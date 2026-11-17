@@ -5,8 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0a1020" />
   <meta name="description" content="Sports Spreads — scores, teams and a fast parlay builder, with honest data sources." />
-  <title>Sports Spreads — Live games, teams & ticket builder</title>
-  
+  <title>Sports Spreads | Games • Teams • Weather • Builder</title>
+  <link rel="canonical" href="https://sports-spreads-v3.onrender.com/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Sports Spreads" />
+  <meta property="og:title" content="Sports Spreads" />
+  <meta property="og:description" content="NFL • NBA • NHL • MLB. Games, team reports, weather context and a clean parlay builder." />
+  <meta property="og:url" content="https://sports-spreads-v3.onrender.com/" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2215%22%20fill%3D%22%230a1020%22%2F%3E%3Cpath%20d%3D%22m10%2038%2014-11%2010%207%2020-18%22%20fill%3D%22none%22%20stroke%3D%22%23b8fa70%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22m44%2016h10v10%22%20fill%3D%22none%22%20stroke%3D%22%23b8fa70%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E%0A" type="image/svg+xml" />
   <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 :root{color-scheme:dark;--bg:#080e19;--side:#0c1421;--panel:#111c2b;--panel2:#172334;--panel3:#1b2b3b;--stroke:#263549;--muted:#94a4b7;--faint:#64778c;--text:#f1f5f8;--accent:#bcf875;--accent-dim:#2a4329;--amber:#f4cd8b;--red:#fb9e9e;--blue:#8ebeff;--radius:17px;--shadow:0 20px 90px rgba(0,0,0,.35)}
@@ -97,7 +104,21 @@ button,summary{touch-action:manipulation}
 .weather-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.weather-grid>div{background:#182e3e;padding:11px 9px;border:1px solid #314e60;border-radius:11px;display:flex;flex-direction:column;gap:6px}.weather-grid small{font-size:10px;color:#9db3c4}.weather-grid strong{font-size:14px}.weather-note{margin-top:13px!important;font-size:11px!important;line-height:1.5;color:var(--muted)}.weather-note a{color:var(--accent)}.weather-flag{color:#f0cca3;font-weight:650;font-size:12px}.weather-panel p{font-size:12px;line-height:1.55}
 @media(max-width:440px){.weather-grid{gap:5px}.weather-grid>div{padding:8px 6px}.weather-grid strong{font-size:12px}.weather-summary strong{font-size:18px}}
 
+/* v3.2 — restrained sharing, Discord feedback and weather model context. */
+.header-action{border:1px solid #3c786d;border-radius:10px;background:#17332f;color:#c1f7e7;padding:10px 12px;min-height:37px;font-size:12px;font-weight:750;white-space:nowrap;cursor:pointer}
+.header-action:hover{background:#225247;box-shadow:0 0 0 2px rgba(104,226,191,.06)}
+.header-feedback{background:transparent;color:#b9d4d0;border-color:#365565}
+.weather-context{border:1px solid #3f756e;background:#153532;border-radius:12px;padding:12px;margin-top:14px}
+.weather-context p{margin:5px 0 6px;color:#d4f2e6;font-size:12px;line-height:1.6}
+.weather-context summary{cursor:pointer;color:#9bdcca;font-size:11px;margin-top:7px}
+.feedback-label{display:block;color:#cce0e0;font-size:12px;font-weight:750;margin:14px 0 7px}
+#feedback-kind,#feedback-note{display:block;background:#101e2b;color:#f4f8f9;border:1px solid #3a5364;border-radius:10px;padding:12px;width:100%;font:inherit}
+#feedback-note{resize:vertical;min-height:112px}
+@media(max-width:620px){.header-action{min-height:39px;padding:8px 9px;font-size:11px}.top-actions{flex-wrap:wrap;justify-content:flex-end;max-width:190px}.header-feedback{display:inline-flex}}
+@media(prefers-reduced-motion:reduce){.header-action,.weather-context{transition:none!important}}
+
 </style>
+  <script>window.SS_CLOUD_CONFIG={url:'',publishableKey:''};</script>
   <script>
 /** Sports Spreads on-demand game weather (forecast only; not a betting model). */
 (function (root) {
@@ -154,11 +175,122 @@ button,summary{touch-action:manipulation}
   if(gustMph>=25||windMph>=15)flags.push('Wind may matter');
   if(precipChance>=45)flags.push('Rain/snow risk');
   if(tempF<=32)flags.push('Freezing conditions');
-  const data={status:'forecast',...condition(hourly.weather_code?.[index]),tempF,windMph,gustMph,precipChance,city:city||'Venue area',flags,roofNote:roofNote(g),fetchedAt:new Date(now).toISOString(),modelAdjusted:false};
+  const data={status:'forecast',...condition(hourly.weather_code?.[index]),tempF,windMph,gustMph,precipChance,weatherCode:Number(hourly.weather_code?.[index]),city:city||'Venue area',flags,roofNote:roofNote(g),fetchedAt:new Date(now).toISOString(),modelAdjusted:false};
   cache.set(id,{data,expires:now+20*60*1000});
   return data;
  }
  root.SportsWeather=Object.freeze({get,key,indoor,forecastWindow,condition,roofNote});
+})(globalThis);
+
+</script>
+  <script>
+/* Sports Spreads weather feature model v1.
+ * Real forecast features, deterministic and inspectable risk tiers.
+ * This is NOT a trained, backtested probability-adjustment model.
+ * Do not synthesize odds, EV, or a confidence grade from these tiers.
+ */
+(function(root){
+ 'use strict';
+ const TIER=['Minimal','Watch','Elevated','High'];
+ const round=n=>Math.round(n*10)/10;
+ function assess(game, forecast){
+  const league=String(game?.league||'').toLowerCase();
+  const isOutdoor=forecast?.status==='forecast';
+  if(!isOutdoor){return {version:'weather-context-v1',available:false,reason:forecast?.status==='indoors'?'Indoor event':'Forecast unavailable',tier:'Unavailable',severity:null,features:null,signals:[],probabilityDelta:null,confidenceDelta:null,validated:false};}
+  const fields=['tempF','windMph','gustMph','precipChance'];
+  if(fields.some(k=>!Number.isFinite(Number(forecast[k])) || forecast[k]==null))return {version:'weather-context-v1',available:false,reason:'Incomplete weather inputs',tier:'Unavailable',severity:null,features:null,signals:[],probabilityDelta:null,confidenceDelta:null,validated:false};
+  const f={temperature_f:round(Number(forecast.tempF)),wind_mph:round(Number(forecast.windMph)),gust_mph:round(Number(forecast.gustMph)),precipitation_probability_pct:round(Number(forecast.precipChance)),weather_code:Number.isFinite(Number(forecast.weatherCode))?Number(forecast.weatherCode):null,forecast_fetched_at:forecast.fetchedAt||null,game_id:game.id||null,roof_confirmed_open:game.venueIndoor===false,venue_roof_unverified:game.venueIndoor!==false};
+  let severity=0;
+  if(f.wind_mph>=12||f.gust_mph>=20)severity=Math.max(severity,1);
+  if(f.wind_mph>=18||f.gust_mph>=28)severity=Math.max(severity,2);
+  if(f.wind_mph>=25||f.gust_mph>=40)severity=3;
+  if(f.precipitation_probability_pct>=35)severity=Math.max(severity,1);
+  if(f.precipitation_probability_pct>=65)severity=Math.max(severity,2);
+  if(f.temperature_f<=32||f.temperature_f>=95)severity=Math.max(severity,1);
+  if(f.temperature_f<=15)severity=Math.max(severity,2);
+  const signals=[];
+  if(league==='nfl'){
+   if(f.wind_mph>=12||f.gust_mph>=20)signals.push('Wind: passing and kicking uncertainty');
+   if(f.precipitation_probability_pct>=45)signals.push('Precipitation: ball-handling and footing risk');
+   if(f.temperature_f<=32)signals.push('Freezing temperature: monitor conditions');
+  }else if(league==='mlb'){
+   if(f.wind_mph>=12||f.gust_mph>=20)signals.push('Wind may affect fly balls; direction is unknown');
+   if(f.precipitation_probability_pct>=45)signals.push('Rain: possible delay or postponement');
+   if(f.temperature_f<=45)signals.push('Cold conditions: check lineup and performance context');
+  }else if(severity)signals.push('Confirm whether this event is outdoors');
+  if(!signals.length)signals.push('No major weather flags at the forecast threshold');
+  return {version:'weather-context-v1',available:true,tier:TIER[severity],severity,features:f,signals,probabilityDelta:null,confidenceDelta:null,validated:false,
+   method:'Threshold-based weather context only; not an estimated change to hit rate or a betting recommendation.'};
+ }
+ function modelInputs(game,forecast){const a=assess(game,forecast);return a.available?{...a.features,weather_risk_tier:a.severity,weather_features_version:a.version}:null;}
+ root.SportsWeatherModel=Object.freeze({assess,modelInputs});
+})(globalThis);
+
+</script>
+  <script>
+/* Free-static-host cloud adapter: Supabase publishable keys and per-user RLS only.
+ * No service-role or secret credentials are required or accepted here.
+ */
+(function(root){
+ 'use strict';
+ const tokenKey='ss-cloud-access',refreshKey='ss-cloud-refresh';
+ function config(){
+  const raw=root.SS_CLOUD_CONFIG||{};
+  let url='';try{const parsed=new URL(raw.url||'');if(parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&parsed.pathname==='/')url=parsed.origin;}catch{}
+  const key=typeof raw.publishableKey==='string'?raw.publishableKey:'';
+  return {url,key,configured:Boolean(url&&key&&key.startsWith('sb_publishable_'))};
+ }
+ const storage={get:k=>{try{return root.sessionStorage?.getItem(k)||'';}catch{return'';}},set:(k,v)=>{try{root.sessionStorage?.setItem(k,v);}catch{}},remove:k=>{try{root.sessionStorage?.removeItem(k);}catch{}}};
+ function credentials(){return {access:storage.get(tokenKey),refresh:storage.get(refreshKey)};}
+ function consumeRedirect(){
+  const url=new URL(root.location?.href||'https://sports-spreads-v3.onrender.com/');
+  const hash=new URLSearchParams(url.hash.replace(/^#/,''));
+  const access=hash.get('access_token'),refresh=hash.get('refresh_token');
+  if(access){storage.set(tokenKey,access);if(refresh)storage.set(refreshKey,refresh);
+   if(root.history?.replaceState){url.hash='';root.history.replaceState(null,'',url.pathname+url.search);}}
+  return Boolean(access);
+ }
+ async function renew(){
+  const c=config(),old=credentials().refresh;if(!c.configured||!old)throw Error('Sign in again to restore cloud access.');
+  const response=await root.fetch(`${c.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:c.key,'content-type':'application/json'},body:JSON.stringify({refresh_token:old})});
+  if(!response.ok)throw Error('Your cloud session expired. Sign in again.');
+  const data=await response.json();if(!data.access_token)throw Error('Could not refresh session.');
+  storage.set(tokenKey,data.access_token);if(data.refresh_token)storage.set(refreshKey,data.refresh_token);
+  return data.access_token;
+ }
+ async function request(method,path,body){
+  const c=config();if(!c.configured)throw Error('Cloud saving has not been activated.');
+  let access=credentials().access;if(!access)throw Error('Sign in before saving tickets.');
+  async function go(token){return root.fetch(`${c.url}${path}`,{method,headers:{apikey:c.key,authorization:`Bearer ${token}`,'content-type':'application/json',prefer:'return=representation'},body:body?JSON.stringify(body):undefined});}
+  let r=await go(access);if(r.status===401){access=await renew();r=await go(access);}
+  if(!r.ok)throw Error(r.status===403?'Access denied. Check database access policies.':`Cloud request failed (${r.status}).`);
+  return r.json();
+ }
+ async function emailLink(email){
+  const c=config();if(!c.configured)throw Error('Cloud saving has not been activated.');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))throw Error('Enter a valid email address.');
+  const redirect=`${root.location.origin}/`;
+  const r=await root.fetch(`${c.url}/auth/v1/otp?redirect_to=${encodeURIComponent(redirect)}`,{method:'POST',headers:{apikey:c.key,'content-type':'application/json'},body:JSON.stringify({email,create_user:true})});
+  if(!r.ok)throw Error('Could not send sign-in link. Check email settings and permitted redirect URL.');
+  return true;
+ }
+ async function tickets(){return request('GET','/rest/v1/user_tickets?select=id,label,stake,legs,combined_american_odds,potential_return,odds_source,created_at&order=created_at.desc&limit=50');}
+ async function saveTicket(payload){
+  if(!Array.isArray(payload.legs)||payload.legs.length<1||payload.legs.length>20)throw Error('Ticket needs 1–20 selections.');
+  const stake=Number(payload.stake);if(!Number.isFinite(stake)||stake<=0||stake>1000000)throw Error('Stake must be positive.');
+  // Browser-supplied values are user-entered and not official model forecasts.
+  const legs=payload.legs.map(l=>({league:String(l.league).slice(0,10),market:String(l.market||'Other').slice(0,55),selection:String(l.selection||'').slice(0,95),notes:String(l.notes||'').slice(0,85),odds:Number(l.odds),gameId:l.gameId||null,playerId:l.playerId||null,teamId:l.teamId||null,enteredAt:l.enteredAt||null}));
+  if(legs.some(l=>!['nfl','nba','nhl','mlb'].includes(l.league)||!l.selection||!Number.isInteger(l.odds)||Math.abs(l.odds)<100||Math.abs(l.odds)>100000))throw Error('Invalid selection.');
+  const multiplier=legs.reduce((v,l)=>v*(l.odds>0?1+l.odds/100:1+100/Math.abs(l.odds)),1);
+  if(!Number.isFinite(multiplier)||multiplier>1e15)throw Error('Payout exceeds supported range.');
+  const combined=multiplier>=2?`+${Math.round((multiplier-1)*100)}`:`-${Math.round(100/(multiplier-1))}`;
+  return request('POST','/rest/v1/user_tickets',{label:String(payload.label||'Saved ticket').slice(0,95),stake,legs,odds_source:'manual_unverified',combined_american_odds:combined,potential_return:Math.round(stake*multiplier*100)/100});
+ }
+ async function signOut(){const c=config(),token=credentials().access;
+  if(c.configured&&token){try{await root.fetch(`${c.url}/auth/v1/logout`,{method:'POST',headers:{apikey:c.key,authorization:`Bearer ${token}`}});}catch{}}
+  storage.remove(tokenKey);storage.remove(refreshKey);
+ }
+ root.SportsCloud=Object.freeze({config,credentials,consumeRedirect,emailLink,tickets,saveTicket,signOut,renew});
 })(globalThis);
 
 </script>
@@ -234,7 +366,7 @@ async function readSportsData(url){
 function getTodayET(){const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const obj=Object.fromEntries(p.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return `${obj.year}-${obj.month}-${obj.day}`;}
 const persisted=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-ticket')||'[]');return Array.isArray(raw)?raw.slice(0,20):[];}catch{return[];}})();
 const archived=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-archives')||'[]');return Array.isArray(raw)?raw.slice(0,100):[];}catch{return[];}})();
-const state={cloud:{configured:false,url:'',key:'',token:(()=>{try{return sessionStorage.getItem('ss-v2-access')||'';}catch{return'';}})(),status:'',tickets:[]},history:archived,league:'nba',date:getTodayET(),section:'games',loading:true,feed:null,error:'',search:'',directory:{},directoryLoading:{},drawer:null,teamTab:'injuries',teamCache:{},teamLoading:{},teamErrors:{},weather:{},ticket:persisted,draft:null,stake:'10',notice:''};
+const state={cloud:{configured:false,url:'',key:'',token:'',status:'',tickets:[]},history:archived,league:'nba',date:getTodayET(),section:'games',loading:true,feed:null,error:'',search:'',directory:{},directoryLoading:{},drawer:null,teamTab:'injuries',teamCache:{},teamLoading:{},teamErrors:{},weather:{},ticket:persisted,draft:null,stake:'10',notice:''};
 const app=document.getElementById('app');
 const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const safeUrl=x=>{try{const url=new URL(x);return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return'';}};
@@ -250,7 +382,7 @@ function navigation(){return `<aside class="sidebar"><div class="brand-wrap"><di
 function topbar(){
  const titles={games:['Games','Scores, schedules & team details'],teams:['Teams','Rosters, injuries & news'],tickets:['Build a parlay','Odds in. Numbers out.'],history:['Saved tickets','Your snapshots, on this device'],about:['Sources & settings','What is connected, and what is not']};
  const [h,sub]=titles[state.section];
- return `<div class="topbar"><div class="hero"><div class="eyebrow">THE GAME, AT A GLANCE</div><h1>${esc(h)}</h1><p>${esc(sub)}</p></div><div class="top-actions"><div class="status ${state.error?'warning':''}" title="${esc(state.error?'Live feed unavailable — examples shown':state.loading?'Checking sports feed':state.feed?.demo?'Sample preview':'Sports feed connected')}"><i></i>${state.loading?'Checking':state.error?'Examples':'Feed ready'}</div><button class="icon-button about-trigger" data-action="about" aria-label="About data sources" title="About sources">ⓘ</button></div></div>`;
+ return `<div class="topbar"><div class="hero"><div class="eyebrow">THE GAME, AT A GLANCE</div><h1>${esc(h)}</h1><p>${esc(sub)}</p></div><div class="top-actions"><button class="header-action" data-action="share" aria-label="Copy clean website link">↗ Share</button><button class="header-action header-feedback" data-action="feedback" aria-label="Give feedback">Feedback</button><div class="status ${state.error?'warning':''}" title="${esc(state.error?'Live feed unavailable — examples shown':state.loading?'Checking sports feed':state.feed?.demo?'Sample preview':'Sports feed connected')}"><i></i>${state.loading?'Checking':state.error?'Examples':'Feed ready'}</div><button class="icon-button about-trigger" data-action="about" aria-label="About data sources" title="About sources">ⓘ</button></div></div>`;
 }
 function leaguebar(){return `<div class="leaguebar" role="tablist" aria-label="League">${Object.entries(SPORTS).map(([id,s])=>`<button role="tab" aria-selected="${state.league===id}" class="league ${state.league===id?'active':''}" data-action="league" data-league="${id}"><span class="emoji">${s.emoji}</span> ${s.label}</button>`).join('')}</div>`;}
 function logo(team,league){const url=safeUrl(team.logo);return `<span class="team-logo" aria-hidden="true">${url?`<img alt="" src="${esc(url)}" loading="lazy" onerror="this.remove();this.parentElement.textContent='${esc(SPORTS[league]?.emoji||'●')}'">`:esc(SPORTS[league]?.emoji||'●')}</span>`;}
@@ -344,7 +476,7 @@ function weatherPanel(g){
  if(g.demo)return `<div class="panel weather-panel"><span class="block-label">GAME-DAY WEATHER</span><strong>Preview only</strong><p>Weather is not attached to example games.</p></div>`;
  if(!value||value.status==='loading')return `<div class="panel weather-panel"><span class="block-label">GAME-DAY WEATHER</span><p>Checking venue conditions…</p></div>`;
  if(value.status==='indoors')return `<div class="panel weather-panel"><span class="block-label">GAME-DAY WEATHER</span><div class="weather-summary">🏟️ <strong>Indoors</strong></div><p>${esc(value.note||'Outdoor conditions are not expected to affect play.')}</p></div>`;
- if(value.status==='forecast')return `<div class="panel weather-panel"><div class="weather-title"><span class="block-label">GAME-DAY WEATHER</span><span class="weather-source">Forecast · ${esc(formatFresh(value.fetchedAt))}</span></div><div class="weather-summary"><span class="weather-icon" aria-hidden="true">${esc(value.icon)}</span><div><strong>${esc(Math.round(value.tempF))}°F · ${esc(value.description)}</strong><div class="person-info">${esc(value.city)} · Near kickoff</div></div></div><div class="weather-grid"><div><small>Wind</small><strong>${esc(Math.round(value.windMph))} mph</strong></div><div><small>Gusts</small><strong>${esc(Math.round(value.gustMph))} mph</strong></div><div><small>Precipitation</small><strong>${esc(Math.round(value.precipChance))}% chance</strong></div></div>${value.flags?.length?`<p class="weather-flag">${esc(value.flags.join(' · '))}</p>`:''}<p class="weather-note">${esc(value.roofNote||'Forecast for the venue area, not an observed stadium reading.')} Weather is not yet factored into model confidence. <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo ↗</a></p></div>`;
+ if(value.status==='forecast')return `<div class="panel weather-panel"><div class="weather-title"><span class="block-label">GAME-DAY WEATHER</span><span class="weather-source">Forecast · ${esc(formatFresh(value.fetchedAt))}</span></div><div class="weather-summary"><span class="weather-icon" aria-hidden="true">${esc(value.icon)}</span><div><strong>${esc(Math.round(value.tempF))}°F · ${esc(value.description)}</strong><div class="person-info">${esc(value.city)} · Near kickoff</div></div></div><div class="weather-grid"><div><small>Wind</small><strong>${esc(Math.round(value.windMph))} mph</strong></div><div><small>Gusts</small><strong>${esc(Math.round(value.gustMph))} mph</strong></div><div><small>Precipitation</small><strong>${esc(Math.round(value.precipChance))}% chance</strong></div></div>${value.flags?.length?`<p class="weather-flag">${esc(value.flags.join(' · '))}</p>`:''}${(() => {const context=globalThis.SportsWeatherModel?.assess(g,value);return context?.available?`<div class="weather-context"><span class="block-label">WEATHER MODEL · ${esc(context.tier)} RISK</span><p>${esc(context.signals.join(' · '))}</p><details><summary>Model inputs & limits</summary><p>Weather features: ${esc(context.features.wind_mph)} mph wind, ${esc(context.features.gust_mph)} mph gusts, ${esc(context.features.precipitation_probability_pct)}% precipitation chance, ${esc(context.features.temperature_f)}°F. These influence contextual risk, not a calibrated win probability. Roof status can change exposure.</p></details></div>`:'';})()}<p class="weather-note">${esc(value.roofNote||'Forecast for the venue area, not an observed stadium reading.')} Weather is included in matchup risk analysis; calibrated prediction confidence is not available. <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo ↗</a></p></div>`;
  return `<div class="panel weather-panel"><div class="weather-title"><span class="block-label">GAME-DAY WEATHER</span><button class="neutral-button small-btn" data-action="weather-retry" data-game="${esc(g.id)}">Retry</button></div><p>${esc(value.message||'Forecast is unavailable for this game.')}</p></div>`;
 }
 async function loadGameWeather(g,force=false){
@@ -359,7 +491,10 @@ async function loadGameWeather(g,force=false){
 }
 function gameDrawer(){const d=state.drawer,g=d.game;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[g.league].emoji)}</span><div><div class="eyebrow">${esc(g.league.toUpperCase())} / MATCHUP</div><h2>${esc(g.away.abbr||g.away.name)} @ ${esc(g.home.abbr||g.home.name)}</h2><small>${g.demo?'Example matchup':`${formatDay(g.start)} · ${formatTime(g.start)}`}</small></div></div><button class="drawer-close" data-action="close" aria-label="Close panel">×</button></div>${g.demo?`<div class="error-note">UI example only. Do not treat this as a scheduled game.</div>`:''}<div class="model-off"><h3>Prediction engine not connected</h3><p>This prototype does not invent confidence grades, win chances, value percentages or picks. We'll migrate the existing prediction engine and audit its outputs before showing them here.</p></div><div class="panel"><span class="block-label">MATCHUP</span><div class="details-grid"><div>${logo(g.away,g.league)}<div style="margin-top:8px"><strong>${esc(g.away.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="away" style="margin-top:6px">Injuries · Roster · News ↗</button></div><div>${logo(g.home,g.league)}<div style="margin-top:8px"><strong>${esc(g.home.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="home" style="margin-top:6px">Injuries · Roster · News ↗</button></div></div></div><div class="panel"><span class="block-label">GAME DETAILS</span><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Game status</span><strong>${esc(g.demo?'Example only':g.statusText)}</strong></div><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Scheduled</span><strong>${esc(g.demo?'Not verified':formatTime(g.start))}</strong></div><div class="result-row" style="justify-content:space-between"><span class="muted">Sportsbook odds</span><strong>Not verified</strong></div></div>${weatherPanel(g)}<div class="panel"><h3>Build a ticket</h3><p>Choose a selection and enter its sportsbook price.</p><button class="btn" data-action="quickpick" data-game="${esc(g.id)}" style="margin-top:13px">Add to ticket ↗</button></div><details class="panel data-panel"><summary>Full model methodology (pending)</summary><p>Once connected, this section will show model version, data freshness, injuries, weather features for outdoor games, recent form, estimated probability, market-implied probability, and assumptions. Model confidence is not the same as probability of a profitable bet.</p></details>`;}
 function playerDrawer(){const {player,league,team}=state.drawer;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[league].emoji)}</span><div><div class="eyebrow">${esc(league.toUpperCase())} / PLAYER</div><h2>${esc(player.name)}</h2><small>${esc(team.name)} · ${esc(player.position||'Player')}${player.jersey?' · #'+esc(player.jersey):''}</small></div></div><button class="drawer-close" data-action="back-team" aria-label="Back to team">←</button></div><div class="panel"><h3>Player profile</h3><p>Full game logs and player prop projections will appear here after the production statistics adapter and prediction engine are connected.</p>${safeUrl(player.profileUrl)?`<p style="margin-top:14px"><a class="inline-link" href="${esc(safeUrl(player.profileUrl))}" target="_blank" rel="noopener noreferrer">View player source ↗</a></p>`:''}</div><div class="form-actions"><button class="btn" data-action="player-prop">+ Build player prop</button></div><button class="neutral-button" data-action="back-team">← Back to ${esc(team.name)}</button>`;}
-function overlay(){if(!state.drawer)return'';return `<div class="shade" data-action="close" aria-hidden="true"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Details panel">${state.drawer.type==='team'?teamDrawer():state.drawer.type==='player'?playerDrawer():gameDrawer()}</aside>`;}
+function feedbackDrawer(){return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">✦</span><div><div class="eyebrow">BETA FEEDBACK</div><h2>Make it better</h2><small>Short feedback, no sign-in.</small></div></div><button class="drawer-close" data-action="close" aria-label="Close">×</button></div><div class="panel"><label class="feedback-label" for="feedback-kind">What's on your mind?</label><select id="feedback-kind"><option>Something works well</option><option>Something feels confusing</option><option>Bug or broken feature</option><option>Feature suggestion</option></select><label class="feedback-label" for="feedback-note">Your feedback</label><textarea id="feedback-note" rows="5" maxlength="1200" placeholder="What should we improve?"></textarea><div class="form-actions"><button class="btn" data-action="copy-feedback">Copy feedback for Discord</button></div><p class="weather-note">Paste your feedback into the Sports Spreads discussion in Discord. No account details are collected here.</p></div>`;}
+function publicShareUrl(){return 'https://sports-spreads-v3.onrender.com/';}
+async function copyText(value){try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(value);return true;}}catch{}try{const field=document.createElement('textarea');field.value=value;field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();const worked=document.execCommand('copy');field.remove();return worked;}catch{return false;}}
+function overlay(){if(!state.drawer)return'';return `<div class="shade" data-action="close" aria-hidden="true"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Details panel">${state.drawer.type==='team'?teamDrawer():state.drawer.type==='player'?playerDrawer():state.drawer.type==='feedback'?feedbackDrawer():gameDrawer()}</aside>`;}
 function ticketDock(){
  if(state.section==='tickets'||state.drawer)return '';
  const est=calcTicket();return `<button class="ticket-dock" data-action="nav" data-section="tickets" aria-label="Open parlay builder with ${state.ticket.length} legs"><span class="dock-label"><span class="dock-dot">●</span> MY TICKET <span class="dock-count">${state.ticket.length} legs</span></span><strong>${est?americanCombined(est.multiplier):'Build ticket'} <span aria-hidden="true">↗</span></strong></button>`;
@@ -394,36 +529,30 @@ function openDirectoryTeam(id){const team=state.directory[state.league]?.teams?.
 function getRosterPlayer(id){const key=`${state.drawer.league}-${state.drawer.team.id}-roster`;return state.teamCache[key]?.roster?.find(p=>p.id===id);}
 function saveTicket(){try{localStorage.setItem('ss-v2-ticket',JSON.stringify(state.ticket));}catch{notify('Browser storage is not available.');}}
 async function loadCloudConfig(){
- if(window.__STANDALONE_PREVIEW__)return;
- try{const res=await fetch('/api/cloud/config');const c=await res.json();state.cloud.configured=Boolean(c.configured);state.cloud.url=c.url||'';state.cloud.key=c.publishableKey||'';
- const hash=new URLSearchParams(location.hash.startsWith('#')?location.hash.slice(1):'');const token=hash.get('access_token');
- if(state.cloud.configured&&token){state.cloud.token=token;try{sessionStorage.setItem('ss-v2-access',token);}catch{}history.replaceState(null,'',location.pathname+location.search);state.cloud.status='Signed in for this tab.';}
- if(state.cloud.configured&&state.cloud.token)await fetchCloudTickets();
- render();
- }catch{/* Offline/local mode remains usable. */}
+ if(!globalThis.SportsCloud)return;
+ const c=SportsCloud.config();state.cloud.configured=c.configured;state.cloud.url=c.url;state.cloud.key=c.key;
+ if(!c.configured)return;
+ const newLogin=SportsCloud.consumeRedirect();state.cloud.token=SportsCloud.credentials().access;
+ if(newLogin)state.cloud.status='Signed in securely for this tab.';
+ if(state.cloud.token)await fetchCloudTickets();else render();
 }
 async function fetchCloudTickets(){
- if(!state.cloud.token)return;
- try{const res=await fetch('/api/cloud/tickets',{headers:{authorization:`Bearer ${state.cloud.token}`}});const data=await res.json();if(!res.ok)throw new Error(data.error||'Cloud history unavailable');state.cloud.tickets=data.tickets||[];state.cloud.status=`${state.cloud.tickets.length} cloud snapshots loaded.`;}
- catch(e){state.cloud.status=e.message||'Cloud history unavailable';}
- render();
+ if(!state.cloud.configured||!SportsCloud.credentials().access)return;
+ try{state.cloud.tickets=await SportsCloud.tickets();state.cloud.token=SportsCloud.credentials().access;state.cloud.status=`${state.cloud.tickets.length} cloud snapshots loaded.`;}
+ catch(e){state.cloud.status=e.message||'Cloud history unavailable.';}render();
 }
 async function sendLogin(email){
- const c=state.cloud;
- if(!c.configured||!c.url||!c.key){c.status='Cloud integration is not configured.';render();return;}
- try{const res=await fetch(`${c.url}/auth/v1/otp?redirect_to=${encodeURIComponent(location.origin+'/')}`,{method:'POST',headers:{apikey:c.key,'content-type':'application/json'},body:JSON.stringify({email,create_user:true})});if(!res.ok)throw new Error('Unable to send sign-in link. Verify the Supabase Auth redirect allowlist.');c.status='Check your email for the secure sign-in link.';}
- catch(e){c.status=e.message||'Sign-in failed.';}
- render();
+ try{await SportsCloud.emailLink(email);state.cloud.status='Check your email for the secure sign-in link.';}
+ catch(e){state.cloud.status=e.message||'Sign-in failed.';}render();
 }
 async function saveCloudTicket(){
- const c=state.cloud;if(!c.configured||!c.token)return;
+ const c=state.cloud;if(!c.configured||!SportsCloud.credentials().access)return;
  const estimate=calcTicket();if(!estimate){c.status='Enter valid odds and stake first.';render();return;}
- const payload={label:`Ticket · ${new Date().toLocaleDateString()}`,stake:Number(state.stake),legs:state.ticket};
- try{const res=await fetch('/api/cloud/tickets',{method:'POST',headers:{authorization:`Bearer ${c.token}`,'content-type':'application/json'},body:JSON.stringify(payload)});const data=await res.json();if(!res.ok)throw new Error(data.error||'Cloud save failed');c.status='Saved securely to your account.';await fetchCloudTickets();}
+ try{await SportsCloud.saveTicket({label:`Ticket · ${new Date().toLocaleDateString()}`,stake:Number(state.stake),legs:state.ticket});c.status='Saved securely to your account.';await fetchCloudTickets();}
  catch(e){c.status=e.message||'Cloud save failed.';render();}
 }
 function exportTicket(){const payload={format:'sports-spreads-v2-ticket',exportedAt:new Date().toISOString(),source:'user-entered',disclaimer:'No bet was placed; odds are not verified; model probabilities are not calculated.',legs:state.ticket,stake:state.stake};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='sports-spreads-ticket.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);}}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';try{sessionStorage.removeItem('ss-v2-access');}catch{}render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='copy-feedback'){const type=document.getElementById('feedback-kind')?.value||'Feedback';const note=(document.getElementById('feedback-note')?.value||'').trim();if(!note){notify('Enter your feedback first.');return;}const report=`Sports Spreads beta feedback\n${type}\n${note}`;const ok=await copyText(report);notify(ok?'Feedback copied — paste it in Discord.':'Copy the feedback text into Discord.');if(ok){state.drawer=null;render();}return;}else if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);}}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){await SportsCloud.signOut();state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
 document.addEventListener('change',e=>{if(e.target.id==='date'){state.date=e.target.value||getTodayET();state.search='';loadBoard();}else if(e.target.id==='stake'){state.stake=e.target.value;render();}else if(e.target.id==='leg-market'||e.target.id==='leg-league'){const league=document.getElementById('leg-league').value;const marketSelect=document.getElementById('leg-market');if(e.target.id==='leg-league'){marketSelect.innerHTML=(MARKETS[league]||[]).map(m=>`<option>${esc(m)}</option>`).join('');}const market=marketSelect.value;document.getElementById('prop-controls')?.remove();const box=document.createElement('div');box.innerHTML=propFields(league,market);document.getElementById('leg-market').closest('.form-item').insertAdjacentElement('afterend',box.firstElementChild);const form=document.getElementById('leg-form');const control=document.getElementById('prop-line');if(control){const text=propNote(market,Number(control.value));document.getElementById('leg-notes').value=text;}}});
 document.addEventListener('input',e=>{if(e.target.id==='prop-line'){const market=e.target.dataset.market;const text=propNote(market,Number(e.target.value));document.getElementById('prop-line-value').textContent=text;document.getElementById('leg-notes').value=text;}else if(e.target.id==='search'||e.target.id==='team-search'){const inputId=e.target.id;const caret=e.target.selectionStart;state.search=e.target.value;render();const replacement=document.getElementById(inputId);if(replacement){replacement.focus();replacement.setSelectionRange(caret,caret);}}});
 document.addEventListener('submit',e=>{if(e.target.id==='cloud-login'){e.preventDefault();sendLogin(document.getElementById('cloud-email').value.trim());return;}if(e.target.id!=='leg-form')return;e.preventDefault();const selection=document.getElementById('leg-selection').value.trim();const odds=document.getElementById('leg-odds').value.trim();const number=parseAmerican(odds);const err=document.getElementById('form-error');if(!selection||number===null){err.textContent='Enter a selection and valid American odds (at least +100 or -100).';return;}if(state.ticket.length>=20){err.textContent='Prototype limit: 20 legs per ticket.';return;}state.ticket.push({id:`leg-${Date.now()}-${state.ticket.length}`,league:document.getElementById('leg-league').value,market:document.getElementById('leg-market').value,selection,odds:number,notes:document.getElementById('leg-notes').value.trim()||(document.getElementById('prop-line')?propNote(document.getElementById('leg-market').value,Number(document.getElementById('prop-line').value)):'') ,gameId:state.draft?.gameId||null,playerId:state.draft?.playerId||null,teamId:state.draft?.teamId||null,enteredAt:new Date().toISOString()});saveTicket();state.draft=null;render();notify('Added selection to your local ticket.');});
