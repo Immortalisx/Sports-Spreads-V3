@@ -16,7 +16,7 @@ In the Supabase dashboard, go to **Authentication → URL Configuration**:
 - **Redirect URLs:** add `https://sports-spreads.onrender.com/**`
 - If using the secondary preview domain, add `https://sports-spreads-v3.onrender.com/**` only if actually needed.
 
-In **Authentication → Providers → Email**, leave the Email provider enabled. Magic-link delivery is subject to free email rate limits and recipient restrictions; verify on one account before inviting Discord users to sign in. Do not buy SMTP service without reviewing cost.
+In **Authentication → Providers → Email**, leave the Email provider enabled. **Important free-tier email limit:** Supabase's built-in email sender only delivers to pre-authorized addresses on the project's team. Discord testers who are not team members cannot use email sign-in until you configure a separate SMTP sender or another OAuth sign-in provider. Keep the public site, ticket builder and local saving accessible without signing in. For a Discord community, consider free Discord OAuth later rather than paid email. Do not buy SMTP service without reviewing cost.
 
 ## Test the cloud flow
 
