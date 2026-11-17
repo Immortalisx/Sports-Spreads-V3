@@ -6,11 +6,34 @@ function topbar(){
 }
 function leaguebar(){return `<div class="leaguebar" role="tablist" aria-label="League">${Object.entries(SPORTS).map(([id,s])=>`<button role="tab" aria-selected="${state.league===id}" class="league ${state.league===id?'active':''}" data-action="league" data-league="${id}"><span class="emoji">${s.emoji}</span> ${s.label}</button>`).join('')}</div>`;}
 function logo(team,league){const url=safeUrl(team.logo);return `<span class="team-logo" aria-hidden="true">${url?`<img alt="" src="${esc(url)}" loading="lazy" onerror="this.remove();this.parentElement.textContent='${esc(SPORTS[league]?.emoji||'●')}'">`:esc(SPORTS[league]?.emoji||'●')}</span>`;}
+function eligibleRecentSnapshot(g){
+ if(!g||!['nfl','nhl'].includes(g.league)||g.demo||g.status!=='scheduled')return null;
+ const source=state.forms?.[g.league];
+ if(source?.status!=='cached'||source?.league!==g.league||!Array.isArray(source.snapshots))return null;
+ const stamp=Date.parse(source.generatedAt||'');
+ if(!Number.isFinite(stamp)||stamp>Date.now()+5*60*1000||Date.now()-stamp>48*3600*1000)return null;
+ const gameAt=Date.parse(g.start||'');
+ if(!Number.isFinite(gameAt)||gameAt<=Date.now())return null;
+ const gameDate=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',
+  year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(gameAt));
+ const match=source.snapshots.find(x=>x?.gameId===g.id&&x.league===g.league&&
+  x.date===gameDate&&x.homeTeamId===String(g.home?.id)&&x.awayTeamId===String(g.away?.id));
+ if(!match||match.evidence?.sourceStatus!=='adequate_research_samples'||
+  match.evidence?.dateCutoff!=='strictly before game calendar date'||
+  !(match.evidence?.latestCompletedGame<gameDate)||
+  match.home?.played<3||match.away?.played<3)return null;
+ return match;
+}
 function previewModel(g){
- const baseline=globalThis.SportsPrediction?.project?.(g,{weather:state.weather[globalThis.SportsWeather?.key?.(g)]})||{available:false,reason:'The experimental model is unavailable.'};
+ const recent=eligibleRecentSnapshot(g);
+ const baseline=globalThis.SportsPrediction?.project?.(g,{
+  weather:state.weather[globalThis.SportsWeather?.key?.(g)],currentForm:recent
+ })||{available:false,reason:'Model estimate unavailable.'};
  if(!baseline.available)return baseline;
  const advanced=globalThis.SportsMultifactor?.estimate?.(g,baseline,globalThis.SS_ADVANCED_EVIDENCE?.[g.id]||{},globalThis.SS_VALIDATED_MODELS?.[g.league]||null);
- if(advanced?.adjusted)return {...baseline,homeProbability:advanced.probability,awayProbability:1-advanced.probability,advancedModel:advanced,version:advanced.modelVersion,validated:true};
+ if(advanced?.adjusted)return {...baseline,homeProbability:advanced.probability,
+  awayProbability:1-advanced.probability,advancedModel:advanced,
+  version:advanced.modelVersion,validated:!!advanced.validated};
  return {...baseline,advancedModel:advanced||null};
 }
 function modelLabel(g){
@@ -19,7 +42,7 @@ function modelLabel(g){
  if(!m.available)return 'Form estimate unavailable';
  const homeFav=m.homeProbability>=.5;
  const who=homeFav?g.home:g.away,prob=homeFav?m.homeProbability:m.awayProbability;
- return `${m.validated?'Holdout-tested form':'Uncalibrated form'} · ${esc(who.abbr||who.name)} ${Math.round(prob*100)}%`;
+ return `${m.validated?'Holdout-tested form':m.recencyUsed?'Recency estimate':'Record estimate'} · ${esc(who.abbr||who.name)} ${Math.round(prob*100)}%${m.preliminary?'*':''}`;
 }
 function currentSeasonPanel(g){
  if(!g||g.demo||g.status!=='scheduled')return '';
@@ -50,13 +73,14 @@ function currentSeasonPanel(g){
 function modelPanel(g){
  const m=previewModel(g);
  if(!m.available)return `<div class="model-off"><h3>Model estimate unavailable</h3><p>${esc(m.reason||'Missing team performance data.')}</p></div>`;
- const pct=(x)=>Math.round(x*100)+'%';
+ const pct=(x)=>Math.round(x*100)+'%'+(m.preliminary?'*':'');
+ const rangePct=(x)=>Math.round(x*100)+'%';
  const weatherLine=m.weatherUncertaintyPp>0?`+${m.weatherUncertaintyPp} percentage points of weather uncertainty (${esc(m.weatherTier)})`:
    g.league==='nfl'||g.league==='mlb'?'No measured weather adjustment yet; forecast and roof status may be unavailable.':'Indoor game · no weather uncertainty adjustment';
- return `<div class="panel experimental-model"><div class="model-head"><span class="block-label">${m.validated?'TEAM-RECORD MODEL · 2025 HOLDOUT':'TEAM-RECORD MODEL · UNCALIBRATED'}</span><span class="model-flag">${m.validated?'Holdout calibrated · W–L only':'Not calibrated'}</span></div>
+ return `<div class="panel experimental-model"><div class="model-head"><span class="block-label">${m.validated?'TEAM-RECORD MODEL · 2025 HOLDOUT':m.recencyUsed?'CURRENT-SEASON RECENCY MODEL*':'RECORD-ONLY MODEL*'}</span><span class="model-flag">${m.validated?'Holdout calibrated · W–L only':'Not calibrated*'}</span></div>
    <div class="model-columns"><div><small>${esc(g.away.abbr||'AWAY')} win estimate</small><strong>${pct(m.awayProbability)}</strong></div><div><small>${esc(g.home.abbr||'HOME')} win estimate</small><strong>${pct(m.homeProbability)}</strong></div></div>
    <div class="model-meter" role="img" aria-label="${m.validated?'Holdout-tested record probability':'Uncalibrated record estimate'}: ${esc(g.away.name)} ${pct(m.awayProbability)}, ${esc(g.home.name)} ${pct(m.homeProbability)}"><span style="width:${pct(m.awayProbability)}"></span></div>
-   <p class="model-range">Home sensitivity range ${pct(m.low)}–${pct(m.high)} · Not a statistical confidence interval</p>
+   <p class="model-range">Home sensitivity range ${rangePct(m.low)}–${rangePct(m.high)} · Not a statistical confidence interval</p>
    <p class="model-weather">${esc(weatherLine)}</p>
    <details class="model-method"><summary>How this estimate works</summary>
    <p>Version ${esc(m.version)} · ${esc(m.source)} · W–L records ${esc(m.awayRecord)} vs ${esc(m.homeRecord)}. ${m.validated?'Uses league-specific parameters learned from earlier games and calibrated on a separate season.':'Uses record shrinkage and an assumed home advantage.'} ${esc(m.note)} Injuries, lineup changes, true Elo history, sportsbook prices and player prop forecasts are not included. Do not interpret this as a betting edge or validated confidence grade.</p></details></div>`;
