@@ -289,3 +289,17 @@ body:not(.big-screen-mode){
 .daily-empty{border:1px dashed #425568;background:#162534;color:var(--muted);padding:24px;border-radius:11px;font-size:12px}
 @media(max-width:720px){.daily-ticket-grid{grid-template-columns:1fr}.daily-section-head{align-items:flex-start}}
 @media(prefers-reduced-motion:reduce){.daily-ticket-card,.ticket-tabs button{transition:none!important}}
+
+/* Source-verified, rolling in-season matchup form. Compact and research-labeled. */
+.current-form-panel{margin-top:13px}
+.current-form-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.current-form-heading small{color:var(--muted);font-size:11px}
+.current-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.current-form-team{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+ border:1px solid #354b5b;border-radius:10px;padding:13px;background:#102332}
+.current-form-team>strong{grid-column:1/-1;font-size:12px;line-height:1.35}
+.current-form-team>span{display:grid;gap:3px;min-width:0}
+.current-form-team b{font-size:17px;font-variant-numeric:tabular-nums;color:#d9f5e9}
+.current-form-team small{color:var(--muted);font-size:10px;line-height:1.3}
+.current-form-disclaimer{font-size:10px;line-height:1.5;color:var(--muted);margin:10px 0 0}
+@media(max-width:540px){.current-form-grid{grid-template-columns:1fr}}
