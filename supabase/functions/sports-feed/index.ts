@@ -35,7 +35,11 @@ Deno.serve(async(req: Request)=>{
  const cached=cache.get(candidate.url);
  if(cached && cached.expires>Date.now())return new Response(cached.data,{status:200,headers:{...cors(req),"content-type":"application/json; charset=utf-8","cache-control":"public, max-age=30","x-feed-cache":"hit"}});
  try{
-  const upstream=await fetch(candidate.url,{headers:{"accept":"application/json"},signal:AbortSignal.timeout(8500)});
+  let upstream=await fetch(candidate.url,{headers:{"accept":"application/json"},signal:AbortSignal.timeout(6500)});
+  if(upstream.status===403||upstream.status===429){
+   const alternate=candidate.url.replace("https://site.api.espn.com","https://site.web.api.espn.com");
+   upstream=await fetch(alternate,{headers:{"accept":"application/json"},signal:AbortSignal.timeout(6500)});
+  }
   if(!upstream.ok)return reply(req,502,{error:"Sports data provider unavailable",providerStatus:upstream.status});
   const type=upstream.headers.get("content-type")||"";
   if(!type.includes("json"))return reply(req,502,{error:"Sports provider returned a non-JSON response"});
