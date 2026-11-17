@@ -118,6 +118,8 @@ function ticketWarnings(legs=state.ticket){
   if(leg.gameId){const group=byGame.get(leg.gameId)||[];if(group.length && !group.some(x=>x.market===leg.market&&x.selection===leg.selection))warnings.push({kind:'same-game',message:`Multiple legs from one game may be correlated or restricted by the sportsbook.`});group.push(leg);byGame.set(leg.gameId,group);}
   if(leg.playerId){const group=byPlayer.get(`${leg.league}/${leg.playerId}`)||[];if(group.length && !group.some(x=>x.market===leg.market&&x.selection===leg.selection))warnings.push({kind:'player-overlap',message:`Multiple props on one player may be correlated.`});group.push(leg);byPlayer.set(`${leg.league}/${leg.playerId}`,group);}
  }
+ const quotedBooks=[...new Set(legs.map(x=>String(x.bookmaker||'').trim().toLowerCase()).filter(Boolean))];
+ if(quotedBooks.length>1)warnings.push({kind:'multiple-books',message:'These odds come from different sportsbooks and may not be combinable on one ticket at the displayed payout.'});
  return warnings.filter((w,i,a)=>a.findIndex(x=>x.kind===w.kind&&x.message===w.message)===i);
 }
 const MARKETS={nfl:['Moneyline','Spread','Total','Player yards','Touchdowns','Other'],nba:['Moneyline','Spread','Total','Player points','Player rebounds','Other'],nhl:['Moneyline','Puck line','Total','Shots on goal','Other'],mlb:['Moneyline','Run line','Total','Pitcher strikeouts','Other']};
