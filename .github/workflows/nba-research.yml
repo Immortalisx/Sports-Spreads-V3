@@ -1,0 +1,40 @@
+name: NBA licensed historical model research
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'engine/nba-boxscorelab.mjs'
+      - 'engine/run-nba-research.mjs'
+      - '.github/workflows/nba-research.yml'
+permissions:
+  contents: read
+jobs:
+  nba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Evaluate 2022–2026 NBA game history on a held-out season
+        run: |
+          mkdir -p research
+          node engine/run-nba-research.mjs --output=research/nba-out-of-time.json
+      - name: Report Brier, calibration and coverage without auto-promoting models
+        if: always()
+        run: |
+          if test -f research/nba-out-of-time.json; then
+            node -e 'const x=require("./research/nba-out-of-time.json"); console.log("NBA games",x.games,"holdout",x.split?.holdout,"decision",x.decision,"gain",x.holdout?.brierGain,"promotionAllowed",x.promotionAllowed);'
+            echo 'Research-only: independent holdout metrics require review; no live probability weights were changed.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'NBA historical source was unavailable; public predictions remain unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nba-research-licensed-2022-2026
+          path: research/nba-out-of-time.json
+          if-no-files-found: ignore
+          retention-days: 7
