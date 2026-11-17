@@ -8,12 +8,13 @@
     "start": "node server.mjs",
     "build:static": "node scripts/build-app.mjs && node scripts/build-static.mjs",
     "build:onefile": "node scripts/build-app.mjs && node scripts/build-onefile.mjs",
-    "test": "node scripts/build-app.mjs && node --test",
+    "test": "node scripts/build-app.mjs && node scripts/build-onefile.mjs && node --test",
     "build:app": "node scripts/build-app.mjs",
     "validate:model": "node engine/backtest.mjs",
     "research:collect": "node engine/collect-research.mjs",
     "research:backtest": "node engine/run-retrospective.mjs",
-    "research:study": "node engine/research-study.mjs"
+    "research:study": "node engine/research-study.mjs",
+    "verify:release": "node scripts/verify-release.mjs"
   },
   "engines": {
     "node": ">=20"
