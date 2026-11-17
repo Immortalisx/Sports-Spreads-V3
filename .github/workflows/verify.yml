@@ -3,19 +3,22 @@ on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Generate standalone release BEFORE running tests
+        run: npm run build:onefile
       - name: Unit and integration tests
         run: npm test
-      - name: Build standalone and static site
-        run: |
-          npm run build:onefile
-          npm run build:static
-      - name: Confirm published file matches source
-        run: cmp release/index.html index.html
+      - name: Build static website
+        run: npm run build:static
+      - name: Verify release and published content are identical
+        run: npm run verify:release
