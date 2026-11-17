@@ -112,7 +112,12 @@ async function update(league:string,now:Date){
  const existing=new Map((rows||[]).map((r:any)=>[r.year_month,r.games]));
  let networkCalls=0;
  for(const month of months){
-  const mustRefresh=!existing.has(month)||month===current;
+  // Recheck the previous month during the first five days to catch late
+  // final-score corrections and games ending after midnight Eastern.
+  const currentYear=Number(current.slice(0,4)),currentMon=Number(current.slice(4));
+  const prev=new Date(Date.UTC(currentYear,currentMon-2,6));
+  const previous=monthFormat(prev);
+  const mustRefresh=!existing.has(month)||month===current||(month===previous&&today<=5);
   if(!mustRefresh)continue;
   const events=await fetchMonth(league,month);networkCalls++;
   await db('sports_form_months?on_conflict=league,year_month',{method:'POST',
