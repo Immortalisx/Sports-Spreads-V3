@@ -18,7 +18,8 @@ test('touch, reduced motion, keyboard focus remain supported',()=>{
 test('production HTML still keeps readable previews and accurate model limits',()=>{
   const html=oneFile();
   assert.match(html,/restrained, accessible visual polish/);
-  assert.match(html,/Experimental form/);
+  assert.match(html,/Holdout-tested form/);
+  assert.match(html,/Uncalibrated form/);
   assert.match(html,/sports-spreads\.onrender\.com/);
   assert.match(html,/name="viewport"/);
   assert.doesNotMatch(html,/sb_secret_|service_role/);
