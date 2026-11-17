@@ -8,7 +8,7 @@ const games=await collectNbaResearch(seasons);
 const result={...evaluateRetrospective(games,'nba'),study:{
  source:'https://boxscorelab.com/downloads/',sourceLicense:'CC BY 4.0',
  attribution:'BoxScore Lab, boxscorelab.com, data published through November 16, 2026',
- seasons,attemptedGames:games.length,generatedAt:new Date().toISOString(),
+ seasons,coverageBySeason:games.coverageBySeason,attemptedGames:games.length,generatedAt:new Date().toISOString(),
  mode:'historical completed results, not recorded pregame odds, lineups, injuries or forecasts'
 }};
 const filename=process.argv.find(x=>x.startsWith('--output='))?.slice(9)||'research/nba-out-of-time.json';
