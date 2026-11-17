@@ -1,8 +1,8 @@
-# Sports Spreads v5 — Big Screen + historical model research
+# Sports Spreads — calibrated record research and daily suggested tickets
 
 **Live site:** https://sports-spreads.onrender.com/
 
-Fast, mobile-first NFL/NBA/NHL/MLB game explorer with sport-specific matchup detail, game-day weather context, cached **US sportsbook moneyline comparisons** from The Odds API, manual parlay builder, local and optional Supabase saved tickets, and an experimental record-based baseline. Team and player suggestions appear after three characters; select a team to lazily load that team's roster for player-prop entries.
+Fast, mobile-first NFL/NBA/NHL/MLB game explorer with sport-specific matchup detail, game-day weather context, cached **US sportsbook moneyline comparisons** from The Odds API, manual parlay builder, local and optional Supabase saved tickets, and historically calibrated NBA/MLB record-only win estimates (NFL/NHL record baselines not yet approved). Team and player suggestions appear after three characters; select a team to lazily load that team's roster for player-prop entries.
 
 ## Source layout
 
@@ -12,7 +12,7 @@ Fast, mobile-first NFL/NBA/NHL/MLB game explorer with sport-specific matchup det
 - `src/app/30-controller.js`: event handlers, keyboard accessible team/player typeahead, local/cloud actions.
 - `public/autocomplete.js`: pure matching logic; no request per keystroke.
 - `public/multifactor-engine.js`: point-in-time checks for league-specific sourced matchup factors; refuses to apply unvalidated weights.
-- `public/prediction-model.js`: currently shown **unvalidated** records-only probability estimate.
+- `public/prediction-model.js`: holdout-calibrated record-only NBA/MLB estimates, explicitly unapproved NFL/NHL estimates.
 - `engine/`: historical walk-forward trainer, Brier, log loss, calibration ECE; refuses to publish its own weights.
 - `docs/`: release audit and NFL retrospective research report.
 - `supabase/`: database RLS migration; live read-only ESPN Edge relay remains in the connected Supabase project.
@@ -60,8 +60,14 @@ See [docs/ODDS_AND_ADVANCED_MODEL.md](docs/ODDS_AND_ADVANCED_MODEL.md) for the $
 - **Free credit ceiling:** One US region and one moneyline market per league, at most 400 credit reservations per UTC calendar month (the provider free plan normally includes 500). The schedule runs at most ~240 refreshes/month across four fully in-season sports, fewer when a league is out of season. No subscription upgrades.
 - **Market estimate:** Average bookmaker-implied win chance after normalizing away each bookmaker's two-outcome overround. This is **not a model forecast, a calibrated confidence score, an edge claim, or sportsbook profitability**.
 - **Auto Ticket:** User picks a target market-implied percentage (50–95%). The UI obtains the single cached league snapshot, considers future games and source prices not older than eight hours, and chooses up to two different games. It fills market-implied percentages, book names, American odds, and the already-tested payout calculations. It never places a bet and explicitly asks the visitor to verify fresh bookmaker quotes.
-- **Experimental form model:** Independent season-record estimates remain labeled experimental. No unvalidated QB scheme, coaching, NBA lineup, NHL goalie, MLB pitcher/hitter, player props or correlated parlays are falsely promoted.
+- **Historically calibrated form (NBA/MLB only):** Previous-game season W–L records and home effect are trained and calibrated with independent 2025 holdout approval. NFL/NHL, QB scheme, coaching, lineups, goalies, pitcher/hitter, player props and joint parlay confidence do not yet meet promotion standards.
 - **Safety:** Quotes can change, some books have restricted markets or regional availability, and a mathematical break-even percentage is not a model confidence. The builder does not calculate a validated joint parlay probability.
 
 Release QA: `npm test`, `npm run build:onefile`, `npm run build:static`, `npm run verify:release`, and the GitHub Chromium smoke workflow. Backend: `supabase/functions/sportsbook-odds/index.ts`, `supabase/migrations/003_scheduled_credit_safe_sportsbook_odds.sql`.
 
+
+## Latest: daily suggested tickets and audited calibrated baseline
+
+The new **Suggested Tickets** panel creates one cached slate per Eastern day after the 17:00 UTC sportsbook refresh. **Steady**, **Balanced**, **Upside**, and **The Big One** contain one-book, different-game moneyline selections, quoted prices, theoretical payout multiplier and an explicitly labeled market-risk grade. These are mathematical market illustrations, **not calibrated parlay success predictions or bets**. If there are no qualifying games or prices are stale, cards remain unavailable rather than inventing figures. Browsing never consumes The Odds API provider credits.
+
+Review [historical model approval scope](docs/CALIBRATION_RELEASE_2026-11-17.md) and [full source/security review](docs/CODE_AUDIT_2026-11-17.md). The final site remains free and mobile/TV responsive. No complete rewrite is planned; work should focus on prospective odds/model auditing, approved pregame features, reliability and iOS Safari QA.
