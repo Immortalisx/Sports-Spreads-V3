@@ -1,8 +1,8 @@
-# Sports Spreads v4 — model status
+# Sports Spreads — model and daily ticket status (November 17, 2026)
 
 ## Live estimates
 
-The live site estimates scheduled game results using **experimental current-season team record form**, Bayesian-style shrinkage and an assumed league-specific home effect. No trained multi-factor coefficients or profitable betting edge are claimed. Weather for outdoor NFL and MLB games adds contextual uncertainty only; directional weather prediction is withheld pending archived **pregame forecasts** and held-out outcome validation.
+**NBA and MLB team-record win estimates passed independent 2025-season holdout calibration** and use learned, validated record-only coefficients. **NFL and NHL have not passed the promotion gate** and retain uncalibrated estimates. No trained advanced player/lineup/scheme coefficients, validated parlay joint probabilities, or profitable betting edge are claimed. Weather for outdoor NFL and MLB games adds contextual uncertainty only; directional weather prediction is withheld pending archived **pregame forecasts** and held-out outcome validation.
 
 ## Engineered advanced factors — implemented as source-gated features
 
@@ -30,10 +30,17 @@ This free community beta is intended for usability feedback and exploratory rese
 
 ## v5 cross-sport research pipeline (not an active advanced production model)
 
-The model research module can fetch publicly accessible, completed-game histories for all four sports with explicit quotas: NFL community games CSV (one request), MLB official schedule (one per season), NHL official club schedules (one per club per season), and NBA unofficial ESPN daily scoreboard (bounded to 31 requested dates by default). Validation separately trains residual feature weights on earlier seasons, calibrates on the next, and compares held-out Brier/log loss on the last; it also reports a paired-bootstrap interval. **No research coefficients are auto-promoted**. Current live estimates remain experimental season-form only.
+The model research module can fetch publicly accessible, completed-game histories for all four sports with explicit quotas: NFL community games CSV (one request), MLB official schedule (one per season), NHL official club schedules (one per club per season), and NBA unofficial ESPN daily scoreboard (bounded to 31 requested dates by default). Validation separately trains residual feature weights on earlier seasons, calibrates on the next, and compares held-out Brier/log loss on the last; it also reports a paired-bootstrap interval. **Research coefficients are not auto-promoted.** NBA and MLB record-only models were manually reviewed and promoted following their independent holdout tests; NFL/NHL and advanced factors are still research-only.
 
 NFL QB-vs-blitz, defense-vs-offense scheme, NBA lineup/shot profiles, NHL confirmed goalies and MLB pitcher-vs-hitter observations require separate stamped, verified pregame evidence. `engine/pregame-evidence.mjs` rejects unsourced, late, mismatched or under-sampled evidence. Completed-game scorelines do NOT supply those player factors. See `docs/MODEL_RESEARCH_PIPELINE.md`.
 
-## v6.1 confidence-ticket generation
+## November 17, 2026 — calibrated records and daily tickets
 
-An interactive confidence target and grade selector is ready, but the site does not claim it has a trained confidence model. To generate a ticket, each eligible leg must have an independently validated model manifest, a sourced sportsbook moneyline quote timestamped within 15 minutes, a projected start in the future, and a modeled win probability exceeding both the selected target and the price-implied break-even threshold by at least 2.5 percentage points. Correlated games are excluded. Missing conditions produce **zero suggested selections**, never fabricated confidence. See `public/auto-ticket.js`.
+- NBA record-only 2025–26 holdout: N=1,225, Brier 0.209596, ECE 0.02520; approved for this exact feature scope.
+- MLB record-only 2025 holdout: N=2,430, Brier 0.245446, ECE 0.02327; approved for this exact feature scope.
+- NFL record-only: holdout ECE 0.06403 exceeded preregistered .06 gate; not approved.
+- NHL record-only: out-of-time Brier gain 0.001151 with interval crossing zero; not approved.
+- The **Suggested Tickets** tab publishes Steady, Balanced, Upside and **The Big One**, once daily via a private cached-odds backend. All generated parlays use one supported sportsbook and source-dated moneyline prices. Market grades reflect illustrative independent-market probability products, **not calibrated multi-leg forecasts**. These are research tickets; nothing places wagers.
+- The separate automatic market-target slider creates an optional same-book ticket from current cached offers; never label it a validated model edge.
+
+Full evidence: [Calibration release](docs/CALIBRATION_RELEASE_2026-11-17.md), [Code audit](docs/CODE_AUDIT_2026-11-17.md), [GitHub Actions holdout](https://github.com/Immortalisx/Sports-Spreads-V3/actions/runs/44187412724).
