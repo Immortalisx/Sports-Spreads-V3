@@ -36,7 +36,7 @@ async function run(){
       status:'cached',asOf:new Date().toISOString(),ageMinutes:0,events:[{
         id:'qa-odds-1',sport_key:'basketball_nba',home_team:'Test Home Team',
         away_team:'Test Away Team',commence_time:gameStart,
-        bookmakers:[{key:'qa',title:'Test Fixture Book',last_update:new Date().toISOString(),
+        bookmakers:[{key:'fanduel',title:'Test Fixture Book',last_update:new Date().toISOString(),
           markets:[{key:'h2h',outcomes:[
             {name:'Test Home Team',price:-300},{name:'Test Away Team',price:260}
           ]}]}]
