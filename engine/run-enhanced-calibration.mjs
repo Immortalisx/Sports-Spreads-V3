@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import {collectHistorical,nflFromCsv} from './historical-sources.mjs';
 import {evaluateEnhancedGames} from './calibrate-elo-model.mjs';
+import {completeNhlSeason} from './nhl-complete-history.mjs';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {dirname,resolve} from 'node:path';
 const league=process.argv.find(x=>x.startsWith('--league='))?.split('=')[1];
@@ -17,22 +18,10 @@ if(league==='nfl'){
  }
 }else{
  for(let season=2021;season<=2025;season++){
-  const diagnosticFetch=async(url,opts)=>{
-   const response=await fetch(url,opts);
-   if(season===2025&&response.ok){
-    try{
-     const body=await response.clone().json();
-     const games=body.games||[];
-     const counted={};for(const g of games)counted[String(g.gameState||'unknown')]=(counted[String(g.gameState||'unknown')]||0)+1;
-     console.error('NHL club source',url.split('/').at(-2),season,games.length,
-      games[0]?.gameDate,games.at(-1)?.gameDate,JSON.stringify(counted));
-    }catch(e){console.error('Club diagnostics unavailable',String(e));}
-   }
-   return response;
-  };
-  const rows=await collectHistorical({league:'nhl',season,fetchImpl:diagnosticFetch,
-   onProgress:event=>{if(event.error)console.error('NHL source warning:',event.club||event.season,event.error);}});
-  console.error('Loaded NHL',season,rows.length);games.push(...rows);
+  const {games:rows,coverage}=await completeNhlSeason(season,{
+   onProgress:event=>{if(event.error)console.error('NHL source warning',event.club,event.error);}
+  });
+  console.error('Verified NHL',season,JSON.stringify(coverage));games.push(...rows);
  }
 }
 const result=evaluateEnhancedGames(games,league);
