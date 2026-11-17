@@ -20,14 +20,14 @@ export function priorCoachMatchups({historicalGames,gameDate,homeCoachId,awayCoa
   asOfGameDate:gameDate,modelWeight:null,
   note:'Head-to-head is historical context; scheme, players, tenure and roster changed.'};
 }
-export function goaliePregameMatchup({gameDate,home,away,goalieLogs,minimumStarts=15}){
- if(!validDate(gameDate)||!Array.isArray(goalieLogs)||![home,away].every(x=>x&&x.goalkeeperId&&x.teamId))throw Error('Named NHL teams and goalies required');
+export function goaliePregameMatchup({gameDate,gameAt,home,away,goalieLogs,minimumStarts=15}){
+ if(!validDate(gameDate)||!Number.isFinite(Date.parse(gameAt||''))||gameAt.slice(0,10)<gameDate||!Array.isArray(goalieLogs)||![home,away].every(x=>x&&x.goalkeeperId&&x.teamId))throw Error('Named NHL teams and goalies required');
  const evaluate=x=>{
   const source=x.confirmation;
   const confirmationValid=source&&source.status==='confirmed'&&
    source.goalkeeperId===x.goalkeeperId&&
    typeof source.asOf==='string'&&Number.isFinite(Date.parse(source.asOf))&&
-   source.asOf.slice(0,10)<=gameDate&&
+   Date.parse(source.asOf)<Date.parse(gameAt)&&
    typeof source.url==='string'&&/^https:\/\//.test(source.url);
   if(!confirmationValid)return {goalkeeperId:x.goalkeeperId,status:'not_confirmed',gsaxPer60:null,starts:0};
   const past=goalieLogs.filter(l=>l.goalkeeperId===x.goalkeeperId&&validDate(l.gameDate)&&l.gameDate<gameDate&&
