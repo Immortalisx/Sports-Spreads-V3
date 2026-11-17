@@ -8,6 +8,9 @@ const americanToDecimal=p=>p>0?1+p/100:1+100/-p;
 const implied=p=>1/americanToDecimal(p);
 const validPrice=p=>Number.isInteger(p)&&Math.abs(p)>=100&&Math.abs(p)<=100000;
 const four=new Set(['nfl','nba','nhl','mlb']);
+// Operator list is constrained to regulated MD sportsbook brands, not all
+// entries tagged "us" by the provider (which includes offshore operators).
+const supportedBooks=new Set(['draftkings','fanduel','betmgm','betrivers','williamhill_us','fanatics','betparx','ballybet','espnbet']);
 const kLeague={americanfootball_nfl:'nfl',basketball_nba:'nba',icehockey_nhl:'nhl',baseball_mlb:'mlb'};
 const normal=s=>String(s||'').trim().toLowerCase();
 export function sourceCandidates(rows,now=new Date()){
@@ -24,6 +27,7 @@ export function sourceCandidates(rows,now=new Date()){
    if(seenIds.has(eventId))continue;seenIds.add(eventId);
    const books=[];
    for(const book of e.bookmakers||[]){
+    if(!supportedBooks.has(String(book?.key||'').toLowerCase()))continue;
     const market=(book.markets||[]).find(m=>m.key==='h2h');
     const outcomes=market?.outcomes||[],home=outcomes.find(o=>normal(o.name)===normal(e.home_team)),
       away=outcomes.find(o=>normal(o.name)===normal(e.away_team));
