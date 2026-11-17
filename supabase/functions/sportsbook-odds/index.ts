@@ -16,7 +16,7 @@ const adminHeaders={'apikey':serviceKey,'content-type':'application/json',...(se
 async function api(path:string,options:RequestInit={}){
  const res=await fetch(serviceUrl+'/rest/v1/'+path,{...options,headers:{...adminHeaders,...options.headers},signal:AbortSignal.timeout(9000)});
  if(!res.ok)throw Error('Cache provider unavailable ('+res.status+')');
- return res.status===204?null:await res.json();
+ const body=await res.text();return body.trim()?JSON.parse(body):null;
 }
 function safeData(x:unknown,league:string){
  if(!Array.isArray(x))throw Error('Unexpected sportsbook event data');
@@ -41,11 +41,15 @@ function filtered(snapshot:any,home:string,away:string,start:string){
  const matches=(snapshot.events||[]).filter((e:any)=>canonical(e.home_team)===canonical(home)&&canonical(e.away_team)===canonical(away)&&Math.abs(Date.parse(e.commence_time)-Date.parse(start))<=36*3600*1000);
  return {...snapshot,events:matches.length===1?matches:[],note:matches.length===1?'One sourced match. Verify current price directly with the sportsbook.':'No unambiguous game and sportsbook matchup; no prices were inferred.'};
 }
-function administrative(req:Request){
+async function administrative(req:Request){
  const expect=Deno.env.get('SPORTS_SPREADS_REFRESH_TOKEN')||'';
  const got=req.headers.get('x-refresh-token')||'';
- // Never enable administrative mode without an owner-configured long random token.
- return expect.length>=32 && got.length>=32 && got===expect;
+ if(expect.length>=32&&got.length>=32&&got===expect)return true;
+ // Vault-backed DB cron credential; never accessible to anonymous website visitors.
+ if(got.length!==64||!/^[a-f0-9]{64}$/i.test(got))return false;
+ try{
+  return await api('rpc/verify_sports_odds_refresh_token',{method:'POST',body:JSON.stringify({p_token:got})})===true;
+ }catch{return false;}
 }
 Deno.serve(async(req:Request)=>{
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(req)});
@@ -54,7 +58,7 @@ Deno.serve(async(req:Request)=>{
  if(!Object.hasOwn(LEAGUES,league))return out(req,400,{error:'Unsupported sports league'});
  if(!serviceUrl||!serviceKey)return out(req,503,{status:'unavailable',events:[],error:'Sportsbook cache unavailable'});
  if(req.method==='POST'){
-  if(!administrative(req))return out(req,403,{error:'Owner authorization required'});
+  if(!(await administrative(req)))return out(req,403,{error:'Owner authorization required'});
   if([...u.searchParams.keys()].some(k=>k!=='league'))return out(req,400,{error:'Unexpected refresh parameters'});
   const key=Deno.env.get('THE_ODDS_API_KEY');
   if(!key)return out(req,503,{status:'needs_key',error:'Free odds provider key not configured'});
@@ -79,6 +83,14 @@ Deno.serve(async(req:Request)=>{
   }catch{return out(req,502,{status:'provider_failed',error:'Upstream request failed; earlier cache has not been changed'});}
  }
  // PUBLIC: zero upstream calls, no quota reservation and no provider key access.
+ if(u.searchParams.get('mode')==='board'){
+  if([...u.searchParams.keys()].some(k=>!['league','mode'].includes(k)))return out(req,400,{error:'Unsupported board query'});
+  let row:any=null;
+  try{row=await cachedLeague(league);}catch{return out(req,503,{status:'unavailable',events:[],error:'Shared bookmaker cache unavailable'});}
+  if(!row)return out(req,200,{status:Deno.env.get('THE_ODDS_API_KEY')?'waiting_refresh':'needs_key',events:[],note:'Cached sportsbook lines not yet available'});
+  const age=Date.now()-Date.parse(row.fetched_at);
+  return out(req,200,snapshotRow(row,Number.isFinite(age)&&age>=0&&age<CACHE_MS?'cached':'stale'));
+ }
  const home=u.searchParams.get('home')||'',away=u.searchParams.get('away')||'',start=u.searchParams.get('start')||'';
  if([...u.searchParams.keys()].some(x=>!['league','home','away','start'].includes(x))||!/^.{3,100}$/.test(home)||!/^.{3,100}$/.test(away)||!Number.isFinite(Date.parse(start)))return out(req,400,{error:'Invalid matchup'});
  let row:any=null;

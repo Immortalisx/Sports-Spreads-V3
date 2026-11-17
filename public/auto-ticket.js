@@ -34,11 +34,49 @@
  }
  // A single independently calibrated leg may display its own model probability;
  // multiple legs need a separately validated dependence/joint model.
- function ticketConfidence(legs){
+ 
+/** Builds moneyline research tickets using sourced bookmaker-implied estimates.
+ * These are NOT calibrated model predictions, confidence grades or edge claims.
+ */
+function marketEligible(x,now=Date.now()){
+ if(!x||!priceOk(x.odds)||!Number.isFinite(x.probability)||x.probability<=0||x.probability>=1)return false;
+ const asOf=Date.parse(x.oddsAsOf||''),start=Date.parse(x.start||'');
+ return Number.isFinite(asOf)&&asOf<=now&&now-asOf<=8*60*60*1000&&
+  Number.isFinite(start)&&start>now &&
+  typeof x.gameId==='string'&&x.gameId.length>0 &&
+  ['nfl','nba','nhl','mlb'].includes(x.league)&&x.market==='Moneyline'&&
+  typeof x.teamName==='string'&&x.teamName.length>1&&
+  typeof x.bookmaker==='string'&&x.bookmaker.length>0;
+}
+function buildMarket(candidates,{target=75,maxLegs=2,now=Date.now()}={}){
+ if(!Number.isInteger(target)||target<50||target>95||target%5!==0||!Number.isInteger(maxLegs)||maxLegs<1||maxLegs>3)
+  throw Error('Invalid market target');
+ if(!Array.isArray(candidates))return {ok:false,legs:[],reason:'No bookmaker information available.'};
+ const available=candidates.filter(x=>marketEligible(x,now)&&x.probability>=target/100)
+  .sort((a,b)=>b.probability-a.probability||a.gameId.localeCompare(b.gameId));
+ const selected=[],games=new Set();
+ for(const x of available){
+  const key=x.league+':'+x.gameId;
+  if(games.has(key))continue;
+  games.add(key);
+  selected.push({id:'market-'+x.league+'-'+x.gameId+'-'+selected.length,
+   league:x.league,market:'Moneyline',selection:x.teamName+' to win',odds:x.odds,
+   gameId:x.gameId,bookmaker:x.bookmaker,oddsAsOf:x.oddsAsOf,
+   marketImpliedProbability:x.probability,marketType:'No-vig bookmaker consensus',
+   modelValidated:false,notes:'Market-implied estimate only; verify the current bookmaker quote',
+   enteredAt:new Date(now).toISOString()});
+  if(selected.length===maxLegs)break;
+ }
+ if(!selected.length)return {ok:false,legs:[],reason:'No future games with recent sportsbook quotes meet this market probability target.'};
+ return {ok:true,legs:selected,target,kind:'market-derived',
+  warning:'Market probabilities are not model confidence, edge or validated parlay probabilities. Check bookmaker prices.'};
+}
+
+function ticketConfidence(legs){
   if(!Array.isArray(legs)||legs.length!==1)return null;
   const [leg]=legs;
   return leg.modelValidated===true&&Number.isFinite(leg.modelConfidence)&&leg.modelConfidence>0&&leg.modelConfidence<1&&
    typeof leg.modelVersion==='string'&&leg.modelVersion.length>0?leg.modelConfidence:null;
  }
- root.SportsAutoTicket=Object.freeze({VERSION,grade,implied,eligible,build,ticketConfidence});
+ root.SportsAutoTicket=Object.freeze({VERSION,grade,implied,eligible,build,marketEligible,buildMarket,ticketConfidence});
 })(globalThis);

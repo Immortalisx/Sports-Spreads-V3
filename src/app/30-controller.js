@@ -31,7 +31,7 @@ async function loadBoard(){
  render();
  try{const json=await readSportsData(`/api/scoreboard?league=${league}&date=${date.replaceAll('-','')}`);if(state.league!==league||state.date!==date)return;state.feed=json;state.error='';}
  catch(e){if(state.league!==league||state.date!==date)return;state.error=e.message||'Provider unavailable';state.feed={games:[],demo:true,updatedAt:null};}
- finally{if(state.league===league&&state.date===date){state.loading=false;render();}}
+ finally{if(state.league===league&&state.date===date){state.loading=false;render();const first=state.feed?.games?.find(g=>!g.demo&&g.status==='scheduled');if(first&&!state.odds[league])void loadSportsbookOdds(first);}}
 }
 async function loadTeams(force=false){
  const league=state.league;if(state.directory[league]&&!force){render();return;}state.directoryLoading[league]=true;render();
@@ -55,26 +55,26 @@ async function loadPregameSignals(game){
  finally{state.signalsLoading[game.id]=false;render();}
 }
 async function loadSportsbookOdds(game){
- if(!game||game.demo||game.status!=='scheduled')return;
+ if(!game||game.demo||game.status!=='scheduled'||!globalThis.SportsOdds)return;
  const league=game.league;
- if(!globalThis.SportsOdds)return;
  if(state.oddsLoading[league])return;
+ if(state.odds[league]&&Date.now()-Date.parse(state.odds[league].asOf||'')<5*60*1000)return;
  state.oddsLoading[league]=true;state.oddsError[league]='';render();
- try{state.odds[league]=await SportsOdds.get(league,game);}
- catch(e){state.oddsError[league]=e?.message||'Connection unavailable';}
+ try{state.odds[league]=await SportsOdds.getBoard(league);}
+ catch(e){state.oddsError[league]=e?.message||'Cached sportsbook quotes unavailable';}
  finally{state.oddsLoading[league]=false;render();}
 }
 function useSportsbookQuote(game,side,index){
  if(!game||game.demo||game.status!=='scheduled')return;
  const snap=state.odds[game.league];
- if(!snap||!['ok','cached'].includes(snap.status)||!Number.isFinite(Date.parse(snap.asOf))||Date.now()-Date.parse(snap.asOf)>15*60*1000)return;
+ if(!snap||!['ok','cached'].includes(snap.status)||!Number.isFinite(Date.parse(snap.asOf))||Date.now()-Date.parse(snap.asOf)>8*60*60*1000)return;
  const match=SportsOdds.booksForGame(game,snap),book=match.books[Number(index)];
  if(!match.matched||!Number.isInteger(Number(index))||!book)return;
  const team=game[side],price=side==='home'?book.homePrice:side==='away'?book.awayPrice:null;
  if(!team||!SportsOdds.validPrice(price))return;
  // Copy quoted price to draft; NEVER auto-submit and NEVER claim a wager was placed.
  state.draft={league:game.league,market:'Moneyline',selection:team.name+' to win',odds:String(price),gameId:game.id,bookmaker:book.title,oddsAsOf:book.asOf};
- state.section='tickets';state.drawer=null;render();notify('Bookmaker quote copied to your draft. Recheck price before placing any wager.');
+ state.section='tickets';state.drawer=null;render();notify('Cached bookmaker quote copied. Recheck the live price before placing any wager.');
 }
 function openTeam(game,side){if(!game)return;const team=game[side];if(!team?.id){notify('This team has no provider identifier.');return;}state.drawer={type:'team',league:game.league,team};state.teamTab='injuries';render();loadTeam('injuries');}
 function openDirectoryTeam(id){const team=state.directory[state.league]?.teams?.find(t=>t.id===id);if(team){state.drawer={type:'team',league:state.league,team};state.teamTab='injuries';render();loadTeam('injuries');}}
@@ -171,30 +171,41 @@ function lookupTyping(value){
  if(SportsAutocomplete.normalize(value).length<3)return;
  suggestionTimer=setTimeout(()=>void ensureLookupTeams(lookupLeague()),160);
 }
-function generateAutomaticTicket(){
- if(state.ticket.length){state.autoTicket.status='Clear your existing ticket first to keep your selections separate.';render();return;}
- const odds=state.odds[state.league];const offers=[];
- if(odds&&['ok','cached'].includes(odds.status)&&Number(odds.ageMinutes)<=15){
-  for(const game of (state.feed?.games||[])){
-   if(game.demo||game.status!=='scheduled')continue;
-   const model=previewModel(game);
-   if(!model?.validated||!Number.isFinite(model.homeProbability))continue;
-   const available=SportsOdds.booksForGame(game,odds);
-   if(!available.matched)continue;
-   for(const book of available.books){
-    for(const side of ['home','away']){
-     const team=game[side],prob=side==='home'?model.homeProbability:model.awayProbability;
-     offers.push({league:game.league,market:'Moneyline',gameId:game.id,start:game.start,teamName:team.name,modelValidated:true,
-      modelVersion:model.version,probability:prob,odds:side==='home'?book.homePrice:book.awayPrice,bookmaker:book.title,oddsAsOf:book.asOf});
-    }
-   }
+async function generateAutomaticTicket(){
+ if(state.ticket.length){state.autoTicket.status='Clear your current ticket to generate new selections.';render();return;}
+ const games=(state.feed?.games||[]).filter(g=>!g.demo&&g.status==='scheduled'&&Date.parse(g.start)>Date.now());
+ if(!games.length){state.autoTicket.status='No upcoming games on this date. Select a game day with scheduled matchups.';render();return;}
+ state.autoTicket.status='Checking shared sportsbook snapshots…';render();
+ let odds=state.odds[state.league];
+ try{
+  if(!odds||!['ok','cached','stale'].includes(odds.status)){
+   odds=await SportsOdds.getBoard(state.league);
+   state.odds[state.league]=odds;
+  }
+ }catch(e){state.autoTicket.status=e?.message||'No sportsbook prices available';render();return;}
+ if(!['ok','cached'].includes(odds?.status)){
+  state.autoTicket.status=odds?.status==='needs_key'?'Sportsbook key is not configured.':'No recent cached sportsbook lines. Try again when the next scheduled refresh completes.';
+  render();return;
+ }
+ const candidates=[];
+ for(const game of games){
+  const market=SportsOdds.marketConsensus(game,odds);
+  if(!market)continue;
+  for(const side of ['home','away']){
+   const book=side==='home'?market.bestHome:market.bestAway;
+   if(!book)continue;
+   candidates.push({league:game.league,market:'Moneyline',gameId:game.id,start:game.start,
+    teamName:game[side].name,probability:side==='home'?market.homeProbability:market.awayProbability,
+    odds:side==='home'?book.homePrice:book.awayPrice,bookmaker:book.title,oddsAsOf:book.asOf});
   }
  }
- const result=globalThis.SportsAutoTicket.build(offers,{target:state.autoTicket.target,maxLegs:2});
+ const result=SportsAutoTicket.buildMarket(candidates,{target:state.autoTicket.target,maxLegs:2});
  if(!result.ok){state.autoTicket.status=result.reason;render();return;}
- state.ticket=result.legs;saveTicket();state.autoTicket.status=`${result.legs.length} sourced selection${result.legs.length===1?'':'s'} added. Verify prices before wagering.`;render();
+ state.ticket=result.legs;saveTicket();
+ state.autoTicket.status=result.legs.length+' market-derived selection'+(result.legs.length===1?'':'s')+' generated. These are bookmaker estimates, NOT validated model picks. Recheck every price.';
+ render();
 }
-document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='generate-ticket'){generateAutomaticTicket();return;}if(action==='autocomplete-select'){await acceptLookup(Number(el.dataset.index));return;}if(action==='big-screen'){changeBigScreen();return;}if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='copy-feedback'){const type=document.getElementById('feedback-kind')?.value||'Feedback';const note=(document.getElementById('feedback-note')?.value||'').trim();if(!note){notify('Enter your feedback first.');return;}const report=`Sports Spreads beta feedback\n${type}\n${note}`;const ok=await copyText(report);notify(ok?'Feedback copied — paste it in Discord.':'Copy the feedback text into Discord.');if(ok){state.drawer=null;render();}return;}else if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);}}else if(action==='load-signals'){void loadPregameSignals(getGame(el.dataset.game));}else if(action==='load-odds'){void loadSportsbookOdds(getGame(el.dataset.game));}else if(action==='odds-pick'){useSportsbookQuote(getGame(el.dataset.game),el.dataset.side,el.dataset.index);}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){await SportsCloud.signOut();state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='generate-ticket'){await generateAutomaticTicket();return;}if(action==='autocomplete-select'){await acceptLookup(Number(el.dataset.index));return;}if(action==='big-screen'){changeBigScreen();return;}if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='copy-feedback'){const type=document.getElementById('feedback-kind')?.value||'Feedback';const note=(document.getElementById('feedback-note')?.value||'').trim();if(!note){notify('Enter your feedback first.');return;}const report=`Sports Spreads beta feedback\n${type}\n${note}`;const ok=await copyText(report);notify(ok?'Feedback copied — paste it in Discord.':'Copy the feedback text into Discord.');if(ok){state.drawer=null;render();}return;}else if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);void loadSportsbookOdds(game);}}else if(action==='load-signals'){void loadPregameSignals(getGame(el.dataset.game));}else if(action==='load-odds'){void loadSportsbookOdds(getGame(el.dataset.game));}else if(action==='odds-pick'){useSportsbookQuote(getGame(el.dataset.game),el.dataset.side,el.dataset.index);}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){await SportsCloud.signOut();state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
 document.addEventListener('change',e=>{if(e.target.id==='date'){state.date=e.target.value||getTodayET();state.search='';loadBoard();}else if(e.target.id==='stake'){state.stake=e.target.value;render();}else if(e.target.id==='leg-market'||e.target.id==='leg-league'){const league=document.getElementById('leg-league').value;const marketSelect=document.getElementById('leg-market');if(e.target.id==='leg-league'){marketSelect.innerHTML=(MARKETS[league]||[]).map(m=>`<option>${esc(m)}</option>`).join('');}const market=marketSelect.value;state.lookup.chosen=null;if(e.target.id==='leg-league'){state.lookup.selectedTeam=null;state.lookup.roster=[];state.lookup.request++;state.lookup.league=league;state.lookup.query='';}drawLookup();document.getElementById('prop-controls')?.remove();const box=document.createElement('div');box.innerHTML=propFields(league,market);document.getElementById('leg-market').closest('.form-item').insertAdjacentElement('afterend',box.firstElementChild);const form=document.getElementById('leg-form');const control=document.getElementById('prop-line');if(control){const text=propNote(market,Number(control.value));document.getElementById('leg-notes').value=text;}}});
 document.addEventListener('input',e=>{if(e.target.id==='auto-confidence'){
  const target=Number(e.target.value);state.autoTicket.target=target;state.autoTicket.status='';

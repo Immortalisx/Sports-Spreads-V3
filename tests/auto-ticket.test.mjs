@@ -28,11 +28,13 @@ test('rejects invalid targets and suspicious quotes',()=>{
  assert.equal(engine.eligible({...good,odds:99},now),false);
  assert.equal(engine.eligible({...good,start:'2026-11-17T19:00:00Z'},now),false);
 });
-test('published UI has live target slider and calibrated-only auto generation',()=>{
+test('published UI has a market-derived slider with no fake confidence claim',()=>{
  const html=readFileSync(new URL('../release/index.html',import.meta.url),'utf8');
  assert.match(html,/id="auto-confidence"/);
  assert.match(html,/data-action="generate-ticket"/);
  assert.match(html,/sportsbook-odds/);
- assert.match(html,/target win probability/i);
+ assert.match(html,/bookmaker-implied chance/i);
+ assert.match(html,/market research/i);
+ assert.match(html,/not model confidence/i);
  assert.doesNotMatch(html,/THE_ODDS_API_KEY|SPORTS_SPREADS_REFRESH_TOKEN|sb_secret_/);
 });

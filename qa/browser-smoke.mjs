@@ -7,7 +7,8 @@ const url='http://127.0.0.1:8976';
 const server=spawn('python3',['-m','http.server','8976','--bind','127.0.0.1','--directory','.'],{stdio:'ignore'});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function ready(){for(let i=0;i<40;i++){try{if((await fetch(url)).ok)return;}catch{}await sleep(120);}throw Error('Static preview server did not start');}
-const event={events:[{id:'401999123',date:'2026-11-17T23:30:00Z',status:{type:{state:'pre',shortDetail:'Scheduled'}},
+const gameStart=new Date(Date.now()+3*60*60*1000).toISOString();
+const event={events:[{id:'401999123',date:gameStart,status:{type:{state:'pre',shortDetail:'Scheduled'}},
  competitions:[{competitors:[
  {homeAway:'home',team:{id:'1',displayName:'Test Home Team',shortDisplayName:'Home Team',abbreviation:'HOM'},records:[{type:'total',summary:'8-2'}]},
  {homeAway:'away',team:{id:'2',displayName:'Test Away Team',shortDisplayName:'Away Team',abbreviation:'AWY'},records:[{type:'total',summary:'4-6'}]}
@@ -20,6 +21,17 @@ async function run(){
    const requestUrl=route.request().url();
    if(requestUrl.includes('/functions/v1/sports-feed')||requestUrl.includes('/api/scoreboard'))
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(event)});
+   if(requestUrl.includes('/functions/v1/sportsbook-odds'))
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+      status:'cached',asOf:new Date().toISOString(),ageMinutes:0,events:[{
+        id:'qa-odds-1',sport_key:'basketball_nba',home_team:'Test Home Team',
+        away_team:'Test Away Team',commence_time:gameStart,
+        bookmakers:[{key:'qa',title:'Test Fixture Book',last_update:new Date().toISOString(),
+          markets:[{key:'h2h',outcomes:[
+            {name:'Test Home Team',price:-300},{name:'Test Away Team',price:260}
+          ]}]}]
+      }]
+    })});
    if(/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(requestUrl))return route.abort();
    return route.continue();
   };
@@ -33,10 +45,12 @@ async function run(){
   await desktop.screenshot({path:'qa/screenshots/desktop.png'});
   await desktop.locator('nav.nav [data-section="tickets"]').click();
   await desktop.locator('#auto-confidence').waitFor({timeout:5000});
-  await desktop.locator('#auto-confidence').evaluate(el=>{el.value='90';el.dispatchEvent(new Event('input',{bubbles:true}));});
-  assert.equal(await desktop.locator('#auto-target').innerText(),'90%');
+  await desktop.locator('#auto-confidence').evaluate(el=>{el.value='65';el.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.equal(await desktop.locator('#auto-target').innerText(),'65%');
   await desktop.locator('[data-action="generate-ticket"]').click();
-  assert.match(await desktop.locator('.auto-ticket-status').innerText(),/No calibrated picks/);
+  await desktop.locator('.ticket-item').first().waitFor({timeout:10000});
+  assert.match(await desktop.locator('.ticket-item').first().innerText(),/Test Home Team/);
+  assert.match(await desktop.locator('.auto-ticket-status').innerText(),/market-derived/i);
   await desktop.screenshot({path:'qa/screenshots/ticket-confidence.png'});
   await desktop.locator('nav.nav [data-section="games"]').click();
   await desktop.locator('[data-action="big-screen"]').first().click();
