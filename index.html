@@ -367,7 +367,7 @@ function getTodayET(){const p=new Intl.DateTimeFormat('en-US',{timeZone:'America
 const persisted=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-ticket')||'[]');return Array.isArray(raw)?raw.slice(0,20):[];}catch{return[];}})();
 const archived=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-archives')||'[]');return Array.isArray(raw)?raw.slice(0,100):[];}catch{return[];}})();
 const state={cloud:{configured:false,url:'',key:'',token:'',status:'',tickets:[]},history:archived,league:'nba',date:getTodayET(),section:'games',loading:true,feed:null,error:'',search:'',directory:{},directoryLoading:{},drawer:null,teamTab:'injuries',teamCache:{},teamLoading:{},teamErrors:{},weather:{},ticket:persisted,draft:null,stake:'10',notice:''};
-const app=document.getElementById('app');
+let app; // Initialize only when the DOM has created #app.
 const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const safeUrl=x=>{try{const url=new URL(x);return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return'';}};
 const money=x=>Number(x).toLocaleString('en-US',{style:'currency',currency:'USD'});
@@ -557,12 +557,19 @@ document.addEventListener('change',e=>{if(e.target.id==='date'){state.date=e.tar
 document.addEventListener('input',e=>{if(e.target.id==='prop-line'){const market=e.target.dataset.market;const text=propNote(market,Number(e.target.value));document.getElementById('prop-line-value').textContent=text;document.getElementById('leg-notes').value=text;}else if(e.target.id==='search'||e.target.id==='team-search'){const inputId=e.target.id;const caret=e.target.selectionStart;state.search=e.target.value;render();const replacement=document.getElementById(inputId);if(replacement){replacement.focus();replacement.setSelectionRange(caret,caret);}}});
 document.addEventListener('submit',e=>{if(e.target.id==='cloud-login'){e.preventDefault();sendLogin(document.getElementById('cloud-email').value.trim());return;}if(e.target.id!=='leg-form')return;e.preventDefault();const selection=document.getElementById('leg-selection').value.trim();const odds=document.getElementById('leg-odds').value.trim();const number=parseAmerican(odds);const err=document.getElementById('form-error');if(!selection||number===null){err.textContent='Enter a selection and valid American odds (at least +100 or -100).';return;}if(state.ticket.length>=20){err.textContent='Prototype limit: 20 legs per ticket.';return;}state.ticket.push({id:`leg-${Date.now()}-${state.ticket.length}`,league:document.getElementById('leg-league').value,market:document.getElementById('leg-market').value,selection,odds:number,notes:document.getElementById('leg-notes').value.trim()||(document.getElementById('prop-line')?propNote(document.getElementById('leg-market').value,Number(document.getElementById('prop-line').value)):'') ,gameId:state.draft?.gameId||null,playerId:state.draft?.playerId||null,teamId:state.draft?.teamId||null,enteredAt:new Date().toISOString()});saveTicket();state.draft=null;render();notify('Added selection to your local ticket.');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.drawer){state.drawer=null;render();}});
-render();loadBoard();loadCloudConfig();
+function bootSportsSpreads(){
+ app=document.getElementById('app');
+ if(!app){console.error('Sports Spreads startup failed: #app is missing.');return;}
+ try{render();loadBoard();loadCloudConfig();}
+ catch(err){console.error('Sports Spreads startup error:',err);app.textContent='Sports Spreads could not start. Please reload the page.';}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootSportsSpreads,{once:true});
+else bootSportsSpreads();
 
 </script>
 </head>
 <body>
-  <div id="app" aria-live="off"></div>
+  <div id="app" aria-live="off"><div class="startup-message">Loading Sports Spreads…</div></div>
   <div id="announcer" class="sr-only" aria-live="polite"></div>
 </body>
 </html>
