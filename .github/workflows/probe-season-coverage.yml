@@ -1,0 +1,14 @@
+name: Probe bounded free 2026 scoreboard season coverage
+on:
+  pull_request:
+    paths: ['engine/probe-current-season-scoreboard.py','.github/workflows/probe-season-coverage.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Count official scoreboard season coverage, metadata only
+        run: python3 engine/probe-current-season-scoreboard.py
