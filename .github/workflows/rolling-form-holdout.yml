@@ -1,0 +1,42 @@
+name: Verify rolling current-season form on independent NFL/NHL holdouts
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/validate-rolling-form.mjs'
+      - 'engine/run-rolling-form-holdout.mjs'
+      - 'tests/validate-rolling-form.test.mjs'
+      - '.github/workflows/rolling-form-holdout.yml'
+permissions: {contents: read}
+jobs:
+  holdout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      matrix:
+        league: [nfl, nhl]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Train old seasons, select 2023, calibrate 2024, score 2025 untouched
+        run: |
+          mkdir -p research
+          node engine/run-rolling-form-holdout.mjs --league=${{ matrix.league }} --output=research/rolling-${{ matrix.league }}.json
+      - name: Show decision without pretending unapproved features are live
+        if: always()
+        run: |
+          if test -f research/rolling-${{ matrix.league }}.json; then
+            node -e 'const r=require("./research/rolling-${{ matrix.league }}.json");console.log("Sport:",r.league,"Status:",r.status,"Approved:",r.approved,"Candidate:",r.holdout?.candidate?.brier,"Benchmark:",r.holdout?.recordBenchmark?.brier,"ECE:",r.holdout?.candidate?.ece)'
+          else
+            echo "No study result: refuse promotion" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: current-form-holdout-${{ matrix.league }}
+          path: research/rolling-${{ matrix.league }}.json
+          if-no-files-found: ignore
+          retention-days: 14
