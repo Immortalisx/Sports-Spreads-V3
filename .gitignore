@@ -3,3 +3,6 @@ node_modules/
 .env.*
 !.env.example
 .DS_Store
+
+# Historical data is research-only and may have redistribution restrictions.
+research/
