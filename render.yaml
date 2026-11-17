@@ -1,0 +1,9 @@
+# Sports Spreads v3 — free static site, no backend instance, no paid add-ons.
+# Requires repository connection before Render can create a live URL.
+services:
+  - type: web
+    name: sports-spreads-v3-static
+    runtime: static
+    buildCommand: npm run build:static
+    staticPublishPath: dist
+    autoDeployTrigger: off

@@ -1,46 +1,36 @@
-# Sports Spreads v3.2 — community beta
+# Sports Spreads v4 — free community beta
 
-Public website: **https://sports-spreads.onrender.com/**
+**Live site:** https://sports-spreads.onrender.com/
 
-A responsive four-sport scoreboard, team directory, optional player props and manual parlay builder. Compact by default; detail available on tap.
+Fast, mobile-first NFL/NBA/NHL/MLB game explorer with sport-specific matchup detail, game-day weather context, manual parlay builder, local and optional Supabase saved tickets, and an experimental record-based baseline. Team and player suggestions appear after three characters; select a team to lazily load that team's roster for player-prop entries.
 
-## What works
+## Source layout
 
-- Read-only scoreboard, team directories, injury reports, rosters and news via ESPN's **unofficial** public site feed, which may be blocked or change. Clearly marked example fixtures provide an offline UI fallback.
-- NFL, NBA, NHL, MLB tabs, search and dates.
-- Game-day weather from Open-Meteo: venue/location validation, indoor check, temperature, wind, gusts and precipitation near kickoff; forecast caching and timestamps.
-- **Weather context model v1** computes sport-sensitive risk tiers and exposes a versioned feature vector (wind, gusts, temperature, precipitation, roof uncertainty). This is a deterministic heuristic, **not** a validated change to win probability, EV, or confidence. The original Sports Spreads prediction model is not yet connected.
-- Player-prop threshold sliders (manual prices), combined-odds/payout math, animated ticker, correlation warnings.
-- Local saved ticket snapshots and export.
-- Responsive Share button copies the bare website URL for Discord; Feedback button lets a beta tester compose and copy a short note to paste into Discord.
-- Optional Supabase browser client for per-user cloud history, with row-level security SQL. **Not activated** until a Supabase project exists.
+- `src/app/00-feed.js`: browser feed adapter and normalized ESPN results via the restricted Supabase relay.
+- `src/app/10-state.js`: state and formatting.
+- `src/app/20-views.js`: UI and progressive disclosures.
+- `src/app/30-controller.js`: event handlers, keyboard accessible team/player typeahead, local/cloud actions.
+- `public/autocomplete.js`: pure matching logic; no request per keystroke.
+- `public/multifactor-engine.js`: point-in-time checks for league-specific sourced matchup factors; refuses to apply unvalidated weights.
+- `public/prediction-model.js`: currently shown **unvalidated** records-only probability estimate.
+- `engine/`: historical walk-forward trainer, Brier, log loss, calibration ECE; refuses to publish its own weights.
+- `docs/`: release audit and NFL retrospective research report.
+- `supabase/`: database RLS migration; live read-only ESPN Edge relay remains in the connected Supabase project.
 
-## $0 architecture
-
-- Render **static website**, GitHub repository, no always-on paid web service.
-- Open-Meteo free API for **noncommercial** use, fetched only for outdoor games when a weather-relevant game drawer is opened. See https://open-meteo.com/en/terms.
-- Free browser local storage works without email. Optional Supabase Free project is separate and not created yet.
-- Respect provider usage, privacy, and the limits of unofficial sources. Do not launch as a commercial or regulated wagering operation without licensing/provider review.
-
-## Run/test/build
+## Build and test
 
 ```bash
-npm test
-npm start                  # Node local development
-npm run build:static        # multi-file static preview in dist/
-npm run build:onefile       # one-file Render deployment in release/index.html
+npm test                    # Assemble and run regression suite
+npm run build:app           # Assemble UI controller from 4 source modules
+npm run build:onefile       # Create release/index.html (Render static site)
+npm run build:static        # Create dist/ for multi-file static hosting
+npm run validate:model      # Honest 'no_historical_data' without an input dataset
 ```
 
-Node 20+. No dependency installation required for the current prototype.
+Render currently copies root `index.html` to its `public/` publish folder. Release process: generate `release/index.html`, copy it to repository-root `index.html`, assert bytes match, commit and deploy via the connected Render static service.
 
-The live Render service currently publishes the repository-root `index.html`. For deployment, replace that file with `release/index.html` (single HTML file with inlined JS/CSS). Source code stays in `public/` with tests in `tests/`.
+## Research status and limitations
 
-**Cloud-saving walkthrough:** [CLOUD_SETUP.md](CLOUD_SETUP.md). SQL: [supabase/migrations/001_saved_ticket_history.sql](supabase/migrations/001_saved_ticket_history.sql).
+**This is a community beta, not a validated betting service.** Live scores and team records come from unofficial, potentially blocked ESPN website endpoints. A restricted Supabase Edge proxy caches requests; no sportsbook odds API is attached. Weather can widen an illustrative uncertainty band but has no trained directional effect. Rest, coaches, NFL QB/blitz and coverage, NBA shot/defense fit, NHL goalies and special teams, MLB pitcher/hitter splits and park/weather are defined as model inputs, not fictitious coefficients. Missing features do not change predictions. Historical NFL study: [docs/NFL_BACKTEST_2023-2025.md](docs/NFL_BACKTEST_2023-2025.md). User-entered odds are not validated or used to infer parlay confidence.
 
-## Honest limitations
-
-- Weather information currently influences a *weather-context risk tier*, not real game win probability. A statistically calibrated weather-aware predictive model requires access to the original model, archived forecasts/results and retrospective validation.
-- No verified live sportsbook lines, model confidence scores, or real bet execution.
-- The team and game feed is not guaranteed for production or commercial use; example games are prominently marked.
-- Feedback submissions are **not** stored on the website; users copy them into a Discord discussion. There is no configured Discord channel/invite yet.
-- Supabase cloud saving is implemented in code but cannot synchronize until a project, Auth settings and public config are established.
+Free Supabase project supports row-private ticket history; unrestricted Discord email logins require SMTP or a configured OAuth provider. The site remains usable without login; feedback is copied to Discord rather than silently collected. Do not add paid services or unlicensed data without reviewing terms.

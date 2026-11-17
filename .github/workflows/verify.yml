@@ -1,0 +1,21 @@
+name: Verify Sports Spreads
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Unit and integration tests
+        run: npm test
+      - name: Build standalone and static site
+        run: |
+          npm run build:onefile
+          npm run build:static
+      - name: Confirm published file matches source
+        run: cmp release/index.html index.html
