@@ -1,0 +1,50 @@
+name: MLB and NHL historical calibration checks
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'engine/**'
+      - '.github/workflows/cross-sport-research.yml'
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    name: ${{ matrix.league }} independent holdout study
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - league: mlb
+            from: 2022
+            to: 2025
+          - league: nhl
+            from: 2023
+            to: 2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch historical completed games and evaluate unseen season
+        run: |
+          mkdir -p research
+          node engine/research-study.mjs --league=${{ matrix.league }} --from=${{ matrix.from }} --to=${{ matrix.to }} --output=research/${{ matrix.league }}-study.json
+      - name: Report model evidence without publishing weights
+        if: always()
+        run: |
+          if test -f research/${{ matrix.league }}-study.json; then
+            node -e 'const r=require("./research/${{ matrix.league }}-study.json");console.log("League:",r.league,"Games:",r.games,"Status:",r.status,"Holdout:",r.split?.holdout??"none","Decision:",r.decision??"insufficient data","Promoted:",r.promotionAllowed===true?"NO (review only)":"NO");'
+            echo 'Research-only; no model weights are promoted to the live site.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Historical data source failed; no predictions were changed.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research-${{ matrix.league }}-report
+          path: research/${{ matrix.league }}-study.json
+          if-no-files-found: ignore
+          retention-days: 7
