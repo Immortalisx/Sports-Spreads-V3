@@ -44,6 +44,32 @@ noncommercial use and requires attribution; check commercial license if
 Sports Spreads eventually becomes paid. No raw FTN/MoneyPuck feed is hosted
 in the site; the proof-of-source job publishes aggregated coverage only.
 
+
+## Measured four-season NFL source coverage (GitHub Actions audit, 2026-11-17)
+
+The public release CSVs were downloaded, validated for required headers, and joined
+by exact game/play identifiers. Results contain **real, source-joined plays**, not
+synthetic matchup statistics:
+
+| NFL season | FTN charted plays | Matched dropbacks | PBP joining coverage | Blitz frequency | QBs / targeted receivers |
+|---|---:|---:|---:|---:|---:|
+| 2022 | 41,643 | 20,381 | 99.62% | 24.08% | 113 / 511 |
+| 2023 | 48,225 | 20,790 | 99.97% | 27.72% | 120 / 490 |
+| 2024 | 48,031 | 20,080 | 99.99% | 29.00% | 113 / 497 |
+| 2025 | 47,316 | 19,817 | 99.99% | 29.54% | 105 / 509 |
+| **Total** | **185,215** | **81,068** | — | — | — |
+
+Each year's audit includes both **regular season and postseason games**; any
+NFL model holdout must explicitly isolate the regular season or define
+the postseason separately. The audit confirms reliable identifier matching.
+It **does not establish** that any QB, receiver, coordinator, or injury feature
+has demonstrated incremental predictive power after controlling for opponent,
+time and player changes. Charting coverage is about passing/sack observations
+that survived quality filters, NOT a claim that every offensive snap is covered.
+
+Workflow:
+https://github.com/Immortalisx/Sports-Spreads-V3/actions/workflows/audit-nfl-ftn-sources.yml
+
 ## Reproducible, credit-free source inspection
 
 `engine/audit-nfl-ftn-sources.py 2025` downloads precisely two public,
