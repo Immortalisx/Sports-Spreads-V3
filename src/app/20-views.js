@@ -19,7 +19,7 @@ function modelLabel(g){
  if(!m.available)return 'Form estimate unavailable';
  const homeFav=m.homeProbability>=.5;
  const who=homeFav?g.home:g.away,prob=homeFav?m.homeProbability:m.awayProbability;
- return `Experimental form · ${esc(who.abbr||who.name)} ${Math.round(prob*100)}%`;
+ return `${m.validated?'Holdout-tested form':'Uncalibrated form'} · ${esc(who.abbr||who.name)} ${Math.round(prob*100)}%`;
 }
 function modelPanel(g){
  const m=previewModel(g);
@@ -27,13 +27,13 @@ function modelPanel(g){
  const pct=(x)=>Math.round(x*100)+'%';
  const weatherLine=m.weatherUncertaintyPp>0?`+${m.weatherUncertaintyPp} percentage points of weather uncertainty (${esc(m.weatherTier)})`:
    g.league==='nfl'||g.league==='mlb'?'No measured weather adjustment yet; forecast and roof status may be unavailable.':'Indoor game · no weather uncertainty adjustment';
- return `<div class="panel experimental-model"><div class="model-head"><span class="block-label">SEASON-FORM MODEL · EXPERIMENTAL</span><span class="model-flag">Not calibrated</span></div>
+ return `<div class="panel experimental-model"><div class="model-head"><span class="block-label">${m.validated?'TEAM-RECORD MODEL · 2025 HOLDOUT':'TEAM-RECORD MODEL · UNCALIBRATED'}</span><span class="model-flag">${m.validated?'Holdout calibrated · W–L only':'Not calibrated'}</span></div>
    <div class="model-columns"><div><small>${esc(g.away.abbr||'AWAY')} win estimate</small><strong>${pct(m.awayProbability)}</strong></div><div><small>${esc(g.home.abbr||'HOME')} win estimate</small><strong>${pct(m.homeProbability)}</strong></div></div>
-   <div class="model-meter" role="img" aria-label="Experimental probability: ${esc(g.away.name)} ${pct(m.awayProbability)}, ${esc(g.home.name)} ${pct(m.homeProbability)}"><span style="width:${pct(m.awayProbability)}"></span></div>
+   <div class="model-meter" role="img" aria-label="${m.validated?'Holdout-tested record probability':'Uncalibrated record estimate'}: ${esc(g.away.name)} ${pct(m.awayProbability)}, ${esc(g.home.name)} ${pct(m.homeProbability)}"><span style="width:${pct(m.awayProbability)}"></span></div>
    <p class="model-range">Home sensitivity range ${pct(m.low)}–${pct(m.high)} · Not a statistical confidence interval</p>
    <p class="model-weather">${esc(weatherLine)}</p>
    <details class="model-method"><summary>How this estimate works</summary>
-   <p>Version ${esc(m.version)} · ${esc(m.source)} · W–L records ${esc(m.awayRecord)} vs ${esc(m.homeRecord)}. Uses Bayesian shrinkage and a league-dependent assumed home advantage. ${esc(m.note)} Injuries, lineup changes, true Elo history, sportsbook prices and player prop forecasts are not included. Do not interpret this as a betting edge or validated confidence grade.</p></details></div>`;
+   <p>Version ${esc(m.version)} · ${esc(m.source)} · W–L records ${esc(m.awayRecord)} vs ${esc(m.homeRecord)}. ${m.validated?'Uses league-specific parameters learned from earlier games and calibrated on a separate season.':'Uses record shrinkage and an assumed home advantage.'} ${esc(m.note)} Injuries, lineup changes, true Elo history, sportsbook prices and player prop forecasts are not included. Do not interpret this as a betting edge or validated confidence grade.</p></details></div>`;
 }
 function marketCardLabel(game){
  const market=globalThis.SportsOdds?.marketConsensus?.(game,state.odds[game.league]);
