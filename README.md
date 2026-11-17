@@ -2,7 +2,7 @@
 
 **Live site:** https://sports-spreads.onrender.com/
 
-Fast, mobile-first NFL/NBA/NHL/MLB game explorer with sport-specific matchup detail, game-day weather context, manual parlay builder, local and optional Supabase saved tickets, and an experimental record-based baseline. Team and player suggestions appear after three characters; select a team to lazily load that team's roster for player-prop entries.
+Fast, mobile-first NFL/NBA/NHL/MLB game explorer with sport-specific matchup detail, game-day weather context, optional **licensed US sportsbook moneyline comparisons** (once a free provider key is configured), manual parlay builder, local and optional Supabase saved tickets, and an experimental record-based baseline. Team and player suggestions appear after three characters; select a team to lazily load that team's roster for player-prop entries.
 
 ## Source layout
 
@@ -31,7 +31,7 @@ Render currently copies root `index.html` to its `public/` publish folder. Relea
 
 ## Research status and limitations
 
-**This is a community beta, not a validated betting service.** Live scores and team records come from unofficial, potentially blocked ESPN website endpoints. A restricted Supabase Edge proxy caches requests; no sportsbook odds API is attached. Weather can widen an illustrative uncertainty band but has no trained directional effect. Rest, coaches, NFL QB/blitz and coverage, NBA shot/defense fit, NHL goalies and special teams, MLB pitcher/hitter splits and park/weather are defined as model inputs, not fictitious coefficients. Missing features do not change predictions. Historical NFL study: [docs/NFL_BACKTEST_2023-2025.md](docs/NFL_BACKTEST_2023-2025.md). User-entered odds are not validated or used to infer parlay confidence.
+**This is a community beta, not a validated betting service.** Live scores and team records come from unofficial, potentially blocked ESPN website endpoints. A restricted Supabase Edge proxy caches requests; a restricted The Odds API US moneyline adapter is staged behind a server-side key and 400-credit monthly cap; until a free API key is configured, quoted odds remain unavailable. Weather can widen an illustrative uncertainty band but has no trained directional effect. Rest, coaches, NFL QB/blitz and coverage, NBA shot/defense fit, NHL goalies and special teams, MLB pitcher/hitter splits and park/weather are defined as model inputs, not fictitious coefficients. Missing features do not change predictions. Historical NFL study: [docs/NFL_BACKTEST_2023-2025.md](docs/NFL_BACKTEST_2023-2025.md). User-entered odds are not validated or used to infer parlay confidence.
 
 Free Supabase project supports row-private ticket history; unrestricted Discord email logins require SMTP or a configured OAuth provider. The site remains usable without login; feedback is copied to Discord rather than silently collected. Do not add paid services or unlicensed data without reviewing terms.
 
@@ -48,3 +48,14 @@ npm run research:study -- --league=nfl --from=2021 --to=2025 --output=research/n
 npm run research:collect -- --league=mlb --season=2025 --output=research/mlb-2025.json
 # NHL uses 32 club schedule requests per year; NBA is explicitly date-bounded
 ```
+
+## v6 — licensed bookmaker quotes and pregame starter signals
+
+See [docs/ODDS_AND_ADVANCED_MODEL.md](docs/ODDS_AND_ADVANCED_MODEL.md) for the $0 key activation, reserved-quota guard, server-only cache, exact-match comparisons, official MLB probable pitchers and strictly gated quarterback/defensive scheme/goalie/pitcher–hitter research inputs. These are not paid bets or validated betting edges.
+
+## v6.1 — Free-credit protection & confidence-target UI
+
+- Sportsbook odds are **cached reads only** for visitors; absolutely no visitor-driven The Odds API credit consumption. Owner-only refresh requires `THE_ODDS_API_KEY` and `SPORTS_SPREADS_REFRESH_TOKEN` configured securely in Supabase Functions secrets. The public endpoint never returns the key or cross-league provider raw data.
+- Confidence slider (50–95%, target only) now appears above the manual builder. Automatic tickets are generated only when independently validated game probabilities, current sourced moneylines, non-correlated games, and a positive modeled margin all exist. **Currently no advanced probability model has passed promotion, so the generator correctly refuses to create unverified bets.**
+- A single qualified selection can show a model confidence; parlays intentionally do not invent joint confidence without a correlation-aware model. Market break-even and potential returns remain mathematical calculations, not predictions.
+- Exact source and setup status: `docs/ODDS_AND_ADVANCED_MODEL.md`.

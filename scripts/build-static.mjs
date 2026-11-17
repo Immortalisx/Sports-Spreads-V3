@@ -2,7 +2,7 @@ import {mkdir,copyFile,readFile,writeFile,rm} from 'node:fs/promises';
 import path from 'node:path';
 const root=path.resolve(new URL('..',import.meta.url).pathname);
 const dist=path.join(root,'dist');await rm(dist,{recursive:true,force:true});await mkdir(dist);
-for(const name of ['app.js','weather.js','weather-model.js','prediction-model.js','matchup-intelligence.js','multifactor-engine.js','autocomplete.js','cloud-browser.js','style.css','favicon.svg','index.html'])await copyFile(path.join(root,'public',name),path.join(dist,name));
+for(const name of ['app.js','weather.js','weather-model.js','prediction-model.js','matchup-intelligence.js','multifactor-engine.js','autocomplete.js','odds-browser.js','auto-ticket.js','matchup-signals.js','cloud-browser.js','style.css','favicon.svg','index.html'])await copyFile(path.join(root,'public',name),path.join(dist,name));
 const htmlPath=path.join(dist,'index.html');let html=await readFile(htmlPath,'utf8');
 html=html.replace('<script src="/weather.js" defer></script>','<script src="./weather.js" defer></script>');
 html=html.replace('<script src="/weather-model.js" defer></script>','<script src="./weather-model.js" defer></script>');
@@ -10,6 +10,9 @@ html=html.replace('<script src="/prediction-model.js" defer></script>','<script 
 html=html.replace('<script src="/matchup-intelligence.js" defer></script>','<script src="./matchup-intelligence.js" defer></script>');
 html=html.replace('<script src="/multifactor-engine.js" defer></script>','<script src="./multifactor-engine.js" defer></script>');
 html=html.replace('<script src="/autocomplete.js" defer></script>','<script src="./autocomplete.js" defer></script>');
+html=html.replace('<script src="/odds-browser.js" defer></script>','<script src="./odds-browser.js" defer></script>');
+html=html.replace('<script src="/auto-ticket.js" defer></script>','<script src="./auto-ticket.js" defer></script>');
+html=html.replace('<script src="/matchup-signals.js" defer></script>','<script src="./matchup-signals.js" defer></script>');
 html=html.replace('<script src="/cloud-browser.js" defer></script>','<script src="./cloud-browser.js" defer></script>');
 html=html.replace('<script src="/app.js" defer></script>','<script>window.__STANDALONE_PREVIEW__=true;</script>\n  <script src="./app.js" defer></script>');
 html=html.replace('href="/favicon.svg"','href="./favicon.svg"').replace('href="/style.css"','href="./style.css"');
