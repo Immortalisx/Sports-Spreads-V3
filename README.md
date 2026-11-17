@@ -71,3 +71,7 @@ Release QA: `npm test`, `npm run build:onefile`, `npm run build:static`, `npm ru
 The new **Suggested Tickets** panel creates one cached slate per Eastern day after the 17:00 UTC sportsbook refresh. **Steady**, **Balanced**, **Upside**, and **The Big One** contain one-book, different-game moneyline selections, quoted prices, theoretical payout multiplier and an explicitly labeled market-risk grade. These are mathematical market illustrations, **not calibrated parlay success predictions or bets**. If there are no qualifying games or prices are stale, cards remain unavailable rather than inventing figures. Browsing never consumes The Odds API provider credits.
 
 Review [historical model approval scope](docs/CALIBRATION_RELEASE_2026-11-17.md) and [full source/security review](docs/CODE_AUDIT_2026-11-17.md). The final site remains free and mobile/TV responsive. No complete rewrite is planned; work should focus on prospective odds/model auditing, approved pregame features, reliability and iOS Safari QA.
+
+## NFL/NHL enhanced research (2026-11-17)
+
+Opponent-aware four-window modeling and official season-wide NHL schedule verification are now reproducible. Historical NFL/NHL Brier scores improved slightly, but **neither passed the predefined upgrade criteria**. The live NFL/NHL calibrated flag remains off; no source, bookmaker credit, or profitability claim is fabricated. See [NFL/NHL holdout audit](docs/NFL_NHL_ENHANCED_HOLDOUT_2026-11-17.md).
