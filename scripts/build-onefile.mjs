@@ -4,7 +4,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');const dir=join(
 let html=await readFile(join(dir,'index.html'),'utf8');
 const css=await readFile(join(dir,'style.css'),'utf8');
 html=html.replace('<link rel="stylesheet" href="/style.css" />',`<style>\n${css}\n</style>`);
-for(const name of ['weather.js','weather-model.js','prediction-model.js','matchup-intelligence.js','multifactor-engine.js','autocomplete.js','cloud-browser.js','app.js']){
+for(const name of ['weather.js','weather-model.js','prediction-model.js','matchup-intelligence.js','multifactor-engine.js','autocomplete.js','odds-browser.js','auto-ticket.js','matchup-signals.js','cloud-browser.js','app.js']){
  const code=await readFile(join(dir,name),'utf8');if(code.includes('</script>'))throw Error('Inline script contains unexpected close tag: '+name);
  html=html.replace(`<script src="/${name}" defer></script>`,`${name==='app.js'?'<script>window.__STANDALONE_PREVIEW__=true;</script>\n  ':''}<script>\n${code}\n</script>`);
 }

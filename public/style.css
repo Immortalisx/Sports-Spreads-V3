@@ -215,3 +215,41 @@ body:not(.big-screen-mode){
   .game,.nav button,.league,.btn,.neutral-button,.icon-button{transition:none!important}
   .game:hover{transform:none!important}
 }
+/* V6 optional book-quote viewer: just-in-time, no sports feed auto-polling. */
+.sportsbook-panel,.starters-panel{background:linear-gradient(145deg,rgba(30,52,59,.94),rgba(16,29,43,.97));}
+.odds-panel-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.odds-books{display:grid;gap:10px;margin:16px 0}
+.odds-book-row{border:1px solid var(--stroke);border-radius:12px;padding:13px;background:rgba(8,20,31,.44)}
+.odds-book-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
+.odds-book-head small{color:var(--muted);font-size:11px}
+.odds-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;margin:10px 0}
+.odds-pair>button{min-height:48px;display:flex;gap:6px;align-items:center;justify-content:space-between;padding:10px;font-size:12px;text-align:left}
+.odds-pair>button strong{color:var(--accent);font-size:16px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.odds-pair>div{display:grid;gap:7px;padding:12px;border-radius:10px;background:var(--panel2)}
+.odds-pair>div small{color:var(--muted)}
+.odds-pair>div strong{font-size:14px}
+@media (max-width:520px){.odds-book-head{flex-direction:column;align-items:flex-start}.odds-pair>button{display:block}.odds-pair>button strong{display:block;margin-top:4px}}
+@media(prefers-reduced-motion:reduce){.odds-pair>button{transition:none!important}}
+
+/* V6.1 — confidence-target laboratory: crisp, small and honest about calibration. */
+.auto-ticket-card{margin:14px 0 20px;border:1px solid rgba(125,208,167,.32);border-radius:16px;padding:17px 19px;background:linear-gradient(122deg,rgba(28,60,61,.77),rgba(15,31,45,.96) 75%);box-shadow:inset 0 1px 0 rgba(156,255,210,.08),0 8px 25px rgba(0,0,0,.09)}
+.auto-ticket-top{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.auto-ticket-top h3{font-size:17px;letter-spacing:-.025em;margin:6px 0 1px}
+.auto-target-badge{display:flex;align-items:center;gap:9px;white-space:nowrap}
+.auto-target-badge small{font-size:9px;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.auto-target-badge strong{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;color:#d6fbe6}
+.auto-target-badge span{font-size:12px;color:#d6fbe6;background:#235347;padding:4px 7px;border-radius:7px;font-weight:700}
+.auto-slider-label{font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;margin-bottom:5px}
+#auto-confidence{display:block;width:100%;appearance:none;-webkit-appearance:none;height:6px;margin:13px 0 12px;border-radius:100px;outline-offset:6px;background:linear-gradient(90deg,#7addaa var(--slider-progress,56%),rgba(105,130,153,.34) var(--slider-progress,56%));cursor:pointer}
+#auto-confidence::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;height:19px;width:19px;border-radius:50%;background:#e5fff1;border:3px solid #3d9d74;box-shadow:0 0 0 3px rgba(116,224,159,.12)}
+#auto-confidence::-moz-range-thumb{height:14px;width:14px;border-radius:50%;background:#e5fff1;border:3px solid #3d9d74}
+#auto-confidence:focus-visible{outline:3px solid #9af2bd}
+.auto-ticket-bottom{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.auto-ticket-bottom p{font-size:12px;line-height:1.5;color:var(--muted);margin:0;flex:1;min-width:170px}
+.auto-ticket-card .auto-build{min-height:43px;padding:10px 15px;font-size:13px;white-space:nowrap}
+.auto-ticket-status{font-size:12px;color:#c5e6dc;border-left:2px solid #6fd6a2;padding-left:9px;margin:13px 0 0}
+.auto-ticket-why{margin-top:11px;color:var(--muted);font-size:11px}
+.auto-ticket-why summary{cursor:pointer;display:inline-block;padding:5px 0}
+.auto-ticket-why p{max-width:650px;font-size:12px;line-height:1.6;margin:6px 0}
+@media(max-width:600px){.auto-ticket-card{padding:15px 13px}.auto-ticket-top h3{font-size:15px}.auto-target-badge strong{font-size:22px}.auto-target-badge small{display:none}.auto-ticket-bottom .auto-build{width:100%}}
+@media(prefers-reduced-motion:reduce){#auto-confidence,.auto-ticket-card{transition:none!important}}
