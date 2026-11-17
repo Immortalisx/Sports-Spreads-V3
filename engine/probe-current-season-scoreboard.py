@@ -12,5 +12,5 @@ for league,path in [('nfl','football/nfl'),('nba','basketball/nba'),('nhl','hock
    dates=sorted(e.get('date','') for e in ev if e.get('date'))
    print(json.dumps(dict(league=league,queryDate=date,limit=limit,
     returned=len(ev),earliest=dates[0] if dates else None,latest=dates[-1] if dates else None,
-    season=payload.get('season'),leagues=len(payload.get('leagues',[])))))
+    season=payload.get('season'),leagues=len(payload.get('leagues',[])),seasonTypes={str(k):sum(1 for e in ev if str(e.get('season',{}).get('type','missing'))==str(k)) for k in set(str(e.get('season',{}).get('type','missing')) for e in ev)},statuses={str(k):sum(1 for e in ev if str(e.get('status',{}).get('type',{}).get('state','missing'))==str(k)) for k in set(str(e.get('status',{}).get('type',{}).get('state','missing')) for e in ev)}))))
   except Exception as e:print(json.dumps(dict(league=league,queryDate=date,limit=limit,error=str(e)[:200])))
