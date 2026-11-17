@@ -1,36 +1,29 @@
-# Sports Spreads — live community beta model status
+# Sports Spreads v4 — model status
 
-_Last audited: November 17, 2026._
+## Live estimates
 
-## Working today
-- A verified live ESPN-site feed is now reached through a restricted Supabase Edge relay, with an alternate ESPN hostname when the primary returns 403/429. Browser direct lookup is a last-resort fallback.
-- League scoreboards, NBA rosters and grouped injury reports have been checked. Feed data is **unofficial and may be unavailable**.
-- Experimental **Season Form v0.1** computes pregame home/away win estimates from team W-L records, league-specific shrinkage and an assumed home advantage when both records exist.
-- For outdoor NFL/MLB games, actual weather features are collected and can widen an **illustrative sensitivity range**. This is not a backtested directional probability adjustment.
-- The UI has a hidden-by-default **Matchup intelligence** section for each league. It tracks data availability, not guessed metrics.
-- Cloud ticket snapshots use Supabase per-user Row Level Security. Odds are entered by the user and are not verified sportsbook feeds.
+The live site estimates scheduled game results using **experimental current-season team record form**, Bayesian-style shrinkage and an assumed league-specific home effect. No trained multi-factor coefficients or profitable betting edge are claimed. Weather for outdoor NFL and MLB games adds contextual uncertainty only; directional weather prediction is withheld pending archived **pregame forecasts** and held-out outcome validation.
 
-## Advanced matchup factors — in the model data contract, not yet scored
-| Sport | Important future inputs |
-| --- | --- |
-| NFL | QB EPA/success under blitz vs defense blitz tendency; man/zone coverage vs QB; offensive protection vs pass rush; verified injuries, rest/travel, coaching tendencies. Coaching head-to-head is descriptive until adjusted for confounding and sample size. |
-| NBA | Pace and possession efficiency; switch/drop/zone scheme vs shot profile; lineups/on-off, rest, travel and coaching rotations. |
-| NHL | Confirmed goalies, five-on-five expected goals, special teams, rest and coaching systems. |
-| MLB | Starting pitcher pitch mix and splits, opponent lineup, bullpen fatigue, fielding, stadium/weather and managerial decisions. |
+## Engineered advanced factors — implemented as source-gated features
 
-**Crucial:** These advanced metrics currently have no live trustworthy provider, do **not** change win estimates, and do **not** produce a confidence grade. A factor becomes a numeric model input only after timestamped data, sample validation, historical fitting and holdout calibration. Do not confuse the implemented feature contract with a trained model.
+- **NFL:** quarterback vs blitz, pass efficiency against man/zone and opponent coverage mix, protection versus pass rush, coaches' opposing strategies/head-to-head, roster availability, rest and travel.
+- **NBA:** lineup on/off and active status, pace and possession quality, defensive scheme vs offensive shot profile, rim and 3-point interactions, back-to-backs, coaching rotations.
+- **NHL:** confirmed starter and goals saved above expected, 5-on-5 xG/chance quality, line deployments, power play vs penalty kill, back-to-backs, coaching systems.
+- **MLB:** confirmed starting pitcher vs projected hitter handedness/pitch mix and xwOBA splits, bullpen workload, lineup/platoon data, fielding and park/weather interaction, manager substitutions.
 
-## Code audit — targeted refactor, not a full rebuild
-- The site is small and fast as a single published static HTML bundle. Keep it for community UI testing.
-- Its source has separate weather, prediction, cloud and matchup modules, but `public/app.js` is still a >60KB view/data monolith. Split it before a broader production release.
-- The repository's deployed `index.html` is the verified public source. The modular source and tests are in the downloadable audited project bundle; they should be synced into GitHub and automated in CI.
-- Fixed feed fallbacks to show honest empty states rather than unverified teams; fixed grouped NBA injuries.
-- The test suite has **49 passing Node tests**, including regression checks. This does not equal a full cross-browser or historical prediction backtest.
-- Public sharing link: https://sports-spreads.onrender.com/ (no ChatGPT wrapper).
+The code now defines per-factor source, sample, timestamp, and opponent-relative input validation in `public/multifactor-engine.js`. **No factor silently receives an invented weight.** Its trained model gate requires a reviewed, time-separated holdout result that improves Brier score and meets calibration thresholds. Without a passing manifest, live probabilities remain the visible record-based baseline.
 
-## Release blockers for genuine production prediction service
-1. Licensed / supported multi-sport live data and terms review.
-2. Source-of-truth historical point-in-time event and player feature store.
-3. Ablation studies and out-of-time Brier / log-loss calibration, especially for scheme and weather factors.
-4. Verified live odds feed before EV claims; player-prop projection and within-game correlated probability model.
-5. Full iOS/Android browser tests, accessible focus and reduced motion, feedback triage.
+`engine/walkforward.mjs` and `engine/backtest.mjs` provide train/holdout split, regularized logistic residual fitting, Brier, log loss, calibration ECE and strict rejection of future-dated or synthetic data. Usage: `npm run validate:model -- --input=private/game_snapshots.json --league=nfl --features=rest_travel,coach_adjustments`. The CLI is research-only and cannot auto-publish a winning model.
+
+## Actual retrospective evaluation
+
+See [`docs/NFL_BACKTEST_2023-2025.md`](docs/NFL_BACKTEST_2023-2025.md). The public nflverse archive yielded 815 NFL holdout games for the record-based baseline (Brier **0.22869**). Rest on its comparable 767 games improved Brier from 0.22747 to 0.22741. Coaching had only 100 holdout observations and an ECE of 0.0926. **No advanced coefficient was promoted.** This is a historical reconstruction, not a point-in-time saved forecast ledger; QB/coverage and MLB/NBA/NHL sophisticated historical factors have no validated source-connected rows yet.
+
+## Remaining data / model work
+
+- Integrate vetted, permitted historical feature datasets for player-vs-scheme and personnel; archived **pregame** availability and odds rather than after-the-fact box scores.
+- Train and hold out data by complete seasons, benchmark and calibrate by league, check subgroup calibration and injuries/lineups as-of, and measure reliability under live daily snapshots.
+- Store immutable model forecasts and compare them with actual outcomes; separately validate player props and same-game correlations before producing confidence or expected value.
+- Obtain stable supported data-provider terms prior to broad public or commercial usage. Current ESPN feed is unofficial and could be blocked.
+
+This free community beta is intended for usability feedback and exploratory research; no live verified betting lines or bankroll guidance are provided.

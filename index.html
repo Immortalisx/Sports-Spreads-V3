@@ -132,6 +132,15 @@ button,summary{touch-action:manipulation}
 .model-method summary{cursor:pointer}.model-method p{margin-top:10px!important;font-size:11px!important;line-height:1.65}
 @media(prefers-reduced-motion:reduce){.model-meter span{transition:none}}
 
+/* Progressive typeahead: compact, high-contrast, accessible tap targets. */
+.suggest-menu{margin-top:6px;border:1px solid var(--stroke);border-radius:12px;background:var(--panel2);overflow:hidden;max-height:265px;overflow-y:auto;box-shadow:0 14px 30px #0006}
+.suggest-menu[hidden]{display:none!important}
+.suggest-option{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:12px 13px;background:transparent;border:0;border-bottom:1px solid var(--stroke);color:var(--text);text-align:left;cursor:pointer;min-height:44px}
+.suggest-option:hover,.suggest-option:focus-visible,.suggest-option.active{background:var(--accent-dim);outline:none}
+.suggest-name{font-weight:650;min-width:0}.suggest-meta{font-size:12px;color:var(--muted);text-align:right;max-width:45%}
+.factor-row{gap:12px;justify-content:space-between;margin-bottom:10px}.factor-row span{font-weight:600}.factor-row small{text-align:right}.factor-intro{margin:10px 0 14px}
+@media(max-width:550px){.suggest-option{padding:13px}.suggest-meta{max-width:42%}}
+
 </style>
   <script>window.SS_CLOUD_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co',publishableKey:'sb_publishable_BX7-wUhJWAp7d3fa3I7Uew_VZc4JHE6'};</script>
   <script>window.SS_FEED_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/sports-feed'};</script>
@@ -372,6 +381,117 @@ button,summary{touch-action:manipulation}
 
 </script>
   <script>
+/* Sports Spreads: point-in-time, source-gated sport-specific feature contract.
+ * Advanced factors NEVER affect a prediction without an out-of-time validated
+ * coefficient manifest. Never treat missing inputs as zero or as neutral.
+ */
+(function(root){
+ 'use strict';
+ const VERSION='multifactor-contract-v0.2';
+ // A signed difference favors the home team. A matchup must have both sides.
+ const CATALOG=Object.freeze({
+  nfl:[
+   ['qb_blitz_edge','QB vs blitz / defense blitz response',70,'NFL Next Gen Stats or verified play charting'],
+   ['coverage_edge','QB man/zone efficiency vs opponent coverage',75,'NFL Next Gen Stats / play charting'],
+   ['protection_edge','O-line pass protection vs defensive rush',70,'Verified pressure / protection splits'],
+   ['coach_adjustments','Coaching: opponent-adjusted tendencies',100,'Game-by-game coach history and staff tenure'],
+   ['coach_h2h','Head coaches head-to-head (descriptive)',12,'Verified coaches, dates and opponent rosters'],
+   ['rest_travel','Rest and travel differential',1,'Prior finalized game schedule'],
+   ['roster_availability','Verified starter/positional availability',1,'Time-stamped official injury reports']
+  ],
+  nba:[
+   ['scheme_edge','Offensive profile vs switching/drop/zone',90,'NBA tracking / defensive matchup'],
+   ['pace_efficiency','Possession efficiency and expected pace',125,'Team possessions with opponent adjustment'],
+   ['lineup_edge','Available lineup net rating and fit',80,'Time-stamped lineups / play-by-play'],
+   ['rim_three_edge','Rim protection versus 3-point shot profile',80,'Shot location and on/off tracking'],
+   ['rest_travel','Back-to-back, travel and rest',1,'Finalized game schedule'],
+   ['coach_rotations','Coaching rotation and late-game tendencies',60,'Possession-level lineup / coaching history']
+  ],
+  nhl:[
+   ['goalie_gsax','Confirmed starter versus expected saves',15,'Goalie expected goals against / start confirmation'],
+   ['fivevfive_xg','5-on-5 xG and shot-quality interaction',200,'Game situation-adjusted NHL shot events'],
+   ['special_teams','Power play vs opposing penalty kill',120,'Special teams attempts / efficiencies'],
+   ['line_matchups','Line deployments and matchup defense',80,'Verified line/pairing shift history'],
+   ['rest_travel','Back-to-back and travel differential',1,'Prior finalized game schedule'],
+   ['coach_system','Coaching system / tactical adjustments',75,'Line deployment and tactical history']
+  ],
+  mlb:[
+   ['pitcher_hitter','Pitch mix vs projected hitters (platoon, whiff)',90,'Baseball Savant Statcast pitch-level splits'],
+   ['pitcher_stuff','Starter pitch quality and repertoire',80,'Statcast xwOBA, whiff and Stuff+'],
+   ['bullpen_freshness','Bullpen availability vs opposing lineup',10,'Prior game usage, workload and projected roles'],
+   ['platoon_lineup','Confirmed lineup and handedness splits',100,'Confirmed batting orders and Statcast splits'],
+   ['fielding_park','Fielding / park interaction',120,'Statcast OAA and park factors'],
+   ['manager_decisions','Manager platoon/bullpen tendencies',60,'Verified historical game decisions']
+  ]
+ });
+ const asNumber=x=>typeof x==='number' && Number.isFinite(x);
+ function eligible(game,id,item){
+  const def=(CATALOG[game?.league]||[]).find(([name])=>name===id);
+  if(!def||!item||typeof item!=='object')return {ok:false,reason:'Not provided'};
+  if(!asNumber(item.homeMinusAway)||Math.abs(item.homeMinusAway)>5)return {ok:false,reason:'No validated matchup difference'};
+  if(!Number.isInteger(item.sampleSize)||item.sampleSize<def[2])return {ok:false,reason:`Fewer than ${def[2]} relevant observations`};
+  if(!/^https:\/\/[^\s/]+/.test(String(item.sourceUrl||'')))return {ok:false,reason:'Missing source URL'};
+  const kickoff=Date.parse(game.start||'');
+  const asOf=Date.parse(item.asOf||''),dataThrough=Date.parse(item.dataThrough||'');
+  if(!Number.isFinite(kickoff)||!Number.isFinite(asOf)||!Number.isFinite(dataThrough)||asOf>=kickoff||dataThrough>=kickoff||dataThrough>asOf)return {ok:false,reason:'Future or unverified timestamp'};
+  if(asOf> Date.now()+300000)return {ok:false,reason:'Future snapshot timestamp'};
+  return {ok:true,code:id,delta:item.homeMinusAway,sourceUrl:item.sourceUrl,asOf:item.asOf,dataThrough:item.dataThrough,sampleSize:item.sampleSize};
+ }
+ function evaluate(game,evidence={}){
+  return (CATALOG[game?.league]||[]).map(([id,label,minSample,sourceHint])=>{
+   const x=eligible(game,id,evidence[id]);
+   return {id,label,minSample,sourceHint,...x};
+  });
+ }
+ // Training manifests MUST be produced by the walk-forward validator, not
+ // by the UI or a manually guessed importance score.
+ function validateManifest(m,league,game){
+  if(!m||m.status!=='validated' || m.league!==league || m.featureContract!==VERSION)return false;
+  if(!m.metrics||m.metrics.count<({nfl:200,nba:500,nhl:450,mlb:800}[league]||Infinity))return false;
+  if(!asNumber(m.metrics.brier)||!asNumber(m.metrics.baselineBrier)||m.metrics.brier>=m.metrics.baselineBrier)return false;
+  if(!asNumber(m.metrics.ece)||m.metrics.ece>0.045)return false;
+  const start=Date.parse(game.start||'');
+  if(!Number.isFinite(start)||!Number.isFinite(Date.parse(m.trainedThrough||''))||Date.parse(m.trainedThrough)>=start)return false;
+  const defs=new Set((CATALOG[league]||[]).map(x=>x[0]));
+  if(!m.weights||typeof m.weights!=='object'||!Object.keys(m.weights).length)return false;
+  return Object.entries(m.weights).every(([k,v])=>defs.has(k)&&asNumber(v)&&Math.abs(v)<=1.5);
+ }
+ function estimate(game,baseline,evidence={},manifest=null){
+  const checks=evaluate(game,evidence);
+  const result={version:VERSION,league:game?.league,available:checks.filter(x=>x.ok).length,possible:checks.length,factors:checks,adjusted:false,probability:null,validated:false};
+  if(!baseline?.available||!validateManifest(manifest,game?.league,game))return result;
+  const needed=Object.keys(manifest.weights);
+  if(!needed.every(id=>checks.some(x=>x.id===id&&x.ok)))return {...result,reason:'One or more trained matchup inputs is unavailable.'};
+  let logit=Math.log(baseline.homeProbability/(1-baseline.homeProbability));
+  for(const [id,w] of Object.entries(manifest.weights)){logit+=w*checks.find(x=>x.id===id).delta;}
+  const probability=1/(1+Math.exp(-Math.max(-9,Math.min(9,logit))));
+  return {...result,adjusted:true,validated:true,probability:Math.min(.98,Math.max(.02,probability)),modelVersion:manifest.version};
+ }
+ root.SportsMultifactor=Object.freeze({VERSION,CATALOG,eligible,evaluate,validateManifest,estimate});
+})(globalThis);
+
+</script>
+  <script>
+/* Sports Spreads autocomplete. No network calls from matching; the controller
+ * lazily fetches a league's teams once and a selected team's roster once. */
+(function(root){
+ 'use strict';
+ const normalize=s=>String(s??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+ function match(query,teams=[],players=[],limit=7){
+  const q=normalize(query);
+  if(q.length<3)return [];
+  const indexed=[...teams.map(t=>({type:'team',id:String(t.id),teamId:String(t.id),name:String(t.name),abbr:String(t.abbr||''),teamName:t.name})),
+   ...players.map(p=>({type:'player',id:String(p.id),teamId:String(p.teamId),name:String(p.name),abbr:String(p.position||''),teamName:String(p.teamName||'')}))];
+  const seen=new Set();
+  return indexed.map(x=>({...x,rank:(()=>{let n=normalize(x.name),a=normalize(x.abbr);return n.startsWith(q)?0:n.split(' ').some(w=>w.startsWith(q))?1:a.startsWith(q)?2:n.includes(q)?3:99;})()}))
+   .filter(x=>x.rank!==99&&x.id&&x.id!=='undefined'&&!seen.has(x.type+':'+x.teamId+':'+x.id)&&seen.add(x.type+':'+x.teamId+':'+x.id))
+   .sort((a,b)=>a.rank-b.rank||a.name.localeCompare(b.name)).slice(0,Math.max(0,Math.min(12,limit)));
+ }
+ root.SportsAutocomplete=Object.freeze({match,normalize});
+})(globalThis);
+
+</script>
+  <script>
 /* Free-static-host cloud adapter: Supabase publishable keys and per-user RLS only.
  * No service-role or secret credentials are required or accepted here.
  */
@@ -440,6 +560,7 @@ button,summary{touch-action:manipulation}
 </script>
   <script>window.__STANDALONE_PREVIEW__=true;</script>
   <script>
+/* Generated by npm run build:app — edit src/app, not public/app.js. */
 /* Sports Spreads v3.1 — progressive disclosure, no fabricated model results. */
 const MODES={games:'Games',teams:'Teams',tickets:'Builder',history:'Saved',about:'About'};
 const SPORTS={nfl:{label:'NFL',emoji:'🏈'},nba:{label:'NBA',emoji:'🏀'},nhl:{label:'NHL',emoji:'🏒'},mlb:{label:'MLB',emoji:'⚾'}};
@@ -515,10 +636,12 @@ async function readSportsData(url){
  try{const r=await fetch(url);const v=await r.json();if(!r.ok)throw Error(v.error||'Sports feed not available');return v;}
  catch(e){return directSportsData(url);}
 }
+
+
 function getTodayET(){const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const obj=Object.fromEntries(p.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return `${obj.year}-${obj.month}-${obj.day}`;}
 const persisted=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-ticket')||'[]');return Array.isArray(raw)?raw.slice(0,20):[];}catch{return[];}})();
 const archived=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-archives')||'[]');return Array.isArray(raw)?raw.slice(0,100):[];}catch{return[];}})();
-const state={cloud:{configured:false,url:'',key:'',token:'',status:'',tickets:[]},history:archived,league:'nba',date:getTodayET(),section:'games',loading:true,feed:null,error:'',search:'',directory:{},directoryLoading:{},drawer:null,teamTab:'injuries',teamCache:{},teamLoading:{},teamErrors:{},weather:{},ticket:persisted,draft:null,stake:'10',notice:''};
+const state={cloud:{configured:false,url:'',key:'',token:'',status:'',tickets:[]},history:archived,league:'nba',date:getTodayET(),section:'games',loading:true,feed:null,error:'',search:'',directory:{},directoryLoading:{},drawer:null,teamTab:'injuries',teamCache:{},teamLoading:{},teamErrors:{},weather:{},ticket:persisted,draft:null,stake:'10',notice:'',lookup:{selectedTeam:null,chosen:null,rows:[],active:-1,loading:false,query:'',league:'',request:0,status:'',roster:[]}};
 let app; // Set after DOMContentLoaded so the mount is guaranteed to exist.
 const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const safeUrl=x=>{try{const url=new URL(x);return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return'';}};
@@ -527,6 +650,8 @@ const formatDay=x=>{if(!x)return 'TBD';const d=new Date(x);if(Number.isNaN(d.get
 const formatTime=x=>{if(!x)return 'TBD';const d=new Date(x);if(Number.isNaN(d.getTime()))return 'TBD';return new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}).format(d)+' ET';};
 const formatFresh=x=>{if(!x)return 'Unavailable';const n=Date.now()-new Date(x).getTime();if(!Number.isFinite(n))return 'Unknown';if(n<60000)return 'Just fetched';if(n<3600000)return `${Math.max(1,Math.floor(n/60000))}m ago`;return `${Math.max(1,Math.floor(n/3600000))}h ago`;};
 function icon(name){const paths={teams:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M2 20v-2a7 7 0 0 1 14 0v2M17 15a5 5 0 0 1 5 5"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',ticket:'<path d="M3 7V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a3 3 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a3 3 0 0 0 0-6Z" transform="translate(0 2)"/><path d="M12 6v2m0 4v2m0 4v1"/>',history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1-2 2-.1-.1a1.6 1.6 0 0 0-1.8-.3l-.2.1V21h-3v-2.4l-.3-.1a1.6 1.6 0 0 0-1.8.3l-.1.1-2-2 .1-.1a1.6 1.6 0 0 0 .3-1.8L8.8 15H6v-3h2.5l.1-.3a1.6 1.6 0 0 0-.3-1.8l-.1-.1 2-2 .1.1a1.6 1.6 0 0 0 1.8.3l.2-.1V6h3v2.1l.3.1a1.6 1.6 0 0 0 1.8-.3l.1-.1 2 2-.1.1a1.6 1.6 0 0 0-.3 1.8l.1.3H21v3h-1.7Z" transform="translate(-2 -2)"/>',refresh:'<path d="M20 11a8 8 0 0 0-14-5L3 9m0-6v6h6M4 13a8 8 0 0 0 14 5l3-3m0 6v-6h-6"/>',link:'<path d="M7 17 17 7M9 7h8v8"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>'};return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`;}
+
+
 function navigation(){return `<aside class="sidebar"><div class="brand-wrap"><div class="brand"><span class="brand-symbol">↗</span><span>sports<span>spreads</span></span></div><div class="beta">THE EDGE, SIMPLIFIED</div></div><nav class="nav" aria-label="Primary navigation">${[['games','grid','Games'],['teams','teams','Teams'],['tickets','ticket','Builder'],['history','history','Saved']].map(([id,svg,label])=>`<button data-action="nav" data-section="${id}" class="${state.section===id?'active':''}" aria-current="${state.section===id?'page':'false'}">${icon(svg)}<span>${label}</span></button>`).join('')}</nav><div class="sidebar-bottom"><button class="nav-settings" data-action="about">⚙  About & sources</button></div><div class="sidebar-foot">SPORTS SPREADS / V3</div></aside>`;}
 function topbar(){
  const titles={games:['Games','Scores, schedules & team details'],teams:['Teams','Rosters, injuries & news'],tickets:['Build a parlay','Odds in. Numbers out.'],history:['Saved tickets','Your snapshots, on this device'],about:['Sources & settings','What is connected, and what is not']};
@@ -535,7 +660,13 @@ function topbar(){
 }
 function leaguebar(){return `<div class="leaguebar" role="tablist" aria-label="League">${Object.entries(SPORTS).map(([id,s])=>`<button role="tab" aria-selected="${state.league===id}" class="league ${state.league===id?'active':''}" data-action="league" data-league="${id}"><span class="emoji">${s.emoji}</span> ${s.label}</button>`).join('')}</div>`;}
 function logo(team,league){const url=safeUrl(team.logo);return `<span class="team-logo" aria-hidden="true">${url?`<img alt="" src="${esc(url)}" loading="lazy" onerror="this.remove();this.parentElement.textContent='${esc(SPORTS[league]?.emoji||'●')}'">`:esc(SPORTS[league]?.emoji||'●')}</span>`;}
-function previewModel(g){return globalThis.SportsPrediction?.project?.(g,{weather:state.weather[globalThis.SportsWeather?.key?.(g)]})||{available:false,reason:'The experimental model is unavailable.'};}
+function previewModel(g){
+ const baseline=globalThis.SportsPrediction?.project?.(g,{weather:state.weather[globalThis.SportsWeather?.key?.(g)]})||{available:false,reason:'The experimental model is unavailable.'};
+ if(!baseline.available)return baseline;
+ const advanced=globalThis.SportsMultifactor?.estimate?.(g,baseline,globalThis.SS_ADVANCED_EVIDENCE?.[g.id]||{},globalThis.SS_VALIDATED_MODELS?.[g.league]||null);
+ if(advanced?.adjusted)return {...baseline,homeProbability:advanced.probability,awayProbability:1-advanced.probability,advancedModel:advanced,version:advanced.modelVersion,validated:true};
+ return {...baseline,advancedModel:advanced||null};
+}
 function modelLabel(g){
  if(g.demo)return 'Preview only · Not a scheduled fixture';
  const m=previewModel(g);
@@ -624,7 +755,7 @@ const PROPS={nfl:[['Player yards',0,200,5,'yds'],['Touchdowns',0,5,1,'TD']],nba:
 function propInfo(league,market){return (PROPS[league]||[]).find(x=>x[0]===market)||null;}
 function propNote(market,value){return market==='Touchdowns'?(value===0?'0 TD (no meaningful threshold)':`At least ${value} TD`):`Over ${value+0.5} ${({'Player yards':'yards','Player points':'points','Player rebounds':'rebounds','Shots on goal':'shots','Pitcher strikeouts':'strikeouts'})[market]||''}`;}
 function propFields(league,market){const info=propInfo(league,market);if(!info)return '<div id="prop-controls"></div>';return `<div class="prop-control" id="prop-controls"><label for="prop-line">Line target <output id="prop-line-value">${esc(propNote(market,market==='Touchdowns'?1:Math.min(info[2],market==='Player yards'?50:10)))}</output></label><input type="range" id="prop-line" data-market="${esc(market)}" min="${info[1]}" max="${info[2]}" value="${market==='Touchdowns'?1:Math.min(info[2],info[0]==='Player yards'?50:10)}" step="${info[3]}"><small class="muted">Line selector only · No live pricing or probability</small></div>`;}
-function ticketView(){const estimate=calcTicket();const draft=state.draft||{};return `<div class="section-top section-header"><div><h2>Ticket builder</h2><p>Your selections. Your sportsbook prices.</p></div></div>${ticketTicker(estimate)}<div class="ticket-layout"><div class="form-card"><h3>Add selection</h3><p>Enter odds from your sportsbook.</p><form id="leg-form"><div class="form-grid"><div class="form-item"><label for="leg-league">Sport</label><select id="leg-league">${Object.entries(SPORTS).map(([id,s])=>`<option value="${id}" ${id===(draft.league||state.league)?'selected':''}>${s.label}</option>`).join('')}</select></div><div class="form-item"><label for="leg-market">Market</label><select id="leg-market">${(MARKETS[draft.league||state.league]||MARKETS.nba).map(m=>`<option ${m===(draft.market||'Moneyline')?'selected':''}>${m}</option>`).join('')}</select></div>${propFields(draft.league||state.league,draft.market||'Moneyline')}<div class="form-item wide"><label for="leg-selection">Team or player · selection</label><input type="text" id="leg-selection" required maxlength="95" placeholder="e.g. New York Knicks to win" value="${esc(draft.selection||'')}"></div><div class="form-item"><label for="leg-odds">American odds</label><input type="text" id="leg-odds" required placeholder="e.g. -110 or +135" pattern="[+-]?[0-9]+" /></div><div class="form-item"><label for="leg-notes">Line / notes</label><input type="text" id="leg-notes" maxlength="85" placeholder="e.g. Over 25.5 points" /></div></div><div class="form-actions"><button type="submit" class="btn">+ Add leg</button></div><div id="form-error" class="notice" role="alert"></div></form></div><div class="form-card"><h3>My ticket <span class="muted">(${state.ticket.length})</span></h3><p>Saved on this device. No bets placed.</p>${state.ticket.length?`<div class="ticket-items">${state.ticket.map((t,i)=>`<div class="ticket-item"><div class="ticket-head"><strong>${esc(t.selection)}</strong><button data-action="remove-leg" data-index="${i}" title="Remove leg" aria-label="Remove ${esc(t.selection)}">×</button></div><small>${esc(t.league.toUpperCase())} / ${esc(t.market)} ${t.notes?'· '+esc(t.notes):''}</small><small>Entered odds: ${Number(t.odds)>0?'+':''}${esc(t.odds)}</small></div>`).join('')}</div>${ticketWarnings().length?`<div class="correlation-warning" role="status"><strong>⚠ Review this combination</strong><ul>${ticketWarnings().map(w=>`<li>${esc(w.message)}</li>`).join('')}</ul><small>Advisory only; no correlation-adjusted confidence is calculated.</small></div>`:''}<div class="ticket-totals"><div class="result-row"><span class="muted">Stake</span><input type="number" id="stake" min="0.01" max="1000000" step="0.01" value="${esc(state.stake)}" style="width:100px;text-align:right"></div><div class="result-row"><span class="muted">Decimal multiplier</span><strong>${estimate?estimate.multiplier.toFixed(2)+'×':'—'}</strong></div><div class="result-row"><span class="muted">Potential return</span><strong class="accent">${estimate?money(estimate.return):'—'}</strong></div><div class="result-row"><span class="muted">Potential profit</span><strong>${estimate?money(estimate.profit):'—'}</strong></div></div><div class="footlinks"><button class="btn small-btn" data-action="archive-ticket">Save snapshot</button>${state.cloud.configured&&state.cloud.token?`<button data-action="cloud-save">Save to cloud</button>`:``}<button data-action="export-ticket">Export JSON</button><button data-action="clear-ticket">Clear ticket</button></div>`:`<div class="empty" style="padding:24px"><h3>Nothing added yet</h3><p>Add a leg to get started.</p></div>`}<p class="notice">Illustrative payout; your sportsbook may restrict combinations or change prices.</p></div></div>`;}
+function ticketView(){const estimate=calcTicket();const draft=state.draft||{};return `<div class="section-top section-header"><div><h2>Ticket builder</h2><p>Your selections. Your sportsbook prices.</p></div></div>${ticketTicker(estimate)}<div class="ticket-layout"><div class="form-card"><h3>Add selection</h3><p>Enter odds from your sportsbook.</p><form id="leg-form"><div class="form-grid"><div class="form-item"><label for="leg-league">Sport</label><select id="leg-league">${Object.entries(SPORTS).map(([id,s])=>`<option value="${id}" ${id===(draft.league||state.league)?'selected':''}>${s.label}</option>`).join('')}</select></div><div class="form-item"><label for="leg-market">Market</label><select id="leg-market">${(MARKETS[draft.league||state.league]||MARKETS.nba).map(m=>`<option ${m===(draft.market||'Moneyline')?'selected':''}>${m}</option>`).join('')}</select></div>${propFields(draft.league||state.league,draft.market||'Moneyline')}<div class="form-item wide"><label for="leg-selection">Team or player · selection</label><input type="text" id="leg-selection" required maxlength="95" autocomplete="off" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="selection-suggestions" placeholder="Type 3+ letters for teams or players" value="${esc(draft.selection||'')}"><div id="selection-suggestions" role="listbox" aria-label="Matching teams and players" class="suggest-menu" hidden></div><p id="suggestion-hint" class="muted-sm">Type 3 letters to find a team. Select a team to search its roster.</p></div><div class="form-item"><label for="leg-odds">American odds</label><input type="text" id="leg-odds" required placeholder="e.g. -110 or +135" pattern="[+-]?[0-9]+" /></div><div class="form-item"><label for="leg-notes">Line / notes</label><input type="text" id="leg-notes" maxlength="85" placeholder="e.g. Over 25.5 points" /></div></div><div class="form-actions"><button type="submit" class="btn">+ Add leg</button></div><div id="form-error" class="notice" role="alert"></div></form></div><div class="form-card"><h3>My ticket <span class="muted">(${state.ticket.length})</span></h3><p>Saved on this device. No bets placed.</p>${state.ticket.length?`<div class="ticket-items">${state.ticket.map((t,i)=>`<div class="ticket-item"><div class="ticket-head"><strong>${esc(t.selection)}</strong><button data-action="remove-leg" data-index="${i}" title="Remove leg" aria-label="Remove ${esc(t.selection)}">×</button></div><small>${esc(t.league.toUpperCase())} / ${esc(t.market)} ${t.notes?'· '+esc(t.notes):''}</small><small>Entered odds: ${Number(t.odds)>0?'+':''}${esc(t.odds)}</small></div>`).join('')}</div>${ticketWarnings().length?`<div class="correlation-warning" role="status"><strong>⚠ Review this combination</strong><ul>${ticketWarnings().map(w=>`<li>${esc(w.message)}</li>`).join('')}</ul><small>Advisory only; no correlation-adjusted confidence is calculated.</small></div>`:''}<div class="ticket-totals"><div class="result-row"><span class="muted">Stake</span><input type="number" id="stake" min="0.01" max="1000000" step="0.01" value="${esc(state.stake)}" style="width:100px;text-align:right"></div><div class="result-row"><span class="muted">Decimal multiplier</span><strong>${estimate?estimate.multiplier.toFixed(2)+'×':'—'}</strong></div><div class="result-row"><span class="muted">Potential return</span><strong class="accent">${estimate?money(estimate.return):'—'}</strong></div><div class="result-row"><span class="muted">Potential profit</span><strong>${estimate?money(estimate.profit):'—'}</strong></div></div><div class="footlinks"><button class="btn small-btn" data-action="archive-ticket">Save snapshot</button>${state.cloud.configured&&state.cloud.token?`<button data-action="cloud-save">Save to cloud</button>`:``}<button data-action="export-ticket">Export JSON</button><button data-action="clear-ticket">Clear ticket</button></div>`:`<div class="empty" style="padding:24px"><h3>Nothing added yet</h3><p>Add a leg to get started.</p></div>`}<p class="notice">Illustrative payout; your sportsbook may restrict combinations or change prices.</p></div></div>`;}
 function historyView(){return `<section class="section-top"><div class="section-header"><div><h2>Saved tickets</h2><p>Local snapshots, not placed bets or verified model forecasts.</p></div></div>${state.history.length?`<div class="archive-list">${state.history.map((t,i)=>`<article class="form-card archive-card"><div><div class="eyebrow">${esc(new Date(t.savedAt).toLocaleString())} · ${esc(t.source||'manual odds')}</div><h3>${esc(t.label||`Ticket ${state.history.length-i}`)}</h3><p>${t.legs.length} ${t.legs.length===1?'leg':'legs'} · Stake ${esc(money(t.stake))} · ${esc(t.americanOdds||'—')} combined · Return ${esc(t.potentialReturn===null?'Uncomputed':money(t.potentialReturn))}</p><small class="muted">Not graded · Confidence unavailable · Snapshot cannot be edited</small></div><button class="neutral-button small-btn" data-action="restore-archive" data-index="${i}">Copy to builder</button></article>`).join('')}</div>`:`<div class="empty"><h3>No saved tickets yet</h3><p>Save a ticket snapshot to keep a record of the odds and selections you entered.</p><button class="btn" data-action="nav" data-section="tickets">Build a ticket</button></div>`}<details class="panel data-panel section-top"><summary>Cloud sync · optional</summary>${state.cloud.configured?`${state.cloud.token?`<p>Signed in for this browser session. Snapshots can be synchronized to your account.</p><div class="footlinks"><button data-action="cloud-fetch">Refresh cloud history</button><button data-action="cloud-signout">Sign out</button></div>${state.cloud.tickets.length?`<div class="archive-list">${state.cloud.tickets.map(t=>`<div class="archive-card"><strong>${esc(t.label)}</strong><div class="muted-sm">${esc(new Date(t.created_at).toLocaleString())} · ${t.legs.length} legs · ${esc(t.combined_american_odds)} · Not graded</div></div>`).join('')}</div>`:''}`:`<p>Sign in by email to keep saved tickets across devices. Configure your site URL as an allowed Auth redirect in Supabase.</p><form id="cloud-login"><label for="cloud-email">Email</label><input type="email" id="cloud-email" autocomplete="email" required placeholder="you@example.com"/><button class="btn small-btn" type="submit">Email sign-in link</button></form>`}`:'<p>Cloud storage is not configured yet. Local ticket snapshots work without an account.</p>'}<p class="notice" role="status">${esc(state.cloud.status)}</p></details><details class="panel data-panel section-top"><summary>Prediction accountability (next integration)</summary><p>The original model is not connected yet. Accurate ROI, calibration and Brier-score tracking require immutable, timestamped model forecasts and confirmed game results. These manual tickets are not evidence of model performance.</p></details></section>`;}
 function archiveTicket(){const result=calcTicket();if(!result||state.ticket.length===0){notify('Enter valid odds and a positive stake before saving.');return;}
  const stamp=new Date().toISOString();const snapshot={id:`snapshot-${Date.now()}`,savedAt:stamp,source:'manually entered / unverified',label:`Ticket · ${new Date().toLocaleDateString()}`,stake:Number(state.stake),legs:JSON.parse(JSON.stringify(state.ticket)),americanOdds:americanCombined(result.multiplier),potentialReturn:Math.round(result.return*100)/100,modelProbability:null,result:'ungraded'};
@@ -662,17 +793,20 @@ async function loadGameWeather(g,force=false){
  if(state.drawer?.type==='game'&&state.drawer.game.id===g.id)render();
 }
 function matchupFactorsPanel(g){
- const m=globalThis.SportsMatchups?.evaluate?.(g,{},state.weather[globalThis.SportsWeather?.key?.(g)]);
- if(!m)return '';
- const rows=m.factors.map(f=>`<div class="result-row" style="justify-content:space-between;gap:12px;margin-bottom:10px"><span>${esc(f.label)}</span><small class="muted">${f.available?'Sourced context':'Awaiting verified data'}</small></div>`).join('');
- return `<details class="panel data-panel"><summary>Matchup intelligence · ${m.availableCount}/${m.totalCount} advanced factors sourced</summary>
-   <p class="muted-sm" style="margin:10px 0 14px">Blitz, coverage, coaching, lineups and other league-specific factors are part of the model data contract. Missing data is never assigned a fake grade.</p>${rows}
-   <p class="muted-sm">The current estimate uses season form and home advantage; weather affects uncertainty only. Advanced factors will affect probability after verified feeds, historical training and holdout calibration.</p></details>`;
+ const advanced=globalThis.SportsMultifactor?.evaluate?.(g,{})||[];
+ if(!advanced.length)return '';
+ const count=advanced.filter(f=>f.ok).length;
+ const rows=advanced.map(f=>`<div class="result-row factor-row"><span>${esc(f.label)}</span><small class="muted">${f.ok?'Sourced · '+esc(f.sampleSize)+' observations':'Awaiting verified data'}</small></div>`).join('');
+ return `<details class="panel data-panel"><summary>Matchup factors · ${count}/${advanced.length} sourced</summary>
+   <p class="muted-sm factor-intro">${esc(g.league.toUpperCase())} scheme, personnel and coaching factors are tracked individually. Sources and point-in-time samples are required before anything changes a prediction.</p>${rows}
+   <p class="muted-sm">The current on-screen estimate uses season records only. No unsourced blitz, coaching, pitcher-hitter or lineup rating is substituted. Advanced coefficients require a passing historical holdout test.</p></details>`;
 }
 function gameDrawer(){const d=state.drawer,g=d.game;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[g.league].emoji)}</span><div><div class="eyebrow">${esc(g.league.toUpperCase())} / MATCHUP</div><h2>${esc(g.away.abbr||g.away.name)} @ ${esc(g.home.abbr||g.home.name)}</h2><small>${g.demo?'Example matchup':`${formatDay(g.start)} · ${formatTime(g.start)}`}</small></div></div><button class="drawer-close" data-action="close" aria-label="Close panel">×</button></div>${g.demo?`<div class="error-note">UI example only. Do not treat this as a scheduled game.</div>`:''}${modelPanel(g)}<div class="panel"><span class="block-label">MATCHUP</span><div class="details-grid"><div>${logo(g.away,g.league)}<div style="margin-top:8px"><strong>${esc(g.away.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="away" style="margin-top:6px">Injuries · Roster · News ↗</button></div><div>${logo(g.home,g.league)}<div style="margin-top:8px"><strong>${esc(g.home.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="home" style="margin-top:6px">Injuries · Roster · News ↗</button></div></div></div><div class="panel"><span class="block-label">GAME DETAILS</span><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Game status</span><strong>${esc(g.demo?'Example only':g.statusText)}</strong></div><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Scheduled</span><strong>${esc(g.demo?'Not verified':formatTime(g.start))}</strong></div><div class="result-row" style="justify-content:space-between"><span class="muted">Sportsbook odds</span><strong>Not verified</strong></div></div>${weatherPanel(g)}${matchupFactorsPanel(g)}<div class="panel"><h3>Build a ticket</h3><p>Choose a selection and enter its sportsbook price.</p><button class="btn" data-action="quickpick" data-game="${esc(g.id)}" style="margin-top:13px">Add to ticket ↗</button></div><details class="panel data-panel"><summary>Model roadmap & limits</summary><p>This first transparent baseline uses season W-L form and assumed home advantage. Weather increases the displayed uncertainty range for outdoor games when a forecast is available. A trained Elo model, injury impact, sport-specific player projections, calibrated confidence, independent historical backtests and verified sportsbook prices still require a production data pipeline. A projected winner does not imply a profitable bet.</p></details>`;}
 function playerDrawer(){const {player,league,team}=state.drawer;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[league].emoji)}</span><div><div class="eyebrow">${esc(league.toUpperCase())} / PLAYER</div><h2>${esc(player.name)}</h2><small>${esc(team.name)} · ${esc(player.position||'Player')}${player.jersey?' · #'+esc(player.jersey):''}</small></div></div><button class="drawer-close" data-action="back-team" aria-label="Back to team">←</button></div><div class="panel"><h3>Player profile</h3><p>Full game logs and player prop projections will appear here after the production statistics adapter and prediction engine are connected.</p>${safeUrl(player.profileUrl)?`<p style="margin-top:14px"><a class="inline-link" href="${esc(safeUrl(player.profileUrl))}" target="_blank" rel="noopener noreferrer">View player source ↗</a></p>`:''}</div><div class="form-actions"><button class="btn" data-action="player-prop">+ Build player prop</button></div><button class="neutral-button" data-action="back-team">← Back to ${esc(team.name)}</button>`;}
 function feedbackDrawer(){return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">✦</span><div><div class="eyebrow">BETA FEEDBACK</div><h2>Make it better</h2><small>Short feedback, no sign-in.</small></div></div><button class="drawer-close" data-action="close" aria-label="Close">×</button></div><div class="panel"><label class="feedback-label" for="feedback-kind">What's on your mind?</label><select id="feedback-kind"><option>Something works well</option><option>Something feels confusing</option><option>Bug or broken feature</option><option>Feature suggestion</option></select><label class="feedback-label" for="feedback-note">Your feedback</label><textarea id="feedback-note" rows="5" maxlength="1200" placeholder="What should we improve?"></textarea><div class="form-actions"><button class="btn" data-action="copy-feedback">Copy feedback for Discord</button></div><p class="weather-note">Paste your feedback into the Sports Spreads discussion in Discord. No account details are collected here.</p></div>`;}
 function publicShareUrl(){const origin=globalThis.location?.origin;return /^https:\/\/[-a-z0-9.]+\.onrender\.com$/i.test(origin||'')?origin+'/':'https://sports-spreads.onrender.com/';}
+
+
 async function copyText(value){try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(value);return true;}}catch{}try{const field=document.createElement('textarea');field.value=value;field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();const worked=document.execCommand('copy');field.remove();return worked;}catch{return false;}}
 function overlay(){if(!state.drawer)return'';return `<div class="shade" data-action="close" aria-hidden="true"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Details panel">${state.drawer.type==='team'?teamDrawer():state.drawer.type==='player'?playerDrawer():state.drawer.type==='feedback'?feedbackDrawer():gameDrawer()}</aside>`;}
 function ticketDock(){
@@ -731,11 +865,88 @@ async function saveCloudTicket(){
  catch(e){c.status=e.message||'Cloud save failed.';render();}
 }
 function exportTicket(){const payload={format:'sports-spreads-v2-ticket',exportedAt:new Date().toISOString(),source:'user-entered',disclaimer:'No bet was placed; odds are not verified; model probabilities are not calculated.',legs:state.ticket,stake:state.stake};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='sports-spreads-ticket.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='copy-feedback'){const type=document.getElementById('feedback-kind')?.value||'Feedback';const note=(document.getElementById('feedback-note')?.value||'').trim();if(!note){notify('Enter your feedback first.');return;}const report=`Sports Spreads beta feedback\n${type}\n${note}`;const ok=await copyText(report);notify(ok?'Feedback copied — paste it in Discord.':'Copy the feedback text into Discord.');if(ok){state.drawer=null;render();}return;}else if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);}}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){await SportsCloud.signOut();state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
-document.addEventListener('change',e=>{if(e.target.id==='date'){state.date=e.target.value||getTodayET();state.search='';loadBoard();}else if(e.target.id==='stake'){state.stake=e.target.value;render();}else if(e.target.id==='leg-market'||e.target.id==='leg-league'){const league=document.getElementById('leg-league').value;const marketSelect=document.getElementById('leg-market');if(e.target.id==='leg-league'){marketSelect.innerHTML=(MARKETS[league]||[]).map(m=>`<option>${esc(m)}</option>`).join('');}const market=marketSelect.value;document.getElementById('prop-controls')?.remove();const box=document.createElement('div');box.innerHTML=propFields(league,market);document.getElementById('leg-market').closest('.form-item').insertAdjacentElement('afterend',box.firstElementChild);const form=document.getElementById('leg-form');const control=document.getElementById('prop-line');if(control){const text=propNote(market,Number(control.value));document.getElementById('leg-notes').value=text;}}});
-document.addEventListener('input',e=>{if(e.target.id==='prop-line'){const market=e.target.dataset.market;const text=propNote(market,Number(e.target.value));document.getElementById('prop-line-value').textContent=text;document.getElementById('leg-notes').value=text;}else if(e.target.id==='search'||e.target.id==='team-search'){const inputId=e.target.id;const caret=e.target.selectionStart;state.search=e.target.value;render();const replacement=document.getElementById(inputId);if(replacement){replacement.focus();replacement.setSelectionRange(caret,caret);}}});
-document.addEventListener('submit',e=>{if(e.target.id==='cloud-login'){e.preventDefault();sendLogin(document.getElementById('cloud-email').value.trim());return;}if(e.target.id!=='leg-form')return;e.preventDefault();const selection=document.getElementById('leg-selection').value.trim();const odds=document.getElementById('leg-odds').value.trim();const number=parseAmerican(odds);const err=document.getElementById('form-error');if(!selection||number===null){err.textContent='Enter a selection and valid American odds (at least +100 or -100).';return;}if(state.ticket.length>=20){err.textContent='Prototype limit: 20 legs per ticket.';return;}state.ticket.push({id:`leg-${Date.now()}-${state.ticket.length}`,league:document.getElementById('leg-league').value,market:document.getElementById('leg-market').value,selection,odds:number,notes:document.getElementById('leg-notes').value.trim()||(document.getElementById('prop-line')?propNote(document.getElementById('leg-market').value,Number(document.getElementById('prop-line').value)):'') ,gameId:state.draft?.gameId||null,playerId:state.draft?.playerId||null,teamId:state.draft?.teamId||null,enteredAt:new Date().toISOString()});saveTicket();state.draft=null;render();notify('Added selection to your local ticket.');});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.drawer){state.drawer=null;render();}});
+// Progressive autocomplete: one bounded directory fetch per league, optional
+// roster fetch only after selecting a team, no API request per typed letter.
+let suggestionTimer=null;
+function lookupLeague(){return document.getElementById('leg-league')?.value||state.league;}
+function lookupIsProp(){const league=lookupLeague(),market=document.getElementById('leg-market')?.value||'';return Boolean(propInfo(league,market));}
+function lookupOptions(){
+ const league=lookupLeague();
+ const teams=state.directory[league]?.teams||[];
+ const players=state.lookup.selectedTeam&&state.lookup.league===league?state.lookup.roster:[];
+ return SportsAutocomplete.match(state.lookup.query,teams,players,7);
+}
+function drawLookup(){
+ const box=document.getElementById('selection-suggestions'),input=document.getElementById('leg-selection'),hint=document.getElementById('suggestion-hint');
+ if(!box||!input)return;
+ const query=SportsAutocomplete.normalize(state.lookup.query);
+ const matches=query.length>=3?lookupOptions():[];
+ state.lookup.rows=matches;
+ box.hidden=!matches.length;
+ input.setAttribute('aria-expanded',String(matches.length>0));
+ if(hint)hint.textContent=state.lookup.loading?'Checking team roster…':state.lookup.status||(query.length<3?'Start typing 3 letters to see matching teams and players.':state.lookup.selectedTeam?'Search your chosen team’s players or select a different team.':'Choose a team; then player suggestions are available for that roster.');
+ box.innerHTML=matches.map((x,i)=>`<button type="button" class="suggest-option ${i===state.lookup.active?'active':''}" role="option" aria-selected="${i===state.lookup.active}" id="suggestion-${i}" data-action="autocomplete-select" data-index="${i}"><span class="suggest-name">${esc(x.name)}</span><span class="suggest-meta">${x.type==='team'?'Team':esc(x.teamName||'Player')} ${esc(x.abbr)}</span></button>`).join('');
+ input.setAttribute('aria-activedescendant',matches.length&&state.lookup.active>=0?`suggestion-${state.lookup.active}`:'');
+}
+async function ensureLookupTeams(league){
+ if(state.directory[league]?.teams?.length){drawLookup();return;}
+ const request=++state.lookup.request;
+ state.lookup.loading=true;state.lookup.status='';drawLookup();
+ try{const response=await readSportsData(`/api/teams?league=${league}`);
+  if(response.teams?.length)state.directory[league]={...response,demo:false};
+  else state.lookup.status='Team list is temporarily unavailable; manual entries still work.';
+ }catch{state.lookup.status='Team suggestions unavailable; manual entries still work.';}
+ finally{if(state.lookup.request===request&&lookupLeague()===league){state.lookup.loading=false;drawLookup();}}
+}
+async function ensureLookupRoster(team,league){
+ const request=++state.lookup.request,key=`${league}-${team.id}-roster`;
+ state.lookup.loading=true;state.lookup.status='';drawLookup();
+ try{let json=state.teamCache[key];
+  if(!json){json=await readSportsData(`/api/team/${league}/${encodeURIComponent(team.id)}?view=roster`);state.teamCache[key]=json;}
+  if(state.lookup.request!==request||state.lookup.selectedTeam?.id!==team.id)return;
+  state.lookup.roster=(json.roster||[]).map(p=>({...p,teamId:team.id,teamName:team.name}));
+  if(!state.lookup.roster.length)state.lookup.status='Roster unavailable; player name can still be entered manually.';
+ }catch{state.lookup.status='Roster temporarily unavailable; enter a player manually.';}
+ finally{if(state.lookup.request===request){state.lookup.loading=false;drawLookup();}}
+}
+async function acceptLookup(index){
+ const item=state.lookup.rows[index],input=document.getElementById('leg-selection');if(!item||!input)return;
+ const league=lookupLeague();state.lookup.rows=[];state.lookup.active=-1;state.lookup.league=league;
+ if(item.type==='team'){
+  const team=state.directory[league]?.teams?.find(t=>String(t.id)===item.id);
+  if(!team)return;
+  state.lookup.selectedTeam=team;state.lookup.roster=[];
+  const isProp=lookupIsProp();
+  input.value=isProp?'':`${team.name}${document.getElementById('leg-market')?.value==='Moneyline'?' to win':''}`;
+  state.lookup.chosen={type:'team',id:team.id,teamId:team.id,selection:input.value};
+  state.lookup.query='';drawLookup();
+  if(isProp){input.focus();void ensureLookupRoster(team,league);}else state.lookup.status='Team selected. Choose a player prop market to search this roster.';
+ }else{
+  input.value=item.name;state.lookup.chosen={type:'player',id:item.id,teamId:item.teamId,selection:item.name};
+  state.lookup.query='';state.lookup.status=`${item.teamName} player selected.`;drawLookup();input.focus();
+ }
+}
+function lookupTyping(value){
+ state.lookup.query=value;state.lookup.chosen=null;state.lookup.active=-1;state.lookup.league=lookupLeague();
+ clearTimeout(suggestionTimer);drawLookup();
+ if(SportsAutocomplete.normalize(value).length<3)return;
+ suggestionTimer=setTimeout(()=>void ensureLookupTeams(lookupLeague()),160);
+}
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='autocomplete-select'){await acceptLookup(Number(el.dataset.index));return;}if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='copy-feedback'){const type=document.getElementById('feedback-kind')?.value||'Feedback';const note=(document.getElementById('feedback-note')?.value||'').trim();if(!note){notify('Enter your feedback first.');return;}const report=`Sports Spreads beta feedback\n${type}\n${note}`;const ok=await copyText(report);notify(ok?'Feedback copied — paste it in Discord.':'Copy the feedback text into Discord.');if(ok){state.drawer=null;render();}return;}else if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);}}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){await SportsCloud.signOut();state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
+document.addEventListener('change',e=>{if(e.target.id==='date'){state.date=e.target.value||getTodayET();state.search='';loadBoard();}else if(e.target.id==='stake'){state.stake=e.target.value;render();}else if(e.target.id==='leg-market'||e.target.id==='leg-league'){const league=document.getElementById('leg-league').value;const marketSelect=document.getElementById('leg-market');if(e.target.id==='leg-league'){marketSelect.innerHTML=(MARKETS[league]||[]).map(m=>`<option>${esc(m)}</option>`).join('');}const market=marketSelect.value;state.lookup.chosen=null;if(e.target.id==='leg-league'){state.lookup.selectedTeam=null;state.lookup.roster=[];state.lookup.request++;state.lookup.league=league;state.lookup.query='';}drawLookup();document.getElementById('prop-controls')?.remove();const box=document.createElement('div');box.innerHTML=propFields(league,market);document.getElementById('leg-market').closest('.form-item').insertAdjacentElement('afterend',box.firstElementChild);const form=document.getElementById('leg-form');const control=document.getElementById('prop-line');if(control){const text=propNote(market,Number(control.value));document.getElementById('leg-notes').value=text;}}});
+document.addEventListener('input',e=>{if(e.target.id==='leg-selection'){lookupTyping(e.target.value);return;}if(e.target.id==='prop-line'){const market=e.target.dataset.market;const text=propNote(market,Number(e.target.value));document.getElementById('prop-line-value').textContent=text;document.getElementById('leg-notes').value=text;}else if(e.target.id==='search'||e.target.id==='team-search'){const inputId=e.target.id;const caret=e.target.selectionStart;state.search=e.target.value;render();const replacement=document.getElementById(inputId);if(replacement){replacement.focus();replacement.setSelectionRange(caret,caret);}}});
+document.addEventListener('submit',e=>{if(e.target.id==='cloud-login'){e.preventDefault();sendLogin(document.getElementById('cloud-email').value.trim());return;}if(e.target.id!=='leg-form')return;e.preventDefault();const selection=document.getElementById('leg-selection').value.trim();const odds=document.getElementById('leg-odds').value.trim();const number=parseAmerican(odds);const err=document.getElementById('form-error');if(!selection||number===null){err.textContent='Enter a selection and valid American odds (at least +100 or -100).';return;}if(state.ticket.length>=20){err.textContent='Prototype limit: 20 legs per ticket.';return;}state.ticket.push({id:`leg-${Date.now()}-${state.ticket.length}`,league:document.getElementById('leg-league').value,market:document.getElementById('leg-market').value,selection,odds:number,notes:document.getElementById('leg-notes').value.trim()||(document.getElementById('prop-line')?propNote(document.getElementById('leg-market').value,Number(document.getElementById('prop-line').value)):'') ,gameId:state.draft?.gameId||null,playerId:(state.lookup.chosen?.type==='player'&&state.lookup.chosen.selection===selection?state.lookup.chosen.id:null)||state.draft?.playerId||null,teamId:(state.lookup.chosen?.selection===selection?state.lookup.chosen.teamId:null)||state.draft?.teamId||null,enteredAt:new Date().toISOString()});saveTicket();state.draft=null;state.lookup.chosen=null;state.lookup.query='';render();notify('Added selection to your local ticket.');});
+document.addEventListener('keydown',e=>{
+ if(e.target?.id==='leg-selection'){
+  if(e.key==='Escape'){state.lookup.query='';state.lookup.rows=[];drawLookup();return;}
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+   if(!state.lookup.rows.length)return;e.preventDefault();
+   state.lookup.active=(state.lookup.active+(e.key==='ArrowDown'?1:-1)+state.lookup.rows.length)%state.lookup.rows.length;drawLookup();return;
+  }
+  if(e.key==='Enter'&&state.lookup.rows.length&&state.lookup.active>=0){e.preventDefault();void acceptLookup(state.lookup.active);return;}
+ }
+ if(e.key==='Escape'&&state.drawer){state.drawer=null;render();}
+});
 function bootSportsSpreads(){
  app=document.getElementById('app');
  if(!app){console.error('Sports Spreads startup failed: #app is missing.');return;}

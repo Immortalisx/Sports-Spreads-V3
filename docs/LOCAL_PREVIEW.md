@@ -1,0 +1,1 @@
+The standalone HTML preview is supplied beside the ZIP as Sports_Spreads_V2_Preview.html. Open it in a local browser. Since it has no backend, the board will fall back to clearly labeled demonstration matchups and live team details will not load. To connect the best-effort sports feed, run `npm start` from the extracted project instead.
