@@ -706,11 +706,13 @@ function matchGame(game,events){
  const candidates=events.filter(e=>e&&canonical(e.home_team)===home&&canonical(e.away_team)===away&&Math.abs(Date.parse(e.commence_time)-start)<=MATCH_MAX_MS);
  return candidates.length===1?candidates[0]:null; // never map an ambiguous event
 }
+const SUPPORTED_BOOKS=new Set(['draftkings','fanduel','betmgm','betrivers','williamhill_us','fanatics','betparx','ballybet','espnbet']);
 function booksForGame(game,response){
  const event=matchGame(game,response?.events);
  if(!event)return {matched:false,books:[],reason:'No exact, time-compatible sportsbook matchup found. Prices were not guessed.'};
  const results=[];
  for(const book of (event.bookmakers||[])){
+  if(!SUPPORTED_BOOKS.has(String(book.key||'').toLowerCase()))continue;
   const h2h=(book.markets||[]).find(x=>x.key==='h2h');if(!h2h)continue;
   const home=h2h.outcomes?.find(x=>canonical(x.name)===canonical(event.home_team));
   const away=h2h.outcomes?.find(x=>canonical(x.name)===canonical(event.away_team));
