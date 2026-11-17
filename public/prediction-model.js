@@ -33,6 +33,34 @@
  function logistic(x){return 1/(1+Math.exp(-Math.max(-20,Math.min(20,x))));}
  function logit(p){return Math.log(p/(1-p));}
  function clamp(n,a,b){return Math.min(b,Math.max(a,n));}
+ // PROVISIONAL RECENCY: this is NOT a holdout-approved model coefficient.
+ // The 2025 untouched holdout showed improvement for NFL, but its paired
+ // bootstrap interval included zero. NHL rolling form did not beat record-only.
+ // Caps are deliberately small, and asterisk/notes must always be displayed.
+ function provisionalRecency(snapshot,league){
+  if(!['nfl','nhl'].includes(league)||!snapshot||
+   snapshot.league!==league||snapshot.calibrated!==false||
+   snapshot.appliedToForecast!==false||
+   snapshot.evidence?.sourceStatus!=='adequate_research_samples'||
+   !Number.isInteger(snapshot.home?.played)||!Number.isInteger(snapshot.away?.played)||
+   snapshot.home.played<3||snapshot.away.played<3)return null;
+  const m=snapshot.matchup||{},bounded=(x,scale,max)=>{
+   if(typeof x!=='number'||!Number.isFinite(x))return 0;
+   return clamp(x/scale,-max,max);
+  };
+  // More recent 5-game form is weighted more heavily than broader
+  // differences, but NONE of these coefficients have passed a paired CI test.
+  const form=bounded(m.opponentAdjustedFormDelta,1,2);
+  const elo=bounded(m.eloDifference,200,2);
+  const momentum=bounded(m.rollingMomentumDelta,1,1);
+  const rest=bounded(m.restDaysDifference,7,1);
+  const raw=league==='nfl'
+   ? .029*form+.016*elo+.008*momentum+.005*rest
+   : .010*form+.005*elo+.004*momentum+.003*rest;
+  return {delta:clamp(raw,league==='nfl'?-.05:-.02,league==='nfl'?.05:.02),
+   source:'Last-5 opponent-adjusted form, team Elo, momentum and rest',
+   date:snapshot.evidence?.latestCompletedGame||null,formSamples:Math.min(snapshot.home.last5?.games||0,snapshot.away.last5?.games||0)};
+ }
  function project(game,options={}){
   if(!game||game.demo||game.status!=='scheduled')return {available:false,reason:'Predictions are only shown for scheduled, verified games.'};
   const c=CONFIG[game.league];if(!c)return {available:false,reason:'Unsupported league'};
@@ -45,8 +73,10 @@
   const learned=tuned?logistic(tuned.calIntercept+tuned.calSlope*(
     tuned.intercept+tuned.slope*(logit((home.effectiveWins+tuned.prior/2)/(home.total+tuned.prior))-
      logit((away.effectiveWins+tuned.prior/2)/(away.total+tuned.prior))))):null;
-  const homeBase=tuned?clamp(learned,.02,.98):
+  const recordOnly=tuned?clamp(learned,.02,.98):
     clamp(logistic(c.weight*(logit(h)-logit(a))+c.home),0.12,0.88);
+  const recent=provisionalRecency(options.currentForm,game.league);
+  const homeBase=recent?clamp(recordOnly+recent.delta,.12,.88):recordOnly;
   // Small samples -> broader interval; this is an indicative sensitivity range,
   // not a validated 95% credible interval.
   const sample=Math.min(home.total,away.total);
@@ -60,7 +90,8 @@
   // Weather has no directional impact unless such an effect is estimated and
   // independently backtested. It enlarges uncertainty for volatile matchups.
   const uncertaintyWithWeather=clamp(uncertainty+weatherExtra,0.07,0.29);
-  const model={available:true,version:tuned?'record-holdout-2025-v1':VERSION,source:'ESPN unofficial scoreboard · team records',
+  const model={available:true,version:tuned?'record-holdout-2025-v1':recent?'provisional-rolling-form-v1':VERSION,
+   source:recent?'ESPN team records + cached season-form ledger':'ESPN unofficial scoreboard · team records',
    homeProbability:homeBase,awayProbability:1-homeBase,homeRecord:home.raw,awayRecord:away.raw,
    homeName:game.home.name,awayName:game.away.name,
    low:clamp(homeBase-uncertaintyWithWeather,0.01,0.99),high:clamp(homeBase+uncertaintyWithWeather,0.01,0.99),
@@ -69,10 +100,15 @@
    sampleGames:sample,validated:!!tuned,validationScope:tuned?'historical team W-L record-only':'none',
    holdoutGames:tuned?.holdoutGames||0,holdoutBrier:tuned?.holdoutBrier||null,holdoutECE:tuned?.holdoutECE||null,
    marketChecked:false,injuriesIncluded:false,
+   recencyUsed:!!recent,recencyDeltaPp:recent?Math.round(recent.delta*1000)/10:0,
+   recencyDataThrough:recent?.date||null,recencySampleGames:recent?.formSamples||0,
+   preliminary:['nfl','nhl'].includes(game.league),
    note:tuned?
     'This record-only estimate was fitted on earlier seasons, calibrated on a separate season and passed an independent 2025 season holdout. It does not account for injuries, lineups, quarterback schemes, pitching matchups or the sportsbook market. Weather sensitivity is not a confidence interval. It is not a proven wagering edge.':
-    'Research-only estimate from season W-L records, shrinkage and an assumed home edge. Range is not a statistical confidence interval. No independent holdout calibration has passed.'};
+    recent?
+     'PRELIMINARY*: Season W-L estimate with a bounded recency overlay from completed earlier games. NFL rolling form improved Brier but did not pass the paired statistical gain gate; NHL did not outperform the record-only reference. The adjustment is not independently calibrated, not a wagering confidence grade, and never alters sportsbook prices.':
+     'PRELIMINARY*: Season W-L estimate only; current form has not been verified or is stale. No independent holdout calibration has passed.'};
   return model;
  }
- root.SportsPrediction=Object.freeze({VERSION,CALIBRATED_RECORDS,parseRecord,project});
+ root.SportsPrediction=Object.freeze({VERSION,CALIBRATED_RECORDS,parseRecord,provisionalRecency,project});
 })(globalThis);

@@ -99,11 +99,34 @@ function topbar(){
 }
 function leaguebar(){return `<div class="leaguebar" role="tablist" aria-label="League">${Object.entries(SPORTS).map(([id,s])=>`<button role="tab" aria-selected="${state.league===id}" class="league ${state.league===id?'active':''}" data-action="league" data-league="${id}"><span class="emoji">${s.emoji}</span> ${s.label}</button>`).join('')}</div>`;}
 function logo(team,league){const url=safeUrl(team.logo);return `<span class="team-logo" aria-hidden="true">${url?`<img alt="" src="${esc(url)}" loading="lazy" onerror="this.remove();this.parentElement.textContent='${esc(SPORTS[league]?.emoji||'●')}'">`:esc(SPORTS[league]?.emoji||'●')}</span>`;}
+function eligibleRecentSnapshot(g){
+ if(!g||!['nfl','nhl'].includes(g.league)||g.demo||g.status!=='scheduled')return null;
+ const source=state.forms?.[g.league];
+ if(source?.status!=='cached'||source?.league!==g.league||!Array.isArray(source.snapshots))return null;
+ const stamp=Date.parse(source.generatedAt||'');
+ if(!Number.isFinite(stamp)||stamp>Date.now()+5*60*1000||Date.now()-stamp>48*3600*1000)return null;
+ const gameAt=Date.parse(g.start||'');
+ if(!Number.isFinite(gameAt)||gameAt<=Date.now())return null;
+ const gameDate=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',
+  year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(gameAt));
+ const match=source.snapshots.find(x=>x?.gameId===g.id&&x.league===g.league&&
+  x.date===gameDate&&x.homeTeamId===String(g.home?.id)&&x.awayTeamId===String(g.away?.id));
+ if(!match||match.evidence?.sourceStatus!=='adequate_research_samples'||
+  match.evidence?.dateCutoff!=='strictly before game calendar date'||
+  !(match.evidence?.latestCompletedGame<gameDate)||
+  match.home?.played<3||match.away?.played<3)return null;
+ return match;
+}
 function previewModel(g){
- const baseline=globalThis.SportsPrediction?.project?.(g,{weather:state.weather[globalThis.SportsWeather?.key?.(g)]})||{available:false,reason:'The experimental model is unavailable.'};
+ const recent=eligibleRecentSnapshot(g);
+ const baseline=globalThis.SportsPrediction?.project?.(g,{
+  weather:state.weather[globalThis.SportsWeather?.key?.(g)],currentForm:recent
+ })||{available:false,reason:'Model estimate unavailable.'};
  if(!baseline.available)return baseline;
  const advanced=globalThis.SportsMultifactor?.estimate?.(g,baseline,globalThis.SS_ADVANCED_EVIDENCE?.[g.id]||{},globalThis.SS_VALIDATED_MODELS?.[g.league]||null);
- if(advanced?.adjusted)return {...baseline,homeProbability:advanced.probability,awayProbability:1-advanced.probability,advancedModel:advanced,version:advanced.modelVersion,validated:true};
+ if(advanced?.adjusted)return {...baseline,homeProbability:advanced.probability,
+  awayProbability:1-advanced.probability,advancedModel:advanced,
+  version:advanced.modelVersion,validated:!!advanced.validated};
  return {...baseline,advancedModel:advanced||null};
 }
 function modelLabel(g){
@@ -112,7 +135,7 @@ function modelLabel(g){
  if(!m.available)return 'Form estimate unavailable';
  const homeFav=m.homeProbability>=.5;
  const who=homeFav?g.home:g.away,prob=homeFav?m.homeProbability:m.awayProbability;
- return `${m.validated?'Holdout-tested form':'Uncalibrated form'} · ${esc(who.abbr||who.name)} ${Math.round(prob*100)}%`;
+ return `${m.validated?'Holdout-tested form':m.recencyUsed?'Recency estimate':'Record estimate'} · ${esc(who.abbr||who.name)} ${Math.round(prob*100)}%${m.preliminary?'*':''}`;
 }
 function currentSeasonPanel(g){
  if(!g||g.demo||g.status!=='scheduled')return '';
@@ -140,19 +163,30 @@ function currentSeasonPanel(g){
   '<p class="current-form-disclaimer">Calculated from the most recent completed regular-season games, including prior-opponent strength and scoring margins. Data through '+esc(r.evidence?.latestCompletedGame||'unknown')+
   '. Metrics are informational research signals; they are NOT yet calibrated win probabilities, model confidence or betting edges.</p></div>';
 }
+function recencyFootnote(m){
+ if(!m.preliminary)return '';
+ const description=m.recencyUsed?
+  'Includes verified current-season form through '+(m.recencyDataThrough||'unknown')+
+  ' ('+(m.recencyDeltaPp>=0?'+':'')+Number(m.recencyDeltaPp).toFixed(1)+
+  ' percentage-point provisional adjustment). Its improvement has NOT passed independent statistical validation.':
+  'No eligible recent-game snapshot; this is the record-only estimate.';
+ return '<p class="recency-asterisk" role="note"><strong>* Preliminary estimate, NOT validated betting confidence.</strong> '+
+  esc(description)+' No verified wagering edge or parlay success rate is claimed.</p>';
+}
 function modelPanel(g){
  const m=previewModel(g);
  if(!m.available)return `<div class="model-off"><h3>Model estimate unavailable</h3><p>${esc(m.reason||'Missing team performance data.')}</p></div>`;
- const pct=(x)=>Math.round(x*100)+'%';
+ const pct=(x)=>Math.round(x*100)+'%'+(m.preliminary?'*':'');
+ const rangePct=(x)=>Math.round(x*100)+'%';
  const weatherLine=m.weatherUncertaintyPp>0?`+${m.weatherUncertaintyPp} percentage points of weather uncertainty (${esc(m.weatherTier)})`:
    g.league==='nfl'||g.league==='mlb'?'No measured weather adjustment yet; forecast and roof status may be unavailable.':'Indoor game · no weather uncertainty adjustment';
- return `<div class="panel experimental-model"><div class="model-head"><span class="block-label">${m.validated?'TEAM-RECORD MODEL · 2025 HOLDOUT':'TEAM-RECORD MODEL · UNCALIBRATED'}</span><span class="model-flag">${m.validated?'Holdout calibrated · W–L only':'Not calibrated'}</span></div>
+ return `<div class="panel experimental-model"><div class="model-head"><span class="block-label">${m.validated?'TEAM-RECORD MODEL · 2025 HOLDOUT':m.recencyUsed?'CURRENT-SEASON RECENCY MODEL*':'RECORD-ONLY MODEL*'}</span><span class="model-flag">${m.validated?'Holdout calibrated · W–L only':'Not calibrated*'}</span></div>
    <div class="model-columns"><div><small>${esc(g.away.abbr||'AWAY')} win estimate</small><strong>${pct(m.awayProbability)}</strong></div><div><small>${esc(g.home.abbr||'HOME')} win estimate</small><strong>${pct(m.homeProbability)}</strong></div></div>
    <div class="model-meter" role="img" aria-label="${m.validated?'Holdout-tested record probability':'Uncalibrated record estimate'}: ${esc(g.away.name)} ${pct(m.awayProbability)}, ${esc(g.home.name)} ${pct(m.homeProbability)}"><span style="width:${pct(m.awayProbability)}"></span></div>
-   <p class="model-range">Home sensitivity range ${pct(m.low)}–${pct(m.high)} · Not a statistical confidence interval</p>
-   <p class="model-weather">${esc(weatherLine)}</p>
+   <p class="model-range">Home sensitivity range ${rangePct(m.low)}–${rangePct(m.high)} · Not a statistical confidence interval</p>
+   <p class="model-weather">${esc(weatherLine)}</p>${recencyFootnote(m)}
    <details class="model-method"><summary>How this estimate works</summary>
-   <p>Version ${esc(m.version)} · ${esc(m.source)} · W–L records ${esc(m.awayRecord)} vs ${esc(m.homeRecord)}. ${m.validated?'Uses league-specific parameters learned from earlier games and calibrated on a separate season.':'Uses record shrinkage and an assumed home advantage.'} ${esc(m.note)} Injuries, lineup changes, true Elo history, sportsbook prices and player prop forecasts are not included. Do not interpret this as a betting edge or validated confidence grade.</p></details></div>`;
+   <p>Version ${esc(m.version)} · ${esc(m.source)} · W–L records ${esc(m.awayRecord)} vs ${esc(m.homeRecord)}. ${m.validated?'Uses league-specific parameters learned from earlier games and calibrated on a separate season.':'Uses record shrinkage and an assumed home advantage.'} ${esc(m.note)} Injuries, lineup changes, verified quarterback/receiver matchups, sportsbook prices and player prop forecasts are not included. Do not interpret this as a betting edge or validated confidence grade.</p></details></div>`;
 }
 function marketCardLabel(game){
  const market=globalThis.SportsOdds?.marketConsensus?.(game,state.odds[game.league]);
@@ -160,7 +194,7 @@ function marketCardLabel(game){
  const homeFav=market.homeProbability>=market.awayProbability;
  const favorite=homeFav?game.home:game.away;
  const p=homeFav?market.homeProbability:market.awayProbability;
- return 'Market '+esc(favorite.abbr||favorite.shortName||favorite.name)+' '+Math.round(p*100)+'% · '+market.bookCount+' books';
+ return 'Bookmaker-implied '+esc(favorite.abbr||favorite.shortName||favorite.name)+' '+Math.round(p*100)+'% · '+market.bookCount+' books';
 }
 function gameCard(game){const teams=game.status==='final' || game.status==='live';const middle=teams&&game.away.score!==null&&game.home.score!==null?`<span class="score">${esc(game.away.score)}–${esc(game.home.score)}</span>`:`<span class="versus">VS</span><small>${game.demo?(game.start?formatTime(game.start):'Sample'):formatTime(game.start)}</small>`;return `<article class="game"><div class="game-top"><span class="game-date">${game.demo?'SAMPLE MATCHUP':esc(formatDay(game.start))} ${!game.demo?'· '+esc(formatTime(game.start)):''}</span><span class="tag ${game.demo?'demo':game.status==='live'?'live':game.status==='final'?'final':''}">${game.demo?'Demo':esc(game.status)}</span></div><div class="teams"><div class="team-col">${logo(game.away,game.league)}<button data-action="team" data-team="away" data-game="${esc(game.id)}" title="View ${esc(game.away.name)} team report">${esc(game.away.name)}</button><span class="record">${esc(game.away.record||game.away.abbr||'')}</span></div><div class="match-center">${middle}</div><div class="team-col">${logo(game.home,game.league)}<button data-action="team" data-team="home" data-game="${esc(game.id)}" title="View ${esc(game.home.name)} team report">${esc(game.home.name)}</button><span class="record">${esc(game.home.record||game.home.abbr||'')}</span></div></div><div class="game-foot"><span>${marketCardLabel(game)}</span><button class="drill" data-action="game" data-game="${esc(game.id)}">Game details ↗</button></div></article>`;}
 function filteredGames(){const games=state.feed?.games??[];const q=state.search.trim().toLowerCase();return q?games.filter(x=>(x.home.name+' '+x.away.name+' '+x.home.abbr+' '+x.away.abbr).toLowerCase().includes(q)):games;}
@@ -277,7 +311,7 @@ function dailySuggestionsPanel(){
   return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one':'')+'">'+
    '<div class="daily-card-title"><strong>'+esc(c.name)+'</strong><span>MARKET GRADE '+esc(c.marketGrade||'—')+'</span></div>'+
    '<div class="daily-card-sub">'+esc(c.bookmaker)+' · '+esc(c.legCount)+' different games</div>'+
-   '<div class="daily-card-metrics"><div><strong>'+Math.round(100*(c.marketProbabilityProduct||0))+'%</strong><small>Independence illustration</small></div>'+
+   '<div class="daily-card-metrics"><div><strong>'+Math.round(100*(c.marketProbabilityProduct||0))+'%*</strong><small>Independence illustration</small></div>'+
    '<div><strong>'+Number(c.payoutMultiplier||0).toFixed(2)+'×</strong><small>Potential multiplier</small></div></div>'+
    '<div class="daily-price">Per $10: possible return <strong>'+money(c.returnAt10)+'</strong></div>'+
    '<div class="daily-picks">'+(c.legs||[]).map(l=>'<span>'+esc(l.selection)+' <b>'+(Number(l.odds)>0?'+':'')+esc(l.odds)+'</b></span>').join('')+'</div>'+
@@ -285,7 +319,7 @@ function dailySuggestionsPanel(){
  }).join('')+'</div>';
  return '<section class="daily-suggestions" aria-label="Daily suggested automatic tickets">'+
  '<div class="daily-section-head"><div><div class="block-label">ONCE DAILY · SAME-BOOK PRICES</div><h3>Suggested tickets</h3></div><small>Updated '+esc(stamp)+'</small></div>'+contents+
- '<p class="daily-disclaimer">Grades reflect bookmaker-implied probability only. Combined chances assume independent games and have not been calibrated as parlays. No guaranteed profit. Confirm every quote before wagering.</p>'+
+ '<p class="daily-disclaimer">* Ticket percentage assumes independent games and is not validated wagering confidence. Grades reflect bookmaker-implied probability only. Combined chances assume independent games and have not been calibrated as parlays. No guaranteed profit. Confirm every quote before wagering.</p>'+
  '</section>';
 }
 function ticketView(){const estimate=calcTicket();const draft=state.draft||{};return `<div class="section-top section-header"><div><h2>Ticket builder</h2><p>Your selections. Your sportsbook prices.</p></div></div>${ticketTicker(estimate)}${ticketModeTabs()}${state.ticketMode==='automatic'?autoTicketPanel()+dailySuggestionsPanel():''}<div class="ticket-layout ${state.ticketMode==='automatic'?'auto-only':''}"><div class="form-card"><h3>Add selection</h3><p>Enter odds from your sportsbook.</p><form id="leg-form"><div class="form-grid"><div class="form-item"><label for="leg-league">Sport</label><select id="leg-league">${Object.entries(SPORTS).map(([id,s])=>`<option value="${id}" ${id===(draft.league||state.league)?'selected':''}>${s.label}</option>`).join('')}</select></div><div class="form-item"><label for="leg-market">Market</label><select id="leg-market">${(MARKETS[draft.league||state.league]||MARKETS.nba).map(m=>`<option ${m===(draft.market||'Moneyline')?'selected':''}>${m}</option>`).join('')}</select></div>${propFields(draft.league||state.league,draft.market||'Moneyline')}<div class="form-item wide"><label for="leg-selection">Team or player · selection</label><input type="text" id="leg-selection" required maxlength="95" autocomplete="off" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="selection-suggestions" placeholder="Type 3+ letters for teams or players" value="${esc(draft.selection||'')}"><div id="selection-suggestions" role="listbox" aria-label="Matching teams and players" class="suggest-menu" hidden></div><p id="suggestion-hint" class="muted-sm">Type 3 letters to find a team. Select a team to search its roster.</p></div><div class="form-item"><label for="leg-odds">American odds</label><input type="text" id="leg-odds" required placeholder="e.g. -110 or +135" pattern="[+-]?[0-9]+" value="${esc(draft.odds??'')}" /></div><div class="form-item"><label for="leg-notes">Line / notes</label><input type="text" id="leg-notes" maxlength="85" placeholder="e.g. Over 25.5 points" /></div></div><div class="form-actions"><button type="submit" class="btn">+ Add leg</button></div><div id="form-error" class="notice" role="alert"></div></form></div><div class="form-card"><h3>My ticket <span class="muted">(${state.ticket.length})</span></h3><p>Saved on this device. No bets placed.</p>${state.ticket.length?`<div class="ticket-items">${state.ticket.map((t,i)=>`<div class="ticket-item"><div class="ticket-head"><strong>${esc(t.selection)}</strong><button data-action="remove-leg" data-index="${i}" title="Remove leg" aria-label="Remove ${esc(t.selection)}">×</button></div><small>${esc(t.league.toUpperCase())} / ${esc(t.market)} ${t.notes?'· '+esc(t.notes):''}</small><small>${t.bookmaker?esc(t.bookmaker)+' quote · ':'Entered odds · '}${Number(t.odds)>0?'+':''}${esc(t.odds)}</small></div>`).join('')}</div>${ticketWarnings().length?`<div class="correlation-warning" role="status"><strong>⚠ Review this combination</strong><ul>${ticketWarnings().map(w=>`<li>${esc(w.message)}</li>`).join('')}</ul><small>Advisory only; no correlation-adjusted confidence is calculated.</small></div>`:''}<div class="ticket-totals"><div class="result-row"><span class="muted">Stake</span><input type="number" id="stake" min="0.01" max="1000000" step="0.01" value="${esc(state.stake)}" style="width:100px;text-align:right"></div><div class="result-row"><span class="muted">Decimal multiplier</span><strong>${estimate?estimate.multiplier.toFixed(2)+'×':'—'}</strong></div><div class="result-row"><span class="muted">Potential return</span><strong class="accent">${estimate?money(estimate.return):'—'}</strong></div><div class="result-row"><span class="muted">Potential profit</span><strong>${estimate?money(estimate.profit):'—'}</strong></div></div><div class="footlinks"><button class="btn small-btn" data-action="archive-ticket">Save snapshot</button>${state.cloud.configured&&state.cloud.token?`<button data-action="cloud-save">Save to cloud</button>`:``}<button data-action="export-ticket">Export JSON</button><button data-action="clear-ticket">Clear ticket</button></div>`:`<div class="empty" style="padding:24px"><h3>Nothing added yet</h3><p>Add a leg to get started.</p></div>`}<p class="notice">Illustrative payout; your sportsbook may restrict combinations or change prices.</p></div></div>`;}
