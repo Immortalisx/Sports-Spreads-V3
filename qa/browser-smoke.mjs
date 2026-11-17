@@ -31,14 +31,14 @@ async function run(){
   assert.equal(await desktop.locator('meta[property="og:url"]').getAttribute('content'),'https://sports-spreads.onrender.com/');
   assert.equal(errors.length,0,'Desktop exceptions: '+errors.join('; '));
   await desktop.screenshot({path:'qa/screenshots/desktop.png'});
-  await desktop.locator('[data-action="nav"][data-section="tickets"]').click();
+  await desktop.locator('nav.nav [data-section="tickets"]').click();
   await desktop.locator('#auto-confidence').waitFor({timeout:5000});
   await desktop.locator('#auto-confidence').evaluate(el=>{el.value='90';el.dispatchEvent(new Event('input',{bubbles:true}));});
   assert.equal(await desktop.locator('#auto-target').innerText(),'90%');
   await desktop.locator('[data-action="generate-ticket"]').click();
   assert.match(await desktop.locator('.auto-ticket-status').innerText(),/No calibrated picks/);
   await desktop.screenshot({path:'qa/screenshots/ticket-confidence.png'});
-  await desktop.locator('[data-action="nav"][data-section="games"]').click();
+  await desktop.locator('nav.nav [data-section="games"]').click();
   await desktop.locator('[data-action="big-screen"]').first().click();
   await desktop.locator('.tv-shell').waitFor({timeout:5000});
   await desktop.locator('[aria-label="Exit Big Screen Mode"]').click();
