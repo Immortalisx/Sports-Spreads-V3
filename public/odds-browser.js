@@ -58,5 +58,41 @@ async function get(league,game){
   return body;
  }finally{clearTimeout(tm);}
 }
-root.SportsOdds=Object.freeze({VERSION,canonical,validPrice,implied,fairHomePrice,matchGame,booksForGame,get});
+
+/* One cached league snapshot serves every visitor and every matchup on a board.
+ * GET cannot call the licensed upstream provider or reserve credits. */
+async function getBoard(league){
+ const endpoint=root.SS_ODDS_CONFIG?.url;
+ if(!['nfl','nba','nhl','mlb'].includes(league))throw Error('Unsupported league');
+ if(typeof endpoint!=='string'||!/^https:\/\/[-a-z0-9]+\.supabase\.co\/functions\/v1\/sportsbook-odds$/i.test(endpoint))
+  return {status:'not_configured',events:[]};
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+ try{
+  const response=await fetch(endpoint+'?'+new URLSearchParams({league,mode:'board'}),{
+   headers:{Accept:'application/json'},signal:controller.signal
+  });
+  const result=await response.json();
+  if(!response.ok)throw Error(String(result.error||'Bookmaker cache unavailable'));
+  if(!Array.isArray(result.events))throw Error('Invalid sportsbook snapshot');
+  return result;
+ }finally{clearTimeout(timer);}
+}
+/* Consensus is bookmaker implied probability with overround removed, NOT
+ * a trained win forecast, confidence grade or betting edge. */
+function marketConsensus(game,snapshot){
+ if(!snapshot||!['ok','cached','stale'].includes(snapshot.status))return null;
+ const matched=booksForGame(game,snapshot);
+ if(!matched.matched)return null;
+ const books=matched.books.filter(b=>Number.isFinite(Date.parse(b.asOf||''))&&
+  Date.parse(b.asOf)<=Date.now()+60000);
+ if(!books.length)return null;
+ const average=books.reduce((sum,b)=>sum+b.homeFair,0)/books.length;
+ const decimal=p=>p>0?1+p/100:1+100/-p;
+ const bestHome=books.reduce((best,b)=>!best||decimal(b.homePrice)>decimal(best.homePrice)?b:best,null);
+ const bestAway=books.reduce((best,b)=>!best||decimal(b.awayPrice)>decimal(best.awayPrice)?b:best,null);
+ return {homeProbability:average,awayProbability:1-average,bookCount:books.length,
+  bestHome,bestAway,asOf:snapshot.asOf,status:snapshot.status,source:'Bookmaker no-vig consensus'};
+}
+
+root.SportsOdds=Object.freeze({VERSION,canonical,validPrice,implied,fairHomePrice,matchGame,booksForGame,marketConsensus,get,getBoard});
 })(globalThis);
