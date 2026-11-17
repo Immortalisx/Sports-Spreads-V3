@@ -12,7 +12,7 @@ hand-chosen weights would make a worse product, not a calibrated model.
 FTN's **real** `n_blitzers` to the NFLverse play-by-play records by
 `(game_id,play_id)`, yielding recorded QB and receiver-target EPA versus blitz
 and an actual opposing defense's prior blitz frequency. All rates are calculated
-from **strictly earlier game dates**, with sample thresholds and missing-data
+from **strictly earlier dates with a conservative three-day charting publication lag**, with sample thresholds and missing-data
 rejections. `engine/pregame-matchup-context.mjs` adds dated coach H2H summaries
 and NHL named-goalie GSAx from previously completed appearances ONLY when a
 properly sourced confirmation is provided. Neither file fabricates missing data
