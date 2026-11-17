@@ -1,0 +1,39 @@
+name: Historical research diagnostic
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'engine/**'
+      - '.github/workflows/model-research.yml'
+jobs:
+  historical-nfl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute independent NFL retrospective check (research only)
+        run: |
+          mkdir -p research
+          node engine/research-study.mjs --league=nfl --from=2021 --to=2025 --output=research/nfl-out-of-time.json
+      - name: Publish research summary (no prediction model promotion)
+        if: always()
+        run: |
+          if test -f research/nfl-out-of-time.json; then
+            node -e 'const r=require("./research/nfl-out-of-time.json"); console.log("Research status",r.status,"games",r.games,"decision",r.decision||"no promotion");'
+            echo 'NFL historical diagnostic completed. Research-only results; no live-model weight changes.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Historical provider unavailable. No model changed.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nfl-research-result
+          path: research/nfl-out-of-time.json
+          if-no-files-found: ignore
+          retention-days: 3
