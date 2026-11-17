@@ -45,18 +45,25 @@ export function parseBoxscoreLabGames(csv,season){
    gameAt:h.game_date+'T12:00:00.000Z',homeTeam:h.team,awayTeam:away.team,homeScore:Number(h.points),awayScore:Number(away.points),
    homeCoach:null,awayCoach:null,sourceUrl:BASE+season+'-team-game-results.csv',sourceTier:'cc_by_4_public',retrospective:true});
  }
- if(games.length*2!==lines.length)throw Error('NBA paired-game coverage inconsistent');
- return games.sort((a,b)=>a.gameDate.localeCompare(b.gameDate)||a.gameId.localeCompare(b.gameId));
+ const rejectedTeamRows=lines.length-games.length*2;
+ if(rejectedTeamRows<0||rejectedTeamRows/lines.length>0.005)throw Error('NBA paired-game coverage inconsistent: '+rejectedTeamRows+'/'+lines.length+' incomplete team rows');
+ const result=games.sort((a,b)=>a.gameDate.localeCompare(b.gameDate)||a.gameId.localeCompare(b.gameId));
+ Object.defineProperty(result,'rejectedTeamRows',{value:rejectedTeamRows});
+ Object.defineProperty(result,'totalTeamRows',{value:lines.length});
+ return result;
 }
 export async function collectNbaResearch(seasons,{fetchImpl=fetch,timeoutMs=20000}={}){
  if(!Array.isArray(seasons)||seasons.length<3||seasons.length>5)throw Error('NBA historical research requires 3–5 bounded seasons');
- const games=[];
+ const games=[],coverageBySeason=[];
  for(const season of seasons){
   if(!SEASON.test(season))throw Error('Invalid season label');
   const url=BASE+season+'-team-game-results.csv';
   const response=await fetchImpl(url,{signal:AbortSignal.timeout(timeoutMs),headers:{accept:'text/csv'}});
   if(!response.ok)throw Error('NBA research data unavailable ('+response.status+')');
-  const csv=await response.text();games.push(...parseBoxscoreLabGames(csv,season));
+  const csv=await response.text();const parsed=parseBoxscoreLabGames(csv,season);
+  coverageBySeason.push({season,teamRows:parsed.totalTeamRows,completeGames:parsed.length,rejectedTeamRows:parsed.rejectedTeamRows});
+  games.push(...parsed);
  }
+ Object.defineProperty(games,'coverageBySeason',{value:coverageBySeason});
  return games;
 }
