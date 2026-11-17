@@ -41,3 +41,14 @@ test('Cached board reads cannot trigger credit-spending POST upstream',()=>{
  assert.match(oddsSrc,/getBoard/);
  assert.doesNotMatch(oddsSrc,/method:\s*'POST'/);
 });
+
+
+test('auto builder never joins quotes from separate sportsbook accounts into one payout',()=>{
+ const now=Date.now(),future=new Date(now+2*3600_000).toISOString(),fresh=new Date(now-120_000).toISOString();
+ const base={league:'nba',market:'Moneyline',start:future,teamName:'Home Team',probability:.73,odds:-220,oddsAsOf:fresh};
+ const across=tickets.buildMarket([{...base,gameId:'g1',bookmaker:'Book A'},{...base,gameId:'g2',bookmaker:'Book B'}],{target:70,maxLegs:2,now});
+ assert.equal(across.ok,true);assert.equal(across.legs.length,1);
+ const same=tickets.buildMarket([{...base,gameId:'g1',bookmaker:'Book A'},{...base,gameId:'g2',bookmaker:'Book A'}],{target:70,maxLegs:2,now});
+ assert.equal(same.ok,true);assert.equal(same.legs.length,2);
+ assert.equal(new Set(same.legs.map(l=>l.bookmaker)).size,1);
+});
