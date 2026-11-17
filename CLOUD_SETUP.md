@@ -1,53 +1,36 @@
-# Sports Spreads — $0 cloud saving setup
+# Sports Spreads — Cloud saving setup
 
-Live website: https://sports-spreads.onrender.com/
+**Status (November 17, 2026):** Supabase Free project has been created, private table `public.user_tickets` deployed, RLS verified, and the frontend in `index.html` configured with the project's public API URL and publishable key.
 
-**Status:** The browser cloud adapter and RLS SQL are implemented, but no Supabase project exists on the connected account yet. A plugin connection is not itself a database. Keep local-only saved tickets until this is configured.
+- Public website: https://sports-spreads.onrender.com/
+- Supabase project: https://supabase.com/dashboard/project/nwspnepkmeoytlkbltfe
+- Quoted project cost: **$0/month** (usage limits still apply)
+- Database: authenticated users may read and insert their own ticket snapshots only; no anonymous read, update, or delete.
+- Project credentials: publishable key only in the browser; never use a service_role or secret key.
 
-## 1. Create the dedicated Free project
+## One remaining dashboard step: authorize sign-in redirect
 
-1. Open https://supabase.com/dashboard/projects or https://supabase.com/dashboard/new.
-2. Choose the organization you want (the connected account currently has one organization). Select the **Free** tier and region nearest users (for U.S. East, `us-east-1`). Name the project **Sports Spreads**.
-3. **Confirm the provider's quote is $0 before creating it.** Do not accept a paid plan, add compute, paid database branches, or usage upgrades.
-4. The project may initialize before you can query it.
+In the Supabase dashboard, go to **Authentication → URL Configuration**:
 
-## 2. Create secure ticket storage
+- **Site URL:** `https://sports-spreads.onrender.com/`
+- **Redirect URLs:** add `https://sports-spreads.onrender.com/**`
+- If using the secondary preview domain, add `https://sports-spreads-v3.onrender.com/**` only if actually needed.
 
-1. Open your project → SQL Editor → New query.
-2. Paste and run `supabase/migrations/001_saved_ticket_history.sql` from this repository.
-3. In Table Editor, verify `public.user_tickets` exists. In Security/Policies, confirm Row Level Security is enabled and there are *only two* user-facing policies: authenticated user selects their own `user_id`, and inserts only their own `user_id`.
-4. Do not grant access to the `anon` role and never put any Supabase service-role or secret key in the website.
+In **Authentication → Providers → Email**, leave the Email provider enabled. Magic-link delivery is subject to free email rate limits and recipient restrictions; verify on one account before inviting Discord users to sign in. Do not buy SMTP service without reviewing cost.
 
-## 3. Enable passwordless sign-in
+## Test the cloud flow
 
-1. Supabase → Authentication → Providers → Email: confirm enabled, with magic link sign-in support.
-2. Authentication → URL Configuration:
-   - **Site URL:** `https://sports-spreads.onrender.com/`
-   - **Redirect URLs:** `https://sports-spreads.onrender.com/` (exact match)
-3. Built-in SMTP can have restrictive free-tier quotas. Verify a test email before inviting many Discord users; do not buy a mail service without reviewing the cost.
+1. Open https://sports-spreads.onrender.com/ and choose **Saved → Cloud sync**.
+2. Enter your email and follow the sign-in link. It should return to the site.
+3. Choose **Builder**, add at least one leg with manually entered odds, and save the ticket to cloud.
+4. On another browser or device, sign in with the same email, choose **Saved → Refresh cloud history**, and confirm the ticket is there.
+5. Different users cannot read one another's private ticket history; RLS is enabled.
 
-## 4. Link the public website to your project
+If a link redirects elsewhere or a request says "redirect_to is not allowed", review the Authentication URL Configuration above.
 
-1. Supabase → Project Settings / Connect → API: copy **Project URL** (`https://<project-ref>.supabase.co`) and the **publishable** key (`sb_publishable_…`). Both are designed for frontend configuration.
-2. In GitHub `Immortalisx/Sports-Spreads-V3`, edit `index.html` near the top and set:
+## Accuracy and safety
 
-   ```html
-   <script>window.SS_CLOUD_CONFIG={url:'https://YOUR_PROJECT.supabase.co',publishableKey:'sb_publishable_YOUR_KEY'};</script>
-   ```
-
-3. Commit the edit. Render will deploy a new version once GitHub integration is configured; otherwise deploy the latest commit from the Render dashboard. Never disclose a `service_role` or `sb_secret_…` key. **Only use `sb_publishable_…`.**
-
-## 5. Test sync on two devices
-
-1. Open the live site in a browser and go to **Saved → Cloud sync**.
-2. Enter your email and open the magic link sent by Supabase. It must return to your Sports Spreads website.
-3. In **Builder**, add a test selection, enter manual odds and a stake, then select **Save to cloud**.
-4. Open the site on another device, sign in with the *same* email, and select **Saved → Refresh cloud history**.
-5. Use a different email/user to verify that the original account's ticket **cannot** be read. That is the RLS privacy check. Test an expired session and a network error; local saving should still work.
-
-## Limits and meaning
-
-- This feature synchronizes **user-entered, unverified odds and immutable ticket snapshots**, not placed bets or actual sportsbook accounts.
-- Cloud tickets are private to the signed-in user. The public Discord link does not reveal their history.
-- Forecast weather inputs are a versioned **risk-context model**, not yet a calibrated win-probability adjustment. The original prediction engine and verified sportsbook prices are not connected.
-- Supabase Free has usage limits; review the dashboard to ensure the project stays on Free. Open-Meteo's no-key API is for noncommercial use within its rate limits.
+- Saved tickets are immutable snapshots of **manually entered, unverified** odds. They do not represent bets placed with a sportsbook.
+- Weather risk affects matchup context only; win probabilities remain uncalibrated until the actual prediction engine is connected.
+- This site is a community beta, not verified sportsbook odds or betting advice.
+- Free plans can pause after inactivity and have usage caps. Review usage in Supabase and Render dashboards.
