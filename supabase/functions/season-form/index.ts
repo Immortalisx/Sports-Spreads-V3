@@ -145,7 +145,7 @@ async function update(league:string,now:Date){
  const nowMs=now.getTime();
  const fixture=[...all.values()].filter(e=>!e.final&&
   Date.parse(e.start)>nowMs&&Date.parse(e.start)<=nowMs+32*86400000);
- const built=buildCurrentSeasonSnapshots({league,season,games,fixtures});
+ const built=buildCurrentSeasonSnapshots({league,season,games,fixtures:fixture});
  if((league==='nfl'||league==='nba'||league==='nhl')&&
   today>=6&&Number(current.slice(4))>=start&&built.completedGames<5)
   throw Error('Season has unexpectedly few completed games: refuse overwriting valid form snapshot');
