@@ -109,7 +109,7 @@ function useSportsbookQuote(game,side,index){
  const team=game[side],price=side==='home'?book.homePrice:side==='away'?book.awayPrice:null;
  if(!team||!SportsOdds.validPrice(price))return;
  // Copy quoted price to draft; NEVER auto-submit and NEVER claim a wager was placed.
- state.draft={league:game.league,market:'Moneyline',selection:team.name+' to win',odds:String(price),gameId:game.id,bookmaker:book.title,oddsAsOf:book.asOf};
+ state.draft={league:game.league,market:'Moneyline',selection:team.name+' to win',odds:String(price),gameId:game.id,bookmaker:book.title,bookmakerKey:book.key,oddsAsOf:book.asOf};
  state.section='tickets';state.drawer=null;render();notify('Cached bookmaker quote copied. Recheck the live price before placing any wager.');
 }
 function openTeam(game,side){if(!game)return;const team=game[side];if(!team?.id){notify('This team has no provider identifier.');return;}state.drawer={type:'team',league:game.league,team};state.teamTab='injuries';render();loadTeam('injuries');}
@@ -232,7 +232,7 @@ async function generateAutomaticTicket(){
    if(!book)continue;
    candidates.push({league:game.league,market:'Moneyline',gameId:game.id,start:game.start,
     teamName:game[side].name,probability:side==='home'?market.homeProbability:market.awayProbability,
-    odds:side==='home'?book.homePrice:book.awayPrice,bookmaker:book.title,oddsAsOf:book.asOf});
+    odds:side==='home'?book.homePrice:book.awayPrice,bookmaker:book.title,bookmakerKey:book.key,oddsAsOf:book.asOf});
   }
  }
  const result=SportsAutoTicket.buildMarket(candidates,{target:state.autoTicket.target,maxLegs:2});
