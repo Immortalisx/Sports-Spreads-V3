@@ -89,7 +89,13 @@ function parseScoreboard(payload:any,league:string):any[]{
 async function fetchMonth(league:string,month:string){
  const url='https://site.api.espn.com/apis/site/v2/sports/'+LEAGUES[league]+
   '/scoreboard?dates='+month+'&limit=1000';
- const res=await fetch(url,{headers:{accept:'application/json'},signal:AbortSignal.timeout(14000)});
+ let res=await fetch(url,{headers:{accept:'application/json'},signal:AbortSignal.timeout(14000)});
+ if(res.status===403||res.status===429){
+  // ESPN's canonical website host sometimes blocks server-side Supabase IPs.
+  // Existing Sports Spreads feed uses the separate ESPN website frontend host.
+  const alternate=url.replace('https://site.api.espn.com','https://site.web.api.espn.com');
+  res=await fetch(alternate,{headers:{accept:'application/json'},signal:AbortSignal.timeout(14000)});
+ }
  if(!res.ok)throw Error('Public results feed HTTP '+res.status);
  const raw=await res.text();
  if(raw.length>7500000)throw Error('Scoreboard source oversized');
