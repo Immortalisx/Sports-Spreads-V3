@@ -1,6 +1,11 @@
 name: Calibrate real pregame record baseline (all four sports)
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/calibrate-record-model.mjs'
+      - 'engine/run-record-calibration.mjs'
+      - '.github/workflows/record-calibration.yml'
   push:
     branches: [main]
     paths:
