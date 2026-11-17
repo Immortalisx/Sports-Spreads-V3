@@ -1,0 +1,53 @@
+name: NFL & NHL enhanced calibration (no API credits)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/calibrate-elo-model.mjs'
+      - 'engine/run-enhanced-calibration.mjs'
+      - 'tests/enhanced-calibration.test.mjs'
+      - '.github/workflows/enhanced-calibration.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'engine/calibrate-elo-model.mjs'
+      - 'engine/run-enhanced-calibration.mjs'
+      - '.github/workflows/enhanced-calibration.yml'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    strategy:
+      fail-fast: false
+      matrix:
+        league: [nfl, nhl]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch official/community past completed results and run strict four-stage validation
+        run: |
+          mkdir -p research
+          node engine/run-enhanced-calibration.mjs --league=${{ matrix.league }} --output=research/enhanced-${{ matrix.league }}.json
+      - name: Explicitly report whether any promotion criteria passed
+        if: always()
+        run: |
+          if test -f research/enhanced-${{ matrix.league }}.json; then
+            node -e 'const r=require("./research/enhanced-${{ matrix.league }}.json");console.log("NFL/NHL enhanced",r.league,r.status,"passed:",r.approved,"Brier:",r.holdout?.candidate?.brier,"ECE:",r.holdout?.candidate?.ece)'
+            echo 'Model evaluation is independent of the live site; no weights are promoted and no visitor credit-consuming API calls added.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Model evaluation could not complete: no verified result, no promotion.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: enhanced-${{ matrix.league }}-holdout
+          path: research/enhanced-${{ matrix.league }}.json
+          if-no-files-found: ignore
+          retention-days: 14
