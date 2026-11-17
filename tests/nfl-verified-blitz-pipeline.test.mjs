@@ -56,5 +56,5 @@ test('charting cannot leak from previous day before FTN publication delay',()=>{
  const results=buildBlitzPregameFeatures({plays,fixtures:[g('a','2025-09-09'),g('b','2025-09-11')],minQb:20,minDefense:40});
  assert.equal(results[0].home.qbEpaVsBlitz,null);
  assert.ok(results[1].home.qbEpaVsBlitz!==null);
- assert.throws(()=>buildBlitzPregameFeatures({plays,fixtures:[],publicationLagDays:0}),/publication/);
+ assert.throws(()=>buildBlitzPregameFeatures({plays,fixtures:[],publicationLagDays:0}),/availability lag/);
 });
