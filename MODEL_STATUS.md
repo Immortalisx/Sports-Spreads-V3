@@ -27,3 +27,9 @@ See [`docs/NFL_BACKTEST_2023-2025.md`](docs/NFL_BACKTEST_2023-2025.md). The publ
 - Obtain stable supported data-provider terms prior to broad public or commercial usage. Current ESPN feed is unofficial and could be blocked.
 
 This free community beta is intended for usability feedback and exploratory research; no live verified betting lines or bankroll guidance are provided.
+
+## v5 cross-sport research pipeline (not an active advanced production model)
+
+The model research module can fetch publicly accessible, completed-game histories for all four sports with explicit quotas: NFL community games CSV (one request), MLB official schedule (one per season), NHL official club schedules (one per club per season), and NBA unofficial ESPN daily scoreboard (bounded to 31 requested dates by default). Validation separately trains residual feature weights on earlier seasons, calibrates on the next, and compares held-out Brier/log loss on the last; it also reports a paired-bootstrap interval. **No research coefficients are auto-promoted**. Current live estimates remain experimental season-form only.
+
+NFL QB-vs-blitz, defense-vs-offense scheme, NBA lineup/shot profiles, NHL confirmed goalies and MLB pitcher-vs-hitter observations require separate stamped, verified pregame evidence. `engine/pregame-evidence.mjs` rejects unsourced, late, mismatched or under-sampled evidence. Completed-game scorelines do NOT supply those player factors. See `docs/MODEL_RESEARCH_PIPELINE.md`.
