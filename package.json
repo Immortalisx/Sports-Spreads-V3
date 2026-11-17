@@ -1,6 +1,6 @@
 {
   "name": "sports-spreads-v3",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Clean, sport-agnostic Sports Spreads prototype with drill-down team profiles and data provenance.",
@@ -10,7 +10,10 @@
     "build:onefile": "node scripts/build-app.mjs && node scripts/build-onefile.mjs",
     "test": "node scripts/build-app.mjs && node --test",
     "build:app": "node scripts/build-app.mjs",
-    "validate:model": "node engine/backtest.mjs"
+    "validate:model": "node engine/backtest.mjs",
+    "research:collect": "node engine/collect-research.mjs",
+    "research:backtest": "node engine/run-retrospective.mjs",
+    "research:study": "node engine/research-study.mjs"
   },
   "engines": {
     "node": ">=20"
