@@ -56,7 +56,8 @@ export function joinBlitzPlays({pbp,ftn}){
 /** For each game, return ONLY data from games on strictly earlier calendar dates.
  * Game rows may be in any input order. Same-day doubleheaders don't leak.
  */
-export function buildBlitzPregameFeatures({plays,fixtures,minQb=35,minDefense=60,minReceiver=12}){
+export function buildBlitzPregameFeatures({plays,fixtures,minQb=35,minDefense=60,minReceiver=12,publicationLagDays=3}){
+ if(!Number.isInteger(publicationLagDays)||publicationLagDays<2||publicationLagDays>14)throw Error('Require a conservative historical FTN charting availability lag');
  if(!Array.isArray(plays)||!Array.isArray(fixtures))throw Error('Expected scored plays and future games');
  const sorted=[...fixtures].sort((a,b)=>String(a.date).localeCompare(String(b.date))||id(a.gameId).localeCompare(id(b.gameId)));
  const safe=[...plays].filter(p=>iso(p.date)&&id(p.gameId)&&id(p.quarterbackId)&&
@@ -68,8 +69,10 @@ export function buildBlitzPregameFeatures({plays,fixtures,minQb=35,minDefense=60
  const result=[];
  for(const g of sorted){
   if(!iso(g.date)||!id(g.gameId))throw Error('A fixture needs an actual date and game ID');
-  // Apply completed play observations from dates strictly BEFORE this fixture.
-  while(cursor<safe.length&&safe[cursor].date<g.date){
+  // FTN releases charted plays up to ~48 hours after games. Reconstruct
+  // only observations likely available pre-kickoff, not all prior-day results.
+  const priorCutoff=new Date(Date.parse(g.date+'T00:00:00Z')-publicationLagDays*86400000).toISOString().slice(0,10);
+  while(cursor<safe.length&&safe[cursor].date<=priorCutoff){
    const p=safe[cursor++];
    add(byQb,p.quarterbackId,p);
    add(byDefense,p.defenseTeam,p);
