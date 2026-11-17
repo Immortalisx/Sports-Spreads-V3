@@ -1,0 +1,52 @@
+name: Calibrate real pregame record baseline (all four sports)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/calibrate-record-model.mjs'
+      - 'engine/run-record-calibration.mjs'
+      - '.github/workflows/record-calibration.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'engine/calibrate-record-model.mjs'
+      - 'engine/run-record-calibration.mjs'
+      - '.github/workflows/record-calibration.yml'
+permissions:
+  contents: read
+jobs:
+  calibrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        league: [nfl, nba, nhl, mlb]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Gather past completed results and score untouched holdout
+        run: |
+          mkdir -p research
+          node engine/run-record-calibration.mjs --league=${{ matrix.league }} --output=research/record-${{ matrix.league }}.json
+      - name: Publish study evidence, not unsupported probabilities
+        if: always()
+        run: |
+          if test -f research/record-${{ matrix.league }}.json; then
+            node -e 'const r=require("./research/record-${{ matrix.league }}.json");console.log("Status",r.status,"Approved",r.approved,"Test",r.splits?.holdout,"Brier",r.holdout?.candidate?.brier,"ECE",r.holdout?.candidate?.ece);'
+            echo 'Strict out-of-time: train, calibrate, then holdout. Advanced inputs remain unvalidated.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Dataset unavailable; no model can be claimed calibrated.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: record-calibration-${{ matrix.league }}
+          path: research/record-${{ matrix.league }}.json
+          if-no-files-found: ignore
+          retention-days: 14

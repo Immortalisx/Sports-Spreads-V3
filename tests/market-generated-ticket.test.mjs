@@ -10,8 +10,8 @@ const odds=oddsContext.SportsOdds, tickets=ticketContext.SportsAutoTicket;
 const future=new Date(Date.now()+3*3600_000).toISOString(),fresh=new Date(Date.now()-60_000).toISOString();
 function game(){return {id:'g1',league:'nba',start:future,status:'scheduled',home:{name:'Toronto Raptors',abbr:'TOR'},away:{name:'New York Knicks',abbr:'NYK'}};}
 function snap(){return {status:'cached',asOf:fresh,events:[{id:'odds1',sport_key:'basketball_nba',commence_time:future,home_team:'Toronto Raptors',away_team:'New York Knicks',bookmakers:[
- {key:'fan',title:'FanDuel',last_update:fresh,markets:[{key:'h2h',outcomes:[{name:'New York Knicks',price:-176},{name:'Toronto Raptors',price:148}]}]},
- {key:'book2',title:'Book 2',last_update:fresh,markets:[{key:'h2h',outcomes:[{name:'New York Knicks',price:-170},{name:'Toronto Raptors',price:145}]}]}
+ {key:'fanduel',title:'FanDuel',last_update:fresh,markets:[{key:'h2h',outcomes:[{name:'New York Knicks',price:-176},{name:'Toronto Raptors',price:148}]}]},
+ {key:'draftkings',title:'DraftKings',last_update:fresh,markets:[{key:'h2h',outcomes:[{name:'New York Knicks',price:-170},{name:'Toronto Raptors',price:145}]}]}
  ]}]};}
 test('Sportsbook consensus is calculated from actual no-vig book quotes',()=>{
  const m=odds.marketConsensus(game(),snap());
@@ -40,4 +40,15 @@ test('Cached board reads cannot trigger credit-spending POST upstream',()=>{
  assert.match(oddsSrc,/mode:'board'/);
  assert.match(oddsSrc,/getBoard/);
  assert.doesNotMatch(oddsSrc,/method:\s*'POST'/);
+});
+
+
+test('auto builder never joins quotes from separate sportsbook accounts into one payout',()=>{
+ const now=Date.now(),future=new Date(now+2*3600_000).toISOString(),fresh=new Date(now-120_000).toISOString();
+ const base={league:'nba',market:'Moneyline',start:future,teamName:'Home Team',probability:.73,odds:-220,oddsAsOf:fresh};
+ const across=tickets.buildMarket([{...base,gameId:'g1',bookmaker:'Book A'},{...base,gameId:'g2',bookmaker:'Book B'}],{target:70,maxLegs:2,now});
+ assert.equal(across.ok,true);assert.equal(across.legs.length,1);
+ const same=tickets.buildMarket([{...base,gameId:'g1',bookmaker:'Book A'},{...base,gameId:'g2',bookmaker:'Book A'}],{target:70,maxLegs:2,now});
+ assert.equal(same.ok,true);assert.equal(same.legs.length,2);
+ assert.equal(new Set(same.legs.map(l=>l.bookmaker)).size,1);
 });

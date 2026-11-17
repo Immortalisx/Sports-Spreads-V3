@@ -21,12 +21,22 @@ async function run(){
    const requestUrl=route.request().url();
    if(requestUrl.includes('/functions/v1/sports-feed')||requestUrl.includes('/api/scoreboard'))
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(event)});
+   if(requestUrl.includes('/functions/v1/daily-tickets'))
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+      status:'ready',generatedAt:new Date().toISOString(),
+      cards:[{id:'big-one',name:'The Big One',available:true,bookmaker:'Fixture Same Book',bookmakerKey:'fixture',
+       legCount:4,marketGrade:'D',marketProbabilityProduct:.13,payoutMultiplier:6.7,returnAt10:67,profitAt10:57,
+       legs:Array.from({length:4},(_,i)=>({gameId:'fixture-event-'+i,league:'nba',market:'Moneyline',
+        selection:'Test Fixture Home '+i,homeTeam:'Test Fixture Home '+i,awayTeam:'Test Fixture Away '+i,
+        bookmaker:'Fixture Same Book',bookmakerKey:'fixture',marketProbability:.61,odds:-150,
+        oddsAsOf:new Date().toISOString(),start:gameStart}))}]
+    })});
    if(requestUrl.includes('/functions/v1/sportsbook-odds'))
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
       status:'cached',asOf:new Date().toISOString(),ageMinutes:0,events:[{
         id:'qa-odds-1',sport_key:'basketball_nba',home_team:'Test Home Team',
         away_team:'Test Away Team',commence_time:gameStart,
-        bookmakers:[{key:'qa',title:'Test Fixture Book',last_update:new Date().toISOString(),
+        bookmakers:[{key:'fanduel',title:'Test Fixture Book',last_update:new Date().toISOString(),
           markets:[{key:'h2h',outcomes:[
             {name:'Test Home Team',price:-300},{name:'Test Away Team',price:260}
           ]}]}]
@@ -51,6 +61,12 @@ async function run(){
   await desktop.locator('.ticket-item').first().waitFor({timeout:10000});
   assert.match(await desktop.locator('.ticket-item').first().innerText(),/Test Home Team/);
   assert.match(await desktop.locator('.auto-ticket-status').innerText(),/market-derived/i);
+  await desktop.locator('.daily-ticket-card.big-one').waitFor({timeout:8000});
+  assert.match(await desktop.locator('.daily-ticket-card.big-one').innerText(),/The Big One/);
+  await desktop.locator('[data-action="clear-ticket"]').first().click();
+  await desktop.locator('.daily-ticket-card.big-one [data-action="daily-ticket-load"]').click();
+  assert.equal(await desktop.locator('.ticket-item').count(),4);
+  assert.match(await desktop.locator('.auto-ticket-status').innerText(),/market-implied/i);
   await desktop.screenshot({path:'qa/screenshots/ticket-confidence.png'});
   await desktop.locator('nav.nav [data-section="games"]').click();
   await desktop.locator('[data-action="big-screen"]').first().click();

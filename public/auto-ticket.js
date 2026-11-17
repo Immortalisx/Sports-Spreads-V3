@@ -15,6 +15,20 @@
    typeof input.teamName==='string'&&input.teamName.length>1&&typeof input.bookmaker==='string'&&input.bookmaker.length>0&&
    Number.isFinite(time)&&time<=now&&now-time<=15*60*1000&&Number.isFinite(start)&&start>now;
  }
+ function sameBookCandidates(candidates,maxLegs){
+  const groups=new Map();
+  for(const x of candidates){const key=String(x.bookmakerKey||x.bookmaker||'').toLowerCase().trim();
+   if(!key)continue;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x);}
+  let chosen=[];
+  for(const options of groups.values()){
+   const accepted=[],seen=new Set();
+   for(const x of options){const id=x.league+':'+x.gameId;if(seen.has(id))continue;
+    seen.add(id);accepted.push(x);if(accepted.length===maxLegs)break;}
+   if(accepted.length>chosen.length||(accepted.length===chosen.length&&
+     accepted.reduce((n,x)=>n+x.probability,0)>chosen.reduce((n,x)=>n+x.probability,0)))chosen=accepted;
+  }
+  return chosen;
+ }
  function build(candidates,{target=75,maxLegs=2,now=Date.now(),minEdge=.025}={}){
   if(!Number.isInteger(target)||target<50||target>95||target%5!==0||!Number.isInteger(maxLegs)||maxLegs<1||maxLegs>3)
    throw Error('Invalid ticket confidence target');
@@ -22,10 +36,10 @@
   const scored=candidates.filter(x=>eligible(x,now)).map(x=>({...x,edge:x.probability-implied(x.odds)}))
    .filter(x=>x.probability>=target/100&&x.edge>=minEdge)
    .sort((a,b)=>b.edge-a.edge||b.probability-a.probability||a.gameId.localeCompare(b.gameId));
-  const accepted=[],games=new Set();
-  for(const x of scored){if(games.has(x.league+':'+x.gameId))continue;games.add(x.league+':'+x.gameId);
+  const accepted=[];
+  for(const x of sameBookCandidates(scored,maxLegs)){
    accepted.push({id:'auto-'+x.league+'-'+x.gameId+'-'+accepted.length,league:x.league,market:'Moneyline',selection:x.teamName+' to win',odds:x.odds,
-    gameId:x.gameId,bookmaker:x.bookmaker,oddsAsOf:x.oddsAsOf,modelConfidence:x.probability,modelValidated:true,
+    gameId:x.gameId,bookmaker:x.bookmaker,bookmakerKey:x.bookmakerKey||null,oddsAsOf:x.oddsAsOf,modelConfidence:x.probability,modelValidated:true,
     modelVersion:x.modelVersion,notes:'Validated model candidate · verify book price',enteredAt:new Date(now).toISOString()});
    if(accepted.length===maxLegs)break;
   }
@@ -54,14 +68,11 @@ function buildMarket(candidates,{target=75,maxLegs=2,now=Date.now()}={}){
  if(!Array.isArray(candidates))return {ok:false,legs:[],reason:'No bookmaker information available.'};
  const available=candidates.filter(x=>marketEligible(x,now)&&x.probability>=target/100)
   .sort((a,b)=>b.probability-a.probability||a.gameId.localeCompare(b.gameId));
- const selected=[],games=new Set();
- for(const x of available){
-  const key=x.league+':'+x.gameId;
-  if(games.has(key))continue;
-  games.add(key);
+ const selected=[];
+ for(const x of sameBookCandidates(available,maxLegs)){
   selected.push({id:'market-'+x.league+'-'+x.gameId+'-'+selected.length,
    league:x.league,market:'Moneyline',selection:x.teamName+' to win',odds:x.odds,
-   gameId:x.gameId,bookmaker:x.bookmaker,oddsAsOf:x.oddsAsOf,
+   gameId:x.gameId,bookmaker:x.bookmaker,bookmakerKey:x.bookmakerKey||null,oddsAsOf:x.oddsAsOf,
    marketImpliedProbability:x.probability,marketType:'No-vig bookmaker consensus',
    modelValidated:false,notes:'Market-implied estimate only; verify the current bookmaker quote',
    enteredAt:new Date(now).toISOString()});
