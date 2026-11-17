@@ -1,0 +1,34 @@
+name: NBA historical-data source probe (research only)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/nba-source-probe.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check single CC BY 4.0 NBA game-log file and schema
+        run: |
+          node --input-type=module <<'NODE'
+          const url='https://boxscorelab.com/downloads/2022-23-team-game-results.csv';
+          const res=await fetch(url,{signal:AbortSignal.timeout(20000),headers:{accept:'text/csv'}});
+          const data=await res.text();
+          console.log('Source:',url,'HTTP:',res.status,'bytes:',data.length,'type:',res.headers.get('content-type'));
+          if(!res.ok||data.length<2000||data.length>2_000_000){console.error('NBA research source unavailable or unexpected response size.');process.exitCode=1;}
+          else {
+            const lines=data.split(/\r?\n/);
+            console.log('Columns:',lines[0].slice(0,1400));
+            console.log('First row:',lines[1].slice(0,700));
+            console.log('Lines:',lines.length);
+            if(lines[0].split(',').length<8){console.error('Not a game-results table');process.exitCode=1;}
+          }
+          NODE
