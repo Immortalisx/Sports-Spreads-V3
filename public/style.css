@@ -123,3 +123,49 @@ button,summary{touch-action:manipulation}
 .suggest-name{font-weight:650;min-width:0}.suggest-meta{font-size:12px;color:var(--muted);text-align:right;max-width:45%}
 .factor-row{gap:12px;justify-content:space-between;margin-bottom:10px}.factor-row span{font-weight:600}.factor-row small{text-align:right}.factor-intro{margin:10px 0 14px}
 @media(max-width:550px){.suggest-option{padding:13px}.suggest-meta{max-width:42%}}
+
+/* V5: TV / Big Screen Mode — optional, accessible, supports laptop up to 4K displays. */
+.big-screen-launch{border-color:#395f62!important;color:#a0f1dd!important}
+.big-screen-launch:focus-visible,.tv-button:focus-visible,.tv-league:focus-visible,.tv-date input:focus-visible{outline:3px solid #88f6d5;outline-offset:3px}
+body.big-screen-mode{background:#071018;color:#eaf7f2}
+.big-screen-mode .tv-shell{width:100%;min-height:100vh;padding:clamp(22px,2.4vw,76px);display:flex;flex-direction:column;gap:clamp(20px,2vw,54px);background:radial-gradient(ellipse at 12% 0,rgba(24,110,91,.18),transparent 48%),#071018}
+.tv-header,.tv-toolbar,.tv-headline,.tv-header-controls,.tv-identity,.tv-leagues,.tv-data-status,.tv-footer{display:flex;align-items:center}
+.tv-header,.tv-toolbar,.tv-headline,.tv-footer{justify-content:space-between;gap:24px}
+.tv-identity{gap:clamp(12px,1.1vw,24px)}
+.tv-mark{height:clamp(46px,3.5vw,76px);width:clamp(46px,3.5vw,76px);display:grid;place-items:center;border-radius:17px;background:#79efd0;color:#072119;font-size:clamp(30px,2.6vw,56px);font-weight:900}
+.tv-identity strong{display:block;font:800 clamp(21px,2.0vw,46px)/1.04 'Space Grotesk',sans-serif;letter-spacing:-.055em;white-space:nowrap}
+.tv-identity strong span{color:#73f1d0}
+.tv-identity small{display:block;color:#91b5b1;font-size:clamp(10px,.9vw,18px);font-weight:700;letter-spacing:.16em;margin-top:8px}
+.tv-header-controls{gap:12px}
+.tv-button,.tv-league{background:#142b32;color:#eaf7f2;border:1px solid #285c5b;border-radius:14px;padding:clamp(12px,.85vw,20px) clamp(18px,1.1vw,27px);font-size:clamp(14px,1vw,23px);font-weight:800;min-height:51px;cursor:pointer}
+.tv-button svg{vertical-align:middle;width:clamp(18px,1.1vw,26px);height:clamp(18px,1.1vw,26px)}
+.tv-exit{border-color:#56777b;background:#22363d}
+.tv-leagues{gap:clamp(8px,1vw,19px);flex-wrap:wrap}
+.tv-league.active{background:#73f1d0;color:#08281e;border-color:transparent}
+.tv-date{font-size:clamp(12px,.85vw,19px);text-transform:uppercase;letter-spacing:.1em;color:#a4bdb9;font-weight:800;display:flex;align-items:center;gap:14px;white-space:nowrap}
+.tv-date input{font-size:clamp(15px,1.1vw,24px);min-height:53px;background:#172b36;color:#f1faf5;border-color:#396966}
+.tv-kicker{font-size:clamp(12px,.85vw,19px);font-weight:800;color:#75dec5;letter-spacing:.16em}
+.tv-headline h1{font:800 clamp(30px,2.55vw,72px)/1.1 'Space Grotesk',sans-serif;margin:8px 0 0;letter-spacing:-.04em}
+.tv-data-status{gap:12px;font-size:clamp(13px,1vw,23px);color:#b3c7c4;font-weight:700}
+.tv-data-status .small-pip{height:12px;width:12px}
+.tv-game-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:clamp(18px,1.5vw,37px);align-content:start;flex:1}
+.tv-game-grid .game{padding:clamp(22px,1.65vw,43px);border-radius:22px;border-color:#2d5960;background:linear-gradient(145deg,#142833,#101f2e)}
+.tv-game-grid .game-top{font-size:clamp(13px,1vw,23px);margin-bottom:clamp(20px,2vw,42px)}
+.tv-game-grid .tag{font-size:clamp(12px,.85vw,19px);padding:7px 10px}
+.tv-game-grid .teams{gap:clamp(10px,1.5vw,32px)}
+.tv-game-grid .team-logo{width:clamp(66px,5vw,145px);height:clamp(66px,5vw,145px);padding:9px}
+.tv-game-grid .team-col button{font-size:clamp(17px,1.4vw,35px);line-height:1.2;min-height:50px}
+.tv-game-grid .team-col .record{font-size:clamp(13px,.95vw,24px)}
+.tv-game-grid .match-center{min-width:clamp(85px,6vw,130px)}
+.tv-game-grid .match-center .score{font-size:clamp(23px,2.2vw,52px)}
+.tv-game-grid .match-center .versus{font-size:clamp(17px,1.4vw,35px)}
+.tv-game-grid .match-center small{font-size:clamp(11px,.95vw,23px)}
+.tv-game-grid .game-foot{margin-top:clamp(18px,1.6vw,37px);padding-top:clamp(15px,1.1vw,27px)}
+.tv-game-grid .game-foot span{font-size:clamp(12px,.9vw,21px);line-height:1.5}
+.tv-game-grid .game-foot .drill{font-size:clamp(13px,1vw,23px);min-height:44px}
+.tv-error,.tv-empty{background:#1e2e36;border:1px solid #556468;border-radius:14px;padding:clamp(24px,2vw,45px);font-size:clamp(16px,1.1vw,25px)}
+.tv-footer{color:#789a9d;letter-spacing:.075em;font-size:clamp(11px,.8vw,18px);margin-top:auto;padding-top:20px;border-top:1px solid #294551;flex-wrap:wrap}
+@media (min-width:2400px){.tv-game-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:900px){.big-screen-mode .tv-shell{padding:20px}.tv-header,.tv-toolbar,.tv-headline{align-items:flex-start}.tv-toolbar{flex-direction:column}.tv-game-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tv-game-grid .team-logo{width:66px;height:66px}.tv-game-grid .team-col button{font-size:16px}.tv-game-grid .game-foot{flex-wrap:wrap}.tv-date{align-self:flex-end}}
+@media (max-width:670px){.tv-game-grid{grid-template-columns:1fr}.tv-header,.tv-headline{flex-wrap:wrap}.tv-header-controls{width:100%;justify-content:flex-end}.tv-header-controls .tv-button{padding:11px}.tv-identity strong{font-size:22px}.tv-game-grid .game{padding:20px}.tv-date{align-self:flex-start}.tv-footer{gap:8px}}
+@media(prefers-reduced-motion:reduce){.tv-game-grid .game{transition:none!important}.tv-game-grid .game:hover{transform:none!important}}
