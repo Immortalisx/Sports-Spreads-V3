@@ -2,6 +2,7 @@
 import {collectHistorical,nflFromCsv} from './historical-sources.mjs';
 import {evaluateEnhancedGames} from './calibrate-elo-model.mjs';
 import {completeNhlSeason} from './nhl-complete-history.mjs';
+import {fetchNhlSeasonListing} from './nhl-bulk-history.mjs';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {dirname,resolve} from 'node:path';
 const league=process.argv.find(x=>x.startsWith('--league='))?.split('=')[1];
@@ -18,10 +19,16 @@ if(league==='nfl'){
  }
 }else{
  for(let season=2021;season<=2025;season++){
-  const {games:rows,coverage}=await completeNhlSeason(season,{
-   onProgress:event=>{if(event.error)console.error('NHL source warning',event.club,event.error);}
-  });
-  console.error('Verified NHL',season,JSON.stringify(coverage));games.push(...rows);
+  let loaded;
+  try{loaded=await fetchNhlSeasonListing(season);}
+  catch(e){
+   console.error('NHL bulk listing incomplete:',String(e?.message||e));
+   loaded=await completeNhlSeason(season,{
+    onProgress:event=>{if(event.error)console.error('NHL source warning',event.club,event.error);}
+   });
+  }
+  console.error('Verified NHL',season,JSON.stringify(loaded.coverage));
+  games.push(...loaded.games);
  }
 }
 const result=evaluateEnhancedGames(games,league);
