@@ -13,6 +13,22 @@ function nflBlitz(side){return required(side.qbBlitzEpa,'QB blitz EPA')*rate(sid
   required(side.qbCleanEpa,'clean pocket EPA')*(1-side.opponentBlitzRate)+.25*required(side.opponentPressureEpaAllowed,'opponent pressure response');}
 function nflCoverage(side){return required(side.qbManEpa,'QB man coverage EPA')*rate(side.opponentManRate,'defensive man rate')+
   required(side.qbZoneEpa,'QB zone coverage EPA')*(1-side.opponentManRate);}
+function receiverBlitz(side){
+ if(!side.receiverId||!side.quarterbackId)throw Error('Verified receiver and quarterback identifiers required');
+ const share=rate(side.opponentBlitzRate,'defensive blitz rate');
+ return share*required(side.receiverEpaVsBlitz,'receiver-target EPA versus blitz')+
+  (1-share)*required(side.receiverEpaVsNonBlitz,'receiver-target EPA without blitz');
+}
+function nflRoster(side){
+ if(!Array.isArray(side.starters)||!side.starters.length)throw Error('Verified dated NFL starter availability required');
+ return side.starters.reduce((acc,r)=>{
+  if(!r||!r.playerId||!['out','questionable','active'].includes(r.status)||!Number.isFinite(r.snapShare)||r.snapShare<0||r.snapShare>1)
+    throw Error('Invalid official dated starter status');
+  if(r.status==='questionable')throw Error('Questionable cannot be treated as missing');
+  if(r.status==='active')return acc;
+  return acc+required(r.replacementDelta,'measured replacement efficiency')*r.snapShare;
+ },0);
+}
 function nbaScheme(side){const sw=rate(side.opponentSwitchRate,'switch share'),zone=rate(side.opponentZoneRate,'zone share');if(sw+zone>1)throw Error('Defensive scheme shares exceed one');
  return sw*required(side.offenseVsSwitch,'offense vs switch')+zone*required(side.offenseVsZone,'offense vs zone')+
  (1-sw-zone)*required(side.offenseVsOther,'offense versus other defenses');}
@@ -22,7 +38,7 @@ function mlbPitcherHitter(side){if(!side.opposingStarterId||!Array.isArray(side.
  // not a career head-to-head average of a tiny number of at-bats.
  const x=required(side.lineupXwobaAgainstPitchMix,'lineup expected wOBA');if(x<0||x>1)throw Error('Invalid expected wOBA');return x*10;}
 const computations={
- nfl:{qb_blitz_edge:nflBlitz,coverage_edge:nflCoverage},
+ nfl:{qb_blitz_edge:nflBlitz,receiver_blitz_edge:receiverBlitz,coverage_edge:nflCoverage,roster_availability:nflRoster},
  nba:{scheme_edge:nbaScheme},
  nhl:{goalie_gsax:nhlGoalie},
  mlb:{pitcher_hitter:mlbPitcherHitter}
@@ -30,6 +46,7 @@ const computations={
 /** Each observation has a vetted URL/timestamp, both matchups and a meaningful sample. */
 export function computeCandidateFeature(game,{featureId,home,away,sampleSize,sourceTier,sourceUrl,snapshotAt,dataThrough,matchup}){
  const fn=computations[game?.league]?.[featureId];if(!fn)throw Error('Unsupported matchup calculation');
+ if(featureId==='receiver_blitz_edge'&&(!matchup?.receiverId||!matchup?.quarterbackId))throw Error('Verified receiver and quarterback matchup required');
  pair(home,away,featureId);
  const homeMinusAway=delta(fn(home),fn(away));
  const item={gameId:game.gameId,league:game.league,featureId,homeMinusAway,sampleSize,sourceTier,sourceUrl,snapshotAt,dataThrough,matchup};
