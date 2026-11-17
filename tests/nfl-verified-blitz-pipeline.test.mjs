@@ -48,3 +48,13 @@ test('rejects unsupported corrupt play data instead of creating fabricated sampl
  assert.equal(joined.chartCoverage,0);
  assert.throws(()=>buildBlitzPregameFeatures({plays:[],fixtures:[{date:'invalid'}]}),/date/);
 });
+
+test('charting cannot leak from previous day before FTN publication delay',()=>{
+ const plays=Array.from({length:100},(_,i)=>({gameId:'prior',date:'2025-09-08',offenseTeam:'ATL',defenseTeam:'CAR',
+  quarterbackId:'q1',receiverId:'r1',epa:.2,blitz:i%2===0}));
+ const g=(id,date)=>({gameId:id,date,homeTeam:'ATL',awayTeam:'CAR',homeQbId:'q1',awayQbId:'q2',homeReceiverId:'r1'});
+ const results=buildBlitzPregameFeatures({plays,fixtures:[g('a','2025-09-09'),g('b','2025-09-11')],minQb:20,minDefense:40});
+ assert.equal(results[0].home.qbEpaVsBlitz,null);
+ assert.ok(results[1].home.qbEpaVsBlitz!==null);
+ assert.throws(()=>buildBlitzPregameFeatures({plays,fixtures:[],publicationLagDays:0}),/publication/);
+});
