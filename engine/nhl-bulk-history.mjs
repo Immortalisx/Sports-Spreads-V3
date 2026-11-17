@@ -21,7 +21,8 @@ export async function fetchNhlSeasonListing(season,{fetchImpl=fetch,expected=131
    if(Number(r.gameType)!==2||!String(r.id||'').startsWith(String(season)+'02'))continue;
    const id=Number(r.id),h=Number(r.homeScore),a=Number(r.visitingScore);
    const home=Number(r.homeTeamId),away=Number(r.visitingTeamId),date=String(r.gameDate||'').slice(0,10);
-   if(!Number.isSafeInteger(id)||!Number.isInteger(h)||!Number.isInteger(a)||h<0||a<0||h===a||
+   if(r.homeScore===null||r.homeScore===undefined||r.homeScore===''||r.visitingScore===null||r.visitingScore===undefined||r.visitingScore===''||
+      !Number.isSafeInteger(id)||!Number.isInteger(h)||!Number.isInteger(a)||h<0||a<0||h===a||
       !Number.isInteger(home)||!Number.isInteger(away)||home===away||!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
    const game={gameId:'nhl-'+id,league:'nhl',season,gameDate:date,gameAt:date+'T12:00:00.000Z',
     homeTeam:String(home),awayTeam:String(away),homeScore:h,awayScore:a,
