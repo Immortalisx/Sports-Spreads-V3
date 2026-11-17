@@ -116,6 +116,21 @@ button,summary{touch-action:manipulation}
 #feedback-note{resize:vertical;min-height:112px}
 @media(max-width:620px){.header-action{min-height:39px;padding:8px 9px;font-size:11px}.top-actions{flex-wrap:wrap;justify-content:flex-end;max-width:190px}.header-feedback{display:inline-flex}}
 @media(prefers-reduced-motion:reduce){.header-action,.weather-context{transition:none!important}}
+/* Experimental prediction: compact at-a-glance, details only on demand. */
+.experimental-model{border-color:#44654e;background:linear-gradient(145deg,#162d28,#15232d)}
+.model-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.model-flag{font-size:10px;color:#ffdfac;background:#423625;border:1px solid #605138;border-radius:20px;padding:4px 7px;white-space:nowrap}
+.model-columns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.model-columns>div{display:flex;flex-direction:column;gap:5px}
+.model-columns small{font-size:11px;color:#b5c6bf;white-space:normal}
+.model-columns strong{font-size:27px;font-family:'Space Grotesk',sans-serif;color:#e5f8e0}
+.model-meter{margin:14px 0 9px;background:#3f664b;height:7px;overflow:hidden;border-radius:20px}
+.model-meter span{display:block;height:100%;background:#91bad5;border-radius:20px 0 0 20px;transition:width .25s ease}
+.model-range{font-size:11px!important;color:#c2d1c8!important;margin:0 0 8px!important}
+.model-weather{font-size:11px!important;color:#b5d0d1!important;margin:9px 0!important}
+.model-method{border-top:1px solid #385149;padding-top:10px;margin-top:12px;color:#bad6c7;font-size:11px}
+.model-method summary{cursor:pointer}.model-method p{margin-top:10px!important;font-size:11px!important;line-height:1.65}
+@media(prefers-reduced-motion:reduce){.model-meter span{transition:none}}
 
 </style>
   <script>window.SS_CLOUD_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co',publishableKey:'sb_publishable_BX7-wUhJWAp7d3fa3I7Uew_VZc4JHE6'};</script>
@@ -224,6 +239,70 @@ button,summary{touch-action:manipulation}
  }
  function modelInputs(game,forecast){const a=assess(game,forecast);return a.available?{...a.features,weather_risk_tier:a.severity,weather_features_version:a.version}:null;}
  root.SportsWeatherModel=Object.freeze({assess,modelInputs});
+})(globalThis);
+
+</script>
+  <script>
+/* Sports Spreads experimental season-form model.
+ * No hidden ML model, sportsbook data, or calibrated probabilities.
+ * It uses current, sourced team records. Weather increases uncertainty, not a
+ * directionally invented win advantage. Evaluated only on scheduled real games.
+ */
+(function(root){
+ 'use strict';
+ const VERSION='season-form-preview-v0.1';
+ const CONFIG={
+  nfl:{prior:7,home:0.17,weight:0.80,interval:0.115},
+  nba:{prior:15,home:0.14,weight:0.75,interval:0.105},
+  nhl:{prior:16,home:0.085,weight:0.63,interval:0.115},
+  mlb:{prior:30,home:0.095,weight:0.65,interval:0.11}
+ };
+ function parseRecord(record,league){
+  const m=String(record||'').trim().match(/^(\d{1,3})-(\d{1,3})(?:-(\d{1,3}))?$/);
+  if(!m)return null;
+  const wins=Number(m[1]),losses=Number(m[2]),other=Number(m[3]||0);
+  // NFL's third field is tied games. NHL's third field is OTL; no OTL win credit.
+  const effectiveWins=wins+(league==='nfl'?0.5*other:0);
+  const total=wins+losses+other;
+  if(total===0||total>200)return null;
+  return {wins,losses,other,effectiveWins,total,raw:String(record).trim()};
+ }
+ function logistic(x){return 1/(1+Math.exp(-Math.max(-20,Math.min(20,x))));}
+ function logit(p){return Math.log(p/(1-p));}
+ function clamp(n,a,b){return Math.min(b,Math.max(a,n));}
+ function project(game,options={}){
+  if(!game||game.demo||game.status!=='scheduled')return {available:false,reason:'Predictions are only shown for scheduled, verified games.'};
+  const c=CONFIG[game.league];if(!c)return {available:false,reason:'Unsupported league'};
+  const home=parseRecord(game.home?.record,game.league),away=parseRecord(game.away?.record,game.league);
+  if(!home||!away)return {available:false,reason:'Current season records are not available for both teams.'};
+  // Beta-binomial shrinkage toward 50% with a league-specific pseudo-game prior.
+  const h=(home.effectiveWins+c.prior/2)/(home.total+c.prior);
+  const a=(away.effectiveWins+c.prior/2)/(away.total+c.prior);
+  const homeBase=clamp(logistic(c.weight*(logit(h)-logit(a))+c.home),0.12,0.88); // Cap extreme unvalidated estimates.
+  // Small samples -> broader interval; this is an indicative sensitivity range,
+  // not a validated 95% credible interval.
+  const sample=Math.min(home.total,away.total);
+  const uncertainty=clamp(c.interval+0.13/Math.sqrt(sample+1),0.075,0.22);
+  const forecast=options.weather;
+  const outdoor=(game.league==='nfl'||game.league==='mlb')&&game.venueIndoor!==true;
+  const weatherAssessment=outdoor&&forecast?.status==='forecast'&&root.SportsWeatherModel?.assess?
+    root.SportsWeatherModel.assess(game,forecast):null;
+  const tier=weatherAssessment?.available?Number(weatherAssessment.severity):null;
+  const weatherExtra=tier===null?0:tier===0?0:tier===1?0.02:tier===2?0.04:0.07;
+  // Weather has no directional impact unless such an effect is estimated and
+  // independently backtested. It enlarges uncertainty for volatile matchups.
+  const uncertaintyWithWeather=clamp(uncertainty+weatherExtra,0.07,0.29);
+  const model={available:true,version:VERSION,source:'ESPN unofficial scoreboard · team records',
+   homeProbability:homeBase,awayProbability:1-homeBase,homeRecord:home.raw,awayRecord:away.raw,
+   homeName:game.home.name,awayName:game.away.name,
+   low:clamp(homeBase-uncertaintyWithWeather,0.01,0.99),high:clamp(homeBase+uncertaintyWithWeather,0.01,0.99),
+   uncertaintyPp:Math.round(uncertaintyWithWeather*100),
+   weatherUncertaintyPp:Math.round(weatherExtra*100),weatherTier:weatherAssessment?.available?weatherAssessment.tier:null,
+   sampleGames:sample,validated:false,marketChecked:false,injuriesIncluded:false,
+   note:'Experimental estimate from season W-L records, shrinkage and an assumed home edge. Range is a sensitivity guide, not a statistical confidence interval. Not backtested or calibrated.'};
+  return model;
+ }
+ root.SportsPrediction=Object.freeze({VERSION,parseRecord,project});
 })(globalThis);
 
 </script>
@@ -367,7 +446,7 @@ function getTodayET(){const p=new Intl.DateTimeFormat('en-US',{timeZone:'America
 const persisted=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-ticket')||'[]');return Array.isArray(raw)?raw.slice(0,20):[];}catch{return[];}})();
 const archived=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-archives')||'[]');return Array.isArray(raw)?raw.slice(0,100):[];}catch{return[];}})();
 const state={cloud:{configured:false,url:'',key:'',token:'',status:'',tickets:[]},history:archived,league:'nba',date:getTodayET(),section:'games',loading:true,feed:null,error:'',search:'',directory:{},directoryLoading:{},drawer:null,teamTab:'injuries',teamCache:{},teamLoading:{},teamErrors:{},weather:{},ticket:persisted,draft:null,stake:'10',notice:''};
-let app; // Initialize only when the DOM has created #app.
+let app; // Set after DOMContentLoaded so the mount is guaranteed to exist.
 const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const safeUrl=x=>{try{const url=new URL(x);return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return'';}};
 const money=x=>Number(x).toLocaleString('en-US',{style:'currency',currency:'USD'});
@@ -386,7 +465,30 @@ function topbar(){
 }
 function leaguebar(){return `<div class="leaguebar" role="tablist" aria-label="League">${Object.entries(SPORTS).map(([id,s])=>`<button role="tab" aria-selected="${state.league===id}" class="league ${state.league===id?'active':''}" data-action="league" data-league="${id}"><span class="emoji">${s.emoji}</span> ${s.label}</button>`).join('')}</div>`;}
 function logo(team,league){const url=safeUrl(team.logo);return `<span class="team-logo" aria-hidden="true">${url?`<img alt="" src="${esc(url)}" loading="lazy" onerror="this.remove();this.parentElement.textContent='${esc(SPORTS[league]?.emoji||'●')}'">`:esc(SPORTS[league]?.emoji||'●')}</span>`;}
-function gameCard(game){const teams=game.status==='final' || game.status==='live';const middle=teams&&game.away.score!==null&&game.home.score!==null?`<span class="score">${esc(game.away.score)}–${esc(game.home.score)}</span>`:`<span class="versus">VS</span><small>${game.demo?(game.start?formatTime(game.start):'Sample'):formatTime(game.start)}</small>`;return `<article class="game"><div class="game-top"><span class="game-date">${game.demo?'SAMPLE MATCHUP':esc(formatDay(game.start))} ${!game.demo?'· '+esc(formatTime(game.start)):''}</span><span class="tag ${game.demo?'demo':game.status==='live'?'live':game.status==='final'?'final':''}">${game.demo?'Demo':esc(game.status)}</span></div><div class="teams"><div class="team-col">${logo(game.away,game.league)}<button data-action="team" data-team="away" data-game="${esc(game.id)}" title="View ${esc(game.away.name)} team report">${esc(game.away.name)}</button><span class="record">${esc(game.away.record||game.away.abbr||'')}</span></div><div class="match-center">${middle}</div><div class="team-col">${logo(game.home,game.league)}<button data-action="team" data-team="home" data-game="${esc(game.id)}" title="View ${esc(game.home.name)} team report">${esc(game.home.name)}</button><span class="record">${esc(game.home.record||game.home.abbr||'')}</span></div></div><div class="game-foot"><span>${game.demo?'Preview only · Not a scheduled fixture':game.model?'Model available':'Model prediction not connected'}</span><button class="drill" data-action="game" data-game="${esc(game.id)}">Game details ↗</button></div></article>`;}
+function previewModel(g){return globalThis.SportsPrediction?.project?.(g,{weather:state.weather[globalThis.SportsWeather?.key?.(g)]})||{available:false,reason:'The experimental model is unavailable.'};}
+function modelLabel(g){
+ if(g.demo)return 'Preview only · Not a scheduled fixture';
+ const m=previewModel(g);
+ if(!m.available)return 'Form estimate unavailable';
+ const homeFav=m.homeProbability>=.5;
+ const who=homeFav?g.home:g.away,prob=homeFav?m.homeProbability:m.awayProbability;
+ return `Experimental form · ${esc(who.abbr||who.name)} ${Math.round(prob*100)}%`;
+}
+function modelPanel(g){
+ const m=previewModel(g);
+ if(!m.available)return `<div class="model-off"><h3>Model estimate unavailable</h3><p>${esc(m.reason||'Missing team performance data.')}</p></div>`;
+ const pct=(x)=>Math.round(x*100)+'%';
+ const weatherLine=m.weatherUncertaintyPp>0?`+${m.weatherUncertaintyPp} percentage points of weather uncertainty (${esc(m.weatherTier)})`:
+   g.league==='nfl'||g.league==='mlb'?'No measured weather adjustment yet; forecast and roof status may be unavailable.':'Indoor game · no weather uncertainty adjustment';
+ return `<div class="panel experimental-model"><div class="model-head"><span class="block-label">SEASON-FORM MODEL · EXPERIMENTAL</span><span class="model-flag">Not calibrated</span></div>
+   <div class="model-columns"><div><small>${esc(g.away.abbr||'AWAY')} win estimate</small><strong>${pct(m.awayProbability)}</strong></div><div><small>${esc(g.home.abbr||'HOME')} win estimate</small><strong>${pct(m.homeProbability)}</strong></div></div>
+   <div class="model-meter" role="img" aria-label="Experimental probability: ${esc(g.away.name)} ${pct(m.awayProbability)}, ${esc(g.home.name)} ${pct(m.homeProbability)}"><span style="width:${pct(m.awayProbability)}"></span></div>
+   <p class="model-range">Home sensitivity range ${pct(m.low)}–${pct(m.high)} · Not a statistical confidence interval</p>
+   <p class="model-weather">${esc(weatherLine)}</p>
+   <details class="model-method"><summary>How this estimate works</summary>
+   <p>Version ${esc(m.version)} · ${esc(m.source)} · W–L records ${esc(m.awayRecord)} vs ${esc(m.homeRecord)}. Uses Bayesian shrinkage and a league-dependent assumed home advantage. ${esc(m.note)} Injuries, lineup changes, true Elo history, sportsbook prices and player prop forecasts are not included. Do not interpret this as a betting edge or validated confidence grade.</p></details></div>`;
+}
+function gameCard(game){const teams=game.status==='final' || game.status==='live';const middle=teams&&game.away.score!==null&&game.home.score!==null?`<span class="score">${esc(game.away.score)}–${esc(game.home.score)}</span>`:`<span class="versus">VS</span><small>${game.demo?(game.start?formatTime(game.start):'Sample'):formatTime(game.start)}</small>`;return `<article class="game"><div class="game-top"><span class="game-date">${game.demo?'SAMPLE MATCHUP':esc(formatDay(game.start))} ${!game.demo?'· '+esc(formatTime(game.start)):''}</span><span class="tag ${game.demo?'demo':game.status==='live'?'live':game.status==='final'?'final':''}">${game.demo?'Demo':esc(game.status)}</span></div><div class="teams"><div class="team-col">${logo(game.away,game.league)}<button data-action="team" data-team="away" data-game="${esc(game.id)}" title="View ${esc(game.away.name)} team report">${esc(game.away.name)}</button><span class="record">${esc(game.away.record||game.away.abbr||'')}</span></div><div class="match-center">${middle}</div><div class="team-col">${logo(game.home,game.league)}<button data-action="team" data-team="home" data-game="${esc(game.id)}" title="View ${esc(game.home.name)} team report">${esc(game.home.name)}</button><span class="record">${esc(game.home.record||game.home.abbr||'')}</span></div></div><div class="game-foot"><span>${modelLabel(game)}</span><button class="drill" data-action="game" data-game="${esc(game.id)}">Game details ↗</button></div></article>`;}
 function filteredGames(){const games=state.feed?.games??[];const q=state.search.trim().toLowerCase();return q?games.filter(x=>(x.home.name+' '+x.away.name+' '+x.home.abbr+' '+x.away.abbr).toLowerCase().includes(q)):games;}
 function directoryView(){const d=state.directory[state.league];const teams=d?.teams??[];const q=state.search.trim().toLowerCase();const filtered=q?teams.filter(t=>(t.name+' '+t.abbr).toLowerCase().includes(q)):teams;return `${leaguebar()}<div class="tools"><div class="datebox"><span>TEAM DIRECTORY</span><span class="tag">${esc(SPORTS[state.league].label)}</span></div><div class="tools-right"><input id="team-search" class="search" type="search" aria-label="Search league teams" placeholder="Find a team..." value="${esc(state.search)}" /><button class="neutral-button" data-action="reload-teams">${icon('refresh')} Refresh</button></div></div>${d?.error?`<div class="error-note"><strong>Preview:</strong> ${esc(d.error)}. Example teams are shown; current reports need a working feed.</div>`:''}<div class="section-header"><div><h2>Team directory</h2><p>${state.directoryLoading[state.league]?'Loading…':`${filtered.length} teams · Select one to open its report`}</p></div></div>${state.directoryLoading[state.league]?`<div class="empty"><h3>Loading teams…</h3></div>`:filtered.length?`<div class="game-grid">${filtered.map(t=>`<article class="game" style="padding:16px 19px"><div class="teams" style="justify-content:flex-start">${logo(t,state.league)}<div style="flex:1;min-width:0"><button data-action="directory-team" data-team-id="${esc(t.id)}" style="border:0;color:var(--text);font-weight:800;background:transparent;text-align:left;font-size:15px;padding:3px 0">${esc(t.name)} ↗</button><div class="person-info">${esc(t.abbr||state.league.toUpperCase())}${d.demo?' · Example directory':''}</div></div><button data-action="directory-team" data-team-id="${esc(t.id)}" class="neutral-button small-btn">Report</button></div></article>`).join('')}</div>`:`<div class="empty"><h3>No teams found</h3><p>${q?'Try a different name.':'The team feed did not return a directory.'}</p></div>`}`;}
 function board(){
@@ -396,7 +498,7 @@ function board(){
  <div class="quick-status"><div><span class="small-pip ${official?'pip-green':''}"></span><strong>${state.loading?'Checking feed…':official?`${state.feed.games.length} listed matchups`:'Preview fixtures'}</strong></div><div class="muted-sm">${official?`Updated ${esc(formatFresh(state.feed.updatedAt))}`:'No verified picks or odds'}</div></div>
  <div class="section-header"><div><h2>${esc(SPORTS[state.league].label)} matchups</h2></div><span class="legend">Tap a team for details</span></div>
  ${state.loading?`<div class="empty"><h3>Loading games…</h3></div>`:games.length?`<section class="game-grid">${games.map(gameCard).join('')}</section>`:`<div class="empty"><h3>${state.search?'No matching teams':'No games listed'}</h3><p>${state.search?'Try another team name.':'Nothing scheduled for this league and date, or the feed has no results.'}</p></div>`}
- <details class="source-foot"><summary>Data & model status</summary><p>${official?'Sports schedules and results come from an unofficial ESPN website feed.':'This is an interface preview. Unverified sample games are marked.'} Model forecasts and sportsbook odds are not connected. Always verify with primary sources.</p></details>`;
+ <details class="source-foot"><summary>Data & model status</summary><p>${official?'Sports schedules and results come from an unofficial ESPN website feed.':'This is an interface preview. Unverified sample games are marked.'} Season-form estimates are experimental and uncalibrated. Live sportsbook odds and the original trained prediction engine are not connected. Verify data with primary sources.</p></details>`;
 }
 function parseAmerican(x){const v=Number(x);return Number.isInteger(v)&&Math.abs(v)>=100&&Math.abs(v)<=100000?v:null;}
 function calcTicket(){if(!state.ticket.length)return null;let multiplier=1;for(const leg of state.ticket){const x=parseAmerican(leg.odds);if(x===null)return null;multiplier*=x>0?1+x/100:1+100/Math.abs(x);}const stake=Number(state.stake);if(!Number.isFinite(stake)||stake<=0||stake>1000000)return null;return {multiplier,return:multiplier*stake,profit:(multiplier-1)*stake};}
@@ -459,7 +561,7 @@ function archiveTicket(){const result=calcTicket();if(!result||state.ticket.leng
  state.history.unshift(snapshot);state.history=state.history.slice(0,100);try{localStorage.setItem('ss-v2-archives',JSON.stringify(state.history));}catch{notify('Local storage unavailable — unable to save.');return;}
  notify('Snapshot saved locally.');render();return snapshot;
 }
-function aboutView(){return `<section class="section-top"><div class="section-header"><div><h2>System & sources</h2><p>Designed to support multiple sports without duplicating the interface.</p></div></div><div class="arch-grid"><div class="feature"><div class="feature-icon">⌁</div><h3>Sports feeds</h3><p>ESPN site-feed prototype. Use a properly licensed feed for production; cache and timestamp every response.</p></div><div class="feature"><div class="feature-icon">∑</div><h3>Prediction engine</h3><p>Not yet migrated. No fabricated win probabilities, EV or confidence grades.</p></div><div class="feature"><div class="feature-icon">▦</div><h3>Supabase</h3><p>Secure ticket-history database schema ready; requires a Supabase project. Proposed prediction ledger: model run → market quote → result → audit.</p></div><div class="feature"><div class="feature-icon">↗</div><h3>PostHog</h3><p>Optional event instrumentation for analytics for team-profile opens, ticket steps, errors and abandoned flows.</p></div><div class="feature"><div class="feature-icon">◎</div><h3>Firecrawl</h3><p>Research, source validation, injury and news cross-checks; not hardcoded as an always-on feed.</p></div><div class="feature"><div class="feature-icon">✓</div><h3>Render & GitHub</h3><p>Deployment blueprint prepared; requires hosted repository. Code review, tests and numerical verification after repository access is linked.</p></div></div><div class="panel section-top"><h3>Next migration step</h3><p>Connect the original site's source and data refresh process; create the Supabase project and connect a repository for Render deployment. Preserve model versions, run logs and historical forecasts before switching the public domain. This preview does not modify your existing site.</p></div></section>`;}
+function aboutView(){return `<section class="section-top"><div class="section-header"><div><h2>System & sources</h2><p>Designed to support multiple sports without duplicating the interface.</p></div></div><div class="arch-grid"><div class="feature"><div class="feature-icon">⌁</div><h3>Sports feeds</h3><p>ESPN site-feed prototype. Use a properly licensed feed for production; cache and timestamp every response.</p></div><div class="feature"><div class="feature-icon">∑</div><h3>Matchup estimates</h3><p>Experimental season-form baseline with weather-sensitive uncertainty. Not calibrated, backtested or a substitute for the original trained model.</p></div><div class="feature"><div class="feature-icon">▦</div><h3>Supabase</h3><p>Secure ticket-history database schema ready; requires a Supabase project. Proposed prediction ledger: model run → market quote → result → audit.</p></div><div class="feature"><div class="feature-icon">↗</div><h3>PostHog</h3><p>Optional event instrumentation for analytics for team-profile opens, ticket steps, errors and abandoned flows.</p></div><div class="feature"><div class="feature-icon">◎</div><h3>Firecrawl</h3><p>Research, source validation, injury and news cross-checks; not hardcoded as an always-on feed.</p></div><div class="feature"><div class="feature-icon">✓</div><h3>Render & GitHub</h3><p>Deployment blueprint prepared; requires hosted repository. Code review, tests and numerical verification after repository access is linked.</p></div></div><div class="panel section-top"><h3>Next model milestone</h3><p>Recover the previous Elo training code, add historical backtests and holdout calibration, account for injuries and travel, and compare forecasts to verified sportsbook prices. The experimental baseline currently exposes assumptions and uncertainty rather than claiming proven accuracy.</p></div></section>`;}
 function getGame(id){return (state.feed?.games??[]).find(x=>x.id===id);}
 function getTeamCacheKey(){const d=state.drawer;if(!d||d.type!=='team')return'';return `${d.league}-${d.team.id}-${state.teamTab}`;}
 function dataMeta(result){return `<div class="data-meta">${result?.source?`Source: <span>${esc(result.source)}</span> · `:''}${result?.updatedAt?`Checked ${esc(formatFresh(result.updatedAt))}`:'No source timestamp'}${result?.cache==='stale'?' · STALE CACHE':''}</div>`;}
@@ -489,7 +591,7 @@ async function loadGameWeather(g,force=false){
  catch(e){state.weather[key]={status:'unavailable',message:e.message||'Weather provider unavailable.'};}
  if(state.drawer?.type==='game'&&state.drawer.game.id===g.id)render();
 }
-function gameDrawer(){const d=state.drawer,g=d.game;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[g.league].emoji)}</span><div><div class="eyebrow">${esc(g.league.toUpperCase())} / MATCHUP</div><h2>${esc(g.away.abbr||g.away.name)} @ ${esc(g.home.abbr||g.home.name)}</h2><small>${g.demo?'Example matchup':`${formatDay(g.start)} · ${formatTime(g.start)}`}</small></div></div><button class="drawer-close" data-action="close" aria-label="Close panel">×</button></div>${g.demo?`<div class="error-note">UI example only. Do not treat this as a scheduled game.</div>`:''}<div class="model-off"><h3>Prediction engine not connected</h3><p>This prototype does not invent confidence grades, win chances, value percentages or picks. We'll migrate the existing prediction engine and audit its outputs before showing them here.</p></div><div class="panel"><span class="block-label">MATCHUP</span><div class="details-grid"><div>${logo(g.away,g.league)}<div style="margin-top:8px"><strong>${esc(g.away.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="away" style="margin-top:6px">Injuries · Roster · News ↗</button></div><div>${logo(g.home,g.league)}<div style="margin-top:8px"><strong>${esc(g.home.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="home" style="margin-top:6px">Injuries · Roster · News ↗</button></div></div></div><div class="panel"><span class="block-label">GAME DETAILS</span><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Game status</span><strong>${esc(g.demo?'Example only':g.statusText)}</strong></div><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Scheduled</span><strong>${esc(g.demo?'Not verified':formatTime(g.start))}</strong></div><div class="result-row" style="justify-content:space-between"><span class="muted">Sportsbook odds</span><strong>Not verified</strong></div></div>${weatherPanel(g)}<div class="panel"><h3>Build a ticket</h3><p>Choose a selection and enter its sportsbook price.</p><button class="btn" data-action="quickpick" data-game="${esc(g.id)}" style="margin-top:13px">Add to ticket ↗</button></div><details class="panel data-panel"><summary>Full model methodology (pending)</summary><p>Once connected, this section will show model version, data freshness, injuries, weather features for outdoor games, recent form, estimated probability, market-implied probability, and assumptions. Model confidence is not the same as probability of a profitable bet.</p></details>`;}
+function gameDrawer(){const d=state.drawer,g=d.game;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[g.league].emoji)}</span><div><div class="eyebrow">${esc(g.league.toUpperCase())} / MATCHUP</div><h2>${esc(g.away.abbr||g.away.name)} @ ${esc(g.home.abbr||g.home.name)}</h2><small>${g.demo?'Example matchup':`${formatDay(g.start)} · ${formatTime(g.start)}`}</small></div></div><button class="drawer-close" data-action="close" aria-label="Close panel">×</button></div>${g.demo?`<div class="error-note">UI example only. Do not treat this as a scheduled game.</div>`:''}${modelPanel(g)}<div class="panel"><span class="block-label">MATCHUP</span><div class="details-grid"><div>${logo(g.away,g.league)}<div style="margin-top:8px"><strong>${esc(g.away.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="away" style="margin-top:6px">Injuries · Roster · News ↗</button></div><div>${logo(g.home,g.league)}<div style="margin-top:8px"><strong>${esc(g.home.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="home" style="margin-top:6px">Injuries · Roster · News ↗</button></div></div></div><div class="panel"><span class="block-label">GAME DETAILS</span><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Game status</span><strong>${esc(g.demo?'Example only':g.statusText)}</strong></div><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Scheduled</span><strong>${esc(g.demo?'Not verified':formatTime(g.start))}</strong></div><div class="result-row" style="justify-content:space-between"><span class="muted">Sportsbook odds</span><strong>Not verified</strong></div></div>${weatherPanel(g)}<div class="panel"><h3>Build a ticket</h3><p>Choose a selection and enter its sportsbook price.</p><button class="btn" data-action="quickpick" data-game="${esc(g.id)}" style="margin-top:13px">Add to ticket ↗</button></div><details class="panel data-panel"><summary>Model roadmap & limits</summary><p>This first transparent baseline uses season W-L form and assumed home advantage. Weather increases the displayed uncertainty range for outdoor games when a forecast is available. A trained Elo model, injury impact, sport-specific player projections, calibrated confidence, independent historical backtests and verified sportsbook prices still require a production data pipeline. A projected winner does not imply a profitable bet.</p></details>`;}
 function playerDrawer(){const {player,league,team}=state.drawer;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[league].emoji)}</span><div><div class="eyebrow">${esc(league.toUpperCase())} / PLAYER</div><h2>${esc(player.name)}</h2><small>${esc(team.name)} · ${esc(player.position||'Player')}${player.jersey?' · #'+esc(player.jersey):''}</small></div></div><button class="drawer-close" data-action="back-team" aria-label="Back to team">←</button></div><div class="panel"><h3>Player profile</h3><p>Full game logs and player prop projections will appear here after the production statistics adapter and prediction engine are connected.</p>${safeUrl(player.profileUrl)?`<p style="margin-top:14px"><a class="inline-link" href="${esc(safeUrl(player.profileUrl))}" target="_blank" rel="noopener noreferrer">View player source ↗</a></p>`:''}</div><div class="form-actions"><button class="btn" data-action="player-prop">+ Build player prop</button></div><button class="neutral-button" data-action="back-team">← Back to ${esc(team.name)}</button>`;}
 function feedbackDrawer(){return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">✦</span><div><div class="eyebrow">BETA FEEDBACK</div><h2>Make it better</h2><small>Short feedback, no sign-in.</small></div></div><button class="drawer-close" data-action="close" aria-label="Close">×</button></div><div class="panel"><label class="feedback-label" for="feedback-kind">What's on your mind?</label><select id="feedback-kind"><option>Something works well</option><option>Something feels confusing</option><option>Bug or broken feature</option><option>Feature suggestion</option></select><label class="feedback-label" for="feedback-note">Your feedback</label><textarea id="feedback-note" rows="5" maxlength="1200" placeholder="What should we improve?"></textarea><div class="form-actions"><button class="btn" data-action="copy-feedback">Copy feedback for Discord</button></div><p class="weather-note">Paste your feedback into the Sports Spreads discussion in Discord. No account details are collected here.</p></div>`;}
 function publicShareUrl(){const origin=globalThis.location?.origin;return /^https:\/\/[-a-z0-9.]+\.onrender\.com$/i.test(origin||'')?origin+'/':'https://sports-spreads.onrender.com/';}
