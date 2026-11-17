@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {completeNhlSeason} from '../engine/nhl-complete-history.mjs';
-const game=(id,homeScore=3)=>({id,gameType:2,gameDate:id.endsWith('2')?'2025-10-09':'2025-10-08',
+const game=(id,homeScore=3)=>({id,gameType:2,gameDate:String(id).endsWith('2')?'2025-10-09':'2025-10-08',
  gameState:'OFF',startTimeUTC:'2025-10-09T00:00:00Z',
  homeTeam:{abbrev:'TOR',score:homeScore},
  awayTeam:{abbrev:'MTL',score:1}});
