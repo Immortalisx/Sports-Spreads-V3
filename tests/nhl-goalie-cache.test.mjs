@@ -6,7 +6,7 @@ const edge=readFileSync(new URL('../supabase/functions/nhl-goalie-form/nhl-goali
 const service=readFileSync(new URL('../supabase/functions/nhl-goalie-form/index.ts',import.meta.url),'utf8');
 const schema=readFileSync(new URL('../supabase/migrations/007_nhl_goalie_form_cache.sql',import.meta.url),'utf8');
 const view=['18-prediction-views','20-views','21-game-detail'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
-const ctrl=['26-cached-research','30-controller'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
+const ctrl=['26-cached-research','27-board-team-loaders','30-controller'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
 const state=readFileSync(new URL('../src/app/10-state.js',import.meta.url),'utf8');
 test('live edge pipeline bundles identical tested goalie form; no different math in production',()=>{
  assert.equal(root,edge);
