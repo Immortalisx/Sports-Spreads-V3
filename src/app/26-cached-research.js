@@ -75,3 +75,31 @@ async function loadNflCoaching(game,force=false){
  }catch(e){state.coachingErrors[id]=e?.message||'NFL coaching history unavailable';}
  finally{clearTimeout(timer);state.coachingLoading[id]=false;render();}
 }
+
+
+/** Only loads when someone requests game-scoped price history; no Odds API calls. */
+async function loadMarketHistory(game,force=false){
+ if(!game||game.demo||game.status!=='scheduled'||!globalThis.SportsOdds)return;
+ const id=String(game.id),matched=SportsOdds.booksForGame(game,state.odds[game.league]);
+ const eventId=String(matched?.eventId||'');
+ if(!matched.matched||!/^[a-zA-Z0-9_-]{8,80}$/.test(eventId))return;
+ if(state.marketHistoryLoading[id]||(!force&&state.marketHistory[id]))return;
+ state.marketHistoryLoading[id]=true;delete state.marketHistoryErrors[id];render();
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),10000);
+ try{
+  const q=new URLSearchParams({league:game.league,event_id:eventId});
+  const r=await fetch('https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/market-history?'+q,{
+   headers:{accept:'application/json'},signal:ctrl.signal});
+  if(!r.ok)throw Error('Archived market history unavailable');
+  const data=await r.json();
+  if(!['cached','pending'].includes(data.status)||data.league!==game.league||
+    data.eventId!==eventId||!Array.isArray(data.points)||data.points.length>24||
+    data.calibrated!==false||data.appliedToForecast!==false||
+    data.points.some(x=>!Number.isFinite(x.homeNoVig)||x.homeNoVig<=0||
+     x.homeNoVig>=1||!Number.isFinite(Date.parse(x.asOf))||
+     Date.parse(x.asOf)>=Date.parse(game.start)))
+   throw Error('Unverified or mismatched market history');
+  state.marketHistory[id]=data;
+ }catch(e){state.marketHistoryErrors[id]=e?.message||'Market history unavailable';}
+ finally{clearTimeout(timer);state.marketHistoryLoading[id]=false;render();}
+}
