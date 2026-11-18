@@ -138,7 +138,7 @@ function dayBootstrap(rows,iterations=1000,seed=20261118){
 function toGames(source,sourceTag){
  return source.rows.map(([id,season,gameDate,homeTeam,awayTeam,homeScore,awayScore])=>({
   gameId:'nhl-'+id,league:'nhl',season,gameDate,homeTeam,awayTeam,homeScore,awayScore,
-  sourceUrl:source.sourceUrls?.[season<=20232024?season-20222023:season-20242025]||'',
+  sourceUrl:source.sourceUrls?.[(season===20222023||season===20242025)?0:1]||'',
   sourceTier:'official_public',dataset:sourceTag
  }));
 }
