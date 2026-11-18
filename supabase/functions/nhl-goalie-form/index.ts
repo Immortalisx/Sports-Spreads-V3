@@ -39,9 +39,6 @@ async function nhl(path:string){
  const body=await r.text();if(body.length>950000)throw Error('NHL source oversized');
  return JSON.parse(body);
 }
-async function groupedWork<T>(items:T[],n:number,fn:(x:T)=>Promise<void>){
- for(let i=0;i<items.length;i+=n)await Promise.all(items.slice(i,i+n).map(fn));
-}
 function fixtureList(payload:any,now:number){
  if(!Array.isArray(payload?.gameWeek))throw Error('NHL week schedule missing');
  const all=new Map<string,any>();
@@ -56,60 +53,84 @@ function fixtureList(payload:any,now:number){
  }
  return [...all.values()].sort((a,b)=>a.start.localeCompare(b.start)).slice(0,32);
 }
+async function goalieGameRows(seasonYear:number){
+ // The official NHL Stats REST service caps each query at 100 rows regardless
+ // of requested limit. Page in order; 2026 through mid-November ~700 rows.
+ const rows:any[]=[],seen=new Set<string>();
+ const season=String(seasonYear)+String(seasonYear+1);
+ for(let start=0;start<5000;start+=100){
+  const url=new URL('https://api.nhle.com/stats/rest/en/goalie/summary');
+  url.searchParams.set('isAggregate','false');url.searchParams.set('isGame','true');
+  url.searchParams.set('start',String(start));url.searchParams.set('limit','100');
+  url.searchParams.set('cayenneExp','seasonId='+season+' and gameTypeId=2');
+  const response=await fetch(url.toString(),{headers:{Accept:'application/json'},
+   signal:AbortSignal.timeout(24000)});
+  if(!response.ok)throw Error('NHL goalie game summary HTTP '+response.status);
+  const body=await response.text();if(body.length>850000)throw Error('NHL goalie page too large');
+  const payload=JSON.parse(body);
+  if(!Array.isArray(payload?.data)||!Number.isInteger(Number(payload.total)))
+   throw Error('NHL goalie game summary schema missing');
+  const total=Number(payload.total);
+  if(total<0||total>5000)throw Error('NHL goalie source size outside verified limits');
+  for(const r of payload.data){
+   const playerId=Number(r.playerId),gameId=String(r.gameId||'');
+   if(!Number.isSafeInteger(playerId)||!/^20\d{8}$/.test(gameId)||!gameId.startsWith(String(seasonYear))||
+    !/^[A-Z]{2,4}$/.test(String(r.teamAbbrev||'')))continue;
+   const key=String(playerId)+'|'+gameId;
+   if(seen.has(key))throw Error('Duplicate game-level goalie stats from NHL REST');
+   seen.add(key);rows.push(r);
+  }
+  if(start+payload.data.length>=total){
+   if(rows.length<Math.floor(total*.93))throw Error('NHL goalie game stats insufficient verified coverage');
+   break;
+  }
+  if(payload.data.length!==100)throw Error('NHL goalie page truncated before total');
+ }
+ return rows;
+}
 async function refresh(){
  const generatedAt=new Date().toISOString(),now=Date.parse(generatedAt);
- const schedule=await nhl('/schedule/now');
- const games=fixtureList(schedule,now);
- if(!games.length)throw Error('No scheduled NHL games in next 3.5 days; keep prior verified cache');
+ const schedule=await nhl('/schedule/now'),games=fixtureList(schedule,now);
+ if(!games.length)throw Error('No scheduled NHL games in next 3.5 days; preserve prior cache');
  const teams=[...new Set(games.flatMap(g=>[g.homeAbbrev,g.awayAbbrev]))].sort();
- const roster=new Map<string,Array<{id:number,name:string}>>(),errors:string[]=[];
- await groupedWork(teams,4,async team=>{
-  try{
-   const seasonYear=Number(games.find(g=>g.homeAbbrev===team||g.awayAbbrev===team)!.gameId.slice(0,4));
-   const source=await nhl('/club-stats/'+team+'/'+seasonYear+(seasonYear+1)+'/2');
-   if(!Array.isArray(source.goalies))throw Error('Missing goalie team stats');
-   const players=source.goalies.filter((x:any)=>Number.isSafeInteger(Number(x.playerId))&&
-    Number(x.gamesStarted)>0).sort((a:any,b:any)=>Number(b.gamesStarted)-Number(a.gamesStarted)).slice(0,3)
-    .map((x:any)=>({id:Number(x.playerId),
-     name:[x.firstName?.default,x.lastName?.default].filter(Boolean).join(' ').slice(0,95)}));
-   if(players.length)roster.set(team,players);else errors.push(team);
-  }catch{errors.push(team);}
- });
- const logs=new Map<string,any[]>();
- const wanted=[...roster.entries()].flatMap(([team,players])=>players.map(p=>({team,...p})));
- await groupedWork(wanted,4,async item=>{
-  try{
-   const seasonYear=Number(games.find(g=>g.homeAbbrev===item.team||g.awayAbbrev===item.team)!.gameId.slice(0,4));
-   const data=await nhl('/player/'+item.id+'/game-log/'+seasonYear+(seasonYear+1)+'/2');
-   if(!Array.isArray(data?.gameLog))throw Error('Missing NHL player game-log history');
-   logs.set(item.team+'|'+item.id,data.gameLog);
-  }catch{}
- });
- const goalieData=new Map<string,any[]>();
- for(const team of teams){
-  const upcoming=games.filter(g=>g.homeAbbrev===team||g.awayAbbrev===team);
-  // This cache stores summaries for the earliest fixture per team; each
-  // later fixture will be filtered once more before display by game date.
-  const day=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',year:'numeric',
-    month:'2-digit',day:'2-digit'}).format(new Date(upcoming[0].start));
-  const playerRows=(roster.get(team)||[]).flatMap(p=>{
-   const history=logs.get(team+'|'+p.id);
-   if(!history)return [];
-   const summary=goalieFormFromGameLog({playerId:p.id,teamAbbrev:team,logs:history,gameDate:day});
-   return [{...summary,name:p.name}];
-  });
-  goalieData.set(team,playerRows);
+ const seasonYear=Number(games[0].gameId.slice(0,4));
+ if(games.some(g=>Number(g.gameId.slice(0,4))!==seasonYear))throw Error('Multiple seasons in NHL slate');
+ const rows=await goalieGameRows(seasonYear);
+ if(rows.length<20)throw Error('NHL goalie stats source has too few completed games');
+ const grouped=new Map<string,Map<string,any[]>>();
+ for(const row of rows){
+  const team=String(row.teamAbbrev),id=String(row.playerId);
+  if(!teams.includes(team))continue;
+  const goalie=grouped.get(team)||new Map<string,any[]>(),list=goalie.get(id)||[];
+  list.push({...row,gameId:row.gameId,teamAbbrev:team,
+   gamesStarted:row.gamesStarted,shotsAgainst:row.shotsAgainst,goalsAgainst:row.goalsAgainst});
+  goalie.set(id,list);grouped.set(team,goalie);
  }
- const snap={...buildNhlGoalieSnapshot({games,teamGoalies:goalieData,generatedAt}),
-  teamCount:teams.length,teamsWithStats:roster.size,goalieLogsRetrieved:logs.size,
-  dataSourceFailures:errors.length,showModelConfidence:false,noPaidApiRequests:true};
- if(!snap.games.length||roster.size<Math.ceil(teams.length*.6)||logs.size<Math.ceil(teams.length*.6))
-  throw Error('Too few sourced goalie histories; refuse cache overwrite');
+ const teamGoalies=new Map<string,any[]>();let supportedTeams=0;
+ for(const team of teams){
+  const fixture=games.find(g=>g.homeAbbrev===team||g.awayAbbrev===team)!;
+  const date=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',
+   year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(fixture.start));
+  const options=[...(grouped.get(team)||new Map()).entries()].map(([playerId,history])=>{
+   const stats=goalieFormFromGameLog({playerId,teamAbbrev:team,logs:history,gameDate:date});
+   return {...stats,name:String(history[0]?.goalieFullName||history[0]?.lastName||'Goalie').slice(0,95)};
+  }).filter(x=>x.latestStart).sort((a,b)=>b.latestStart.localeCompare(a.latestStart)||
+   b.last5.starts-a.last5.starts).slice(0,3);
+  if(options.length)supportedTeams++;
+  teamGoalies.set(team,options);
+ }
+ const snapshot={...buildNhlGoalieSnapshot({games,teamGoalies,generatedAt}),
+  teamCount:teams.length,teamsWithStats:supportedTeams,goalieGameRows:rows.length,
+  dataSourceFailures:teams.length-supportedTeams,showModelConfidence:false,
+  noPaidApiRequests:true};
+ if(!snapshot.games.length||supportedTeams<Math.ceil(teams.length*.9))
+  throw Error('Verified goalie coverage insufficient; preserve existing cached research');
  await db('sports_nhl_goalie_latest?on_conflict=id',{method:'POST',
   headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
-  body:JSON.stringify([{id:1,snapshot:snap,updated_at:generatedAt}])});
- return {status:'updated',games:snap.games.length,teams:teams.length,
-  teamsWithStats:roster.size,goalieLogs:logs.size,generatedAt,probabilitiesChanged:false};
+  body:JSON.stringify([{id:1,snapshot,updated_at:generatedAt}])});
+ return {status:'updated',games:snapshot.games.length,teams:teams.length,
+  teamsWithStats:supportedTeams,gameRows:rows.length,
+  generatedAt,probabilitiesChanged:false};
 }
 Deno.serve(async(req:Request)=>{
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:{
