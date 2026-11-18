@@ -94,7 +94,7 @@ function dailySuggestionsPanel(){
  let contents;
  if(d.loading&&!d.loaded)contents='<div class="daily-empty">Loading cached daily tickets…</div>';
  else if(d.error)contents='<div class="daily-empty">Suggestions unavailable. You can still use the manual ticket builder.</div>';
- else if(!d.loaded||!d.cards?.length)contents='<div class="daily-empty">No tickets available yet.</div>';
+ else if(!d.loaded||!d.cards?.length)contents='<article class="daily-ticket-card big-one big-one-hero"><div class="daily-card-title"><strong>✦ THE BIG ONE</strong><span>DAILY FEATURE</span></div><div class="daily-card-sub">High-payout multi-game ticket</div><p class="muted-sm">No verified ticket for this slate. It will appear here when fresh same-book odds and eligible games are available.</p><span class="big-one-status">Awaiting verified picks · No fabricated confidence</span></article>';
  else contents='<div class="daily-ticket-grid">'+d.cards.map(c=>{
   if(!c.available)return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one':'')+'"><div class="daily-card-title"><strong>'+esc(c.name)+'</strong><span>NO SLATE</span></div><p class="muted-sm">'+esc(c.reason||'Insufficient verified games')+'</p></article>';
   const valid=c.legs?.every(l=>Date.parse(l.oddsAsOf)>Date.now()-8*3600_000&&Date.parse(l.start)>Date.now());
