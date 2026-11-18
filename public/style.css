@@ -477,3 +477,10 @@ body:not(.big-screen-mode){
 .scouting-row span{display:grid;gap:3px}
 .scouting-row b{font-size:17px;color:var(--text)}
 .scouting-row small{color:var(--muted);font-size:10px;line-height:1.35}
+
+.odds-history-panel summary{cursor:pointer;font-weight:700;color:var(--text)}
+.odds-history-chart{display:flex;gap:13px;align-items:center;padding:12px 0}
+.odds-history-chart svg{width:56%;max-width:242px;height:70px;color:var(--accent);border-radius:8px;background:var(--panel2)}
+.odds-history-caption{display:grid;gap:3px}
+.odds-history-caption strong{font-family:'Space Grotesk',sans-serif;font-size:20px}
+.odds-history-caption small{font-size:10px;color:var(--muted);line-height:1.4}
