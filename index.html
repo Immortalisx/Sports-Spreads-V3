@@ -568,6 +568,12 @@ body:not(.big-screen-mode){
 .game-card-v3 .match-v3-foot .drill{border:1px solid #4a7168;border-radius:9px;background:#213e3b;color:#d5fba7;font-size:12px;font-weight:800;padding:9px 11px}
 @media(max-width:640px){.game-card-v3 .match-v3-head{padding:12px 13px 6px}.game-card-v3 .match-v3-time{padding:0 13px 10px}.game-card-v3 .match-team-row{min-height:65px}.game-card-v3 .match-team-name button{font-size:14px}.game-card-v3 .match-v3-foot{padding:10px 13px 13px}.ticket-dock{bottom:calc(80px + env(safe-area-inset-bottom,0px))!important;left:12px;right:12px;min-width:0}.main,.content,main{padding-bottom:150px}}
 
+/* Explicit responsive card layout at phone, tablet, desktop, and wide-screen widths */
+@media(min-width:1500px){.game-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.game-card-v3{min-width:0}}
+@media(min-width:720px) and (max-width:1499px){.game-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.game-card-v3{min-width:0}}
+@media(max-width:719px){.game-grid{grid-template-columns:minmax(0,1fr)}.game-card-v3{min-width:0;max-width:100%}.game-card-v3 .match-team-name button{overflow-wrap:anywhere}.game-card-v3 .match-v3-foot{flex-wrap:wrap}}
+@media(max-width:375px){.game-card-v3 .match-team-row{gap:8px;padding:7px}.game-card-v3 .team-logo{width:40px;height:40px}.game-card-v3 .match-team-name button{font-size:13px}}
+
 </style>
   <script>window.SS_CLOUD_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co',publishableKey:'sb_publishable_BX7-wUhJWAp7d3fa3I7Uew_VZc4JHE6'};</script>
   <script>window.SS_FEED_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/sports-feed'};</script>
