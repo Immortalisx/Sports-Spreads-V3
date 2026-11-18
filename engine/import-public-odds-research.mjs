@@ -6,10 +6,10 @@ const leagues={americanfootball_nfl:'nfl',icehockey_nhl:'nhl'};
 const books=new Set(['draftkings','fanduel','betmgm','betrivers','williamhill_us','fanatics','betparx','ballybet','espnbet']);
 const price=p=>Number.isInteger(p)&&Math.abs(p)>=100&&Math.abs(p)<=100000;
 const iso=s=>typeof s==='string'&&Number.isFinite(Date.parse(s));
-export function importGitOddsSnapshot(raw,{league,commitSha,capturedAt,license='MIT',source='kevbowl/odds-fetcher'}={}){
+export function importGitOddsSnapshot(raw,{league,commitSha,capturedAt,license='unverified',rightsVerified=false,source='kevbowl/odds-fetcher'}={}){
  const reject=reason=>({status:'rejected',reason,quotes:[],eligibleSettledTickets:0,promotionAllowed:false});
  if(!['nfl','nhl'].includes(league)||!/^[a-f0-9]{40}$/.test(String(commitSha))||
-   !iso(capturedAt)||license!=='MIT'||source!=='kevbowl/odds-fetcher')return reject('unverified_source');
+   !iso(capturedAt)||rightsVerified!==true||license==='unverified'||source!=='kevbowl/odds-fetcher')return reject('unverified_source');
  let events;try{events=typeof raw==='string'?JSON.parse(raw):raw;}catch{return reject('invalid_json');}
  if(!Array.isArray(events))return reject('invalid_snapshot');
  const quotes=[],seen=new Set(),capture=Date.parse(capturedAt);
