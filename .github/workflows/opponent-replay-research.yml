@@ -1,6 +1,16 @@
 name: Offline opponent calibration replay (research only)
 on:
   workflow_dispatch:
+    inputs:
+      league:
+        description: 'Select a single historical league; both runs only when explicitly selected'
+        required: true
+        type: choice
+        options:
+          - nfl
+          - nhl
+          - both
+        default: nfl
 permissions:
   contents: read
 jobs:
@@ -12,15 +22,17 @@ jobs:
       fail-fast: false
       matrix:
         league: [nfl, nhl]
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Replay historical finals against baseline (no paid API)
+        if: inputs.league == 'both' || inputs.league == matrix.league
         run: node engine/collect-opponent-replay.mjs ${{ matrix.league }}
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: (inputs.league == 'both' || inputs.league == matrix.league) && always()
         with:
           name: opponent-replay-${{ matrix.league }}
           path: research/${{ matrix.league }}-opponent-replay.json
