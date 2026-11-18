@@ -34,6 +34,7 @@ jobs:
       - name: Run desktop, mobile and TV browser interaction checks
         run: node qa/browser-smoke.mjs
       - name: Benchmark emulated mobile and desktop (no provider credits)
+        if: always()
         run: node qa/performance-benchmark.mjs
       - uses: actions/upload-artifact@v4
         if: always()
