@@ -1,0 +1,19 @@
+name: Verify current NHL goalie form snapshot (free, no bookmaker calls)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/build-current-nhl-goalie-snapshot.mjs'
+      - '.github/workflows/build-nhl-goalie-snapshot.yml'
+      - 'engine/nhl-goalie-form.mjs'
+permissions: {contents: read}
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Construct pregame-only goalie snapshot from NHL public game logs
+        run: node engine/build-current-nhl-goalie-snapshot.mjs
