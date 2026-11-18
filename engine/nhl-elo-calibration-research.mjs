@@ -1,8 +1,9 @@
 /**
  * Research-only official NHL time-split probability calibration.
  *
- * Elo history: 2022-23 & 2023-24 (2,624 games).
- * Calibration FIT: 2024-25 (1,312 games).
+ * Elo prior training: 2022-23 (1,312 games).
+ * Calibration FIT: 2023-24 (1,312 games; no future labels).
+ * Separate chronological validation: 2024-25 (1,312 games).
  * Diagnostic evaluation: 2025-26 (1,312, previously inspected in PR #49).
  * Genuinely untouched prospective holdout: future 2026-27 matches only after
  * predictions are archived strictly before puck drop; NO future logs are loaded.
@@ -25,11 +26,11 @@ const expected={
 const ARIZONA_ERA_TEAMS='ANA,ARI,BOS,BUF,CAR,CBJ,CGY,CHI,COL,DAL,DET,EDM,FLA,LAK,MIN,MTL,NJD,NSH,NYI,NYR,OTT,PHI,PIT,SEA,SJS,STL,TBL,TOR,VAN,VGK,WPG,WSH'.split(',');
 export const CALIBRATION_RULES=Object.freeze({
   method:'predeclared_regularized_platt',
-  fitSeason:20242025,holdoutSeason:20252026,
+  fitSeason:20232024,validationSeason:20242025,holdoutSeason:20252026,
   iterationCount:1600,learningRate:.25,interceptPenalty:.03,slopePenalty:.03,
   minimumFitGames:1312,
   coefficientLimits:[-1.5,1.5],slopeLimits:[.25,2.5],
-  freezeBeforeDate:'2025-10-07'
+  freezeBeforeDate:'2024-10-04'
 });
 const q=(p)=>Math.log(p/(1-p));
 const logistic=(z)=>1/(1+Math.exp(-Math.max(-25,Math.min(25,z))));
@@ -78,8 +79,8 @@ export function validateEarlierNhlHistory(source){
 /** Frozen Platt fit on validation season ONLY; intercept/slope priors 0 and 1. */
 export function fitFrozenPlatt(validationRows){
  if(!Array.isArray(validationRows)||validationRows.length!==CALIBRATION_RULES.minimumFitGames
-   ||validationRows.some(r=>r.season!==20242025||!(r.baseline>0&&r.baseline<1)
-     ||![0,1].includes(r.y)))throw Error('Calibration requires complete 2024-25 only');
+   ||validationRows.some(r=>r.season!==20232024||!(r.baseline>0&&r.baseline<1)
+     ||![0,1].includes(r.y)))throw Error('Calibration requires complete 2023-24 only');
  const {iterationCount,learningRate,interceptPenalty,slopePenalty,coefficientLimits,slopeLimits}=CALIBRATION_RULES;
  let intercept=0,slope=1;
  // Average penalized cross entropy; no evaluation or holdout data consulted.
@@ -94,7 +95,7 @@ export function fitFrozenPlatt(validationRows){
   intercept=Math.max(coefficientLimits[0],Math.min(coefficientLimits[1],intercept-learningRate*ga));
   slope=Math.max(slopeLimits[0],Math.min(slopeLimits[1],slope-learningRate*gb));
  }
- return {intercept,slope,...CALIBRATION_RULES,fitGames:validationRows.length,fitLastDate:'2025-04-17'};
+ return {intercept,slope,...CALIBRATION_RULES,fitGames:validationRows.length,fitLastDate:'2024-04-18'};
 }
 export const applyFrozenPlatt=(raw,fit)=>logistic(fit.intercept+fit.slope*q(raw));
 
@@ -147,11 +148,13 @@ export function runNhlCalibrationResearch({earlier=oldDefault,later=newDefault}=
  if(!historical.ok||!recent.ok)return {...EMPTY,reason:!historical.ok?historical.reason:recent.reason};
  const games=[...toGames(earlier,'historical_training'),...toGames(later,'calibration_and_diagnostic')];
  const all=buildPregameRows(games,'nhl');
- const fitRows=all.filter(r=>r.season===20242025);
+ const fitRows=all.filter(r=>r.season===20232024);
+ const validationRows=all.filter(r=>r.season===20242025);
  const evaluation=all.filter(r=>r.season===20252026);
- if(fitRows.length!==1312||evaluation.length!==1312)throw Error('missing calibration/evaluation games');
+ if(fitRows.length!==1312||validationRows.length!==1312||evaluation.length!==1312)throw Error('missing fit/validation/evaluation games');
  if(fitRows.some(r=>r.gameDate>=CALIBRATION_RULES.freezeBeforeDate)
-   ||evaluation.some(r=>r.gameDate<CALIBRATION_RULES.freezeBeforeDate))throw Error('time split violation');
+   ||validationRows.some(r=>r.gameDate<CALIBRATION_RULES.freezeBeforeDate)
+   ||evaluation.some(r=>r.gameDate<='2025-04-17'))throw Error('time split violation');
  const fit=fitFrozenPlatt(fitRows);
  const rows=evaluation.map(r=>{
   if(r.evidence.through!==null&&r.evidence.through>=r.gameDate)throw Error('same-day leakage');
@@ -166,7 +169,7 @@ export function runNhlCalibrationResearch({earlier=oldDefault,later=newDefault}=
    priorEvidenceThrough:r.evidence.through};
  });
  const baseline=metrics(rows,'rawHomeProbability'),candidate=metrics(rows,'calibratedHomeProbability');
- const fitValidation=fitRows.map(r=>({homeWin:r.y,rawHomeProbability:r.baseline,
+ const fitValidation=validationRows.map(r=>({homeWin:r.y,rawHomeProbability:r.baseline,
   calibratedHomeProbability:applyFrozenPlatt(r.baseline,fit)}));
  const validationScores={
   baseline:metrics(fitValidation,'rawHomeProbability'),
@@ -192,9 +195,10 @@ export function runNhlCalibrationResearch({earlier=oldDefault,later=newDefault}=
   originalTwoSeasonEloBrierFromEarlierAudit:0.24893033405119727
  };
  return {status:'research_only',promotionAllowed:false,source:'Official NHL Stats REST pinned offline scores',
-  splits:{eloHistoricalTrainingSeasons:[20222023,20232024],eloHistoricalTrainingGames:2624,
-   calibrationFitSeason:20242025,calibrationFitGames:fitRows.length,
-   calibrationFitLastDate:fit.fitLastDate,exploratoryEvaluationSeason:20252026,
+  splits:{eloHistoricalTrainingSeasons:[20222023],eloHistoricalTrainingGames:1312,
+   calibrationFitSeason:20232024,calibrationFitGames:fitRows.length,
+   calibrationFitLastDate:fit.fitLastDate,validationSeason:20242025,validationGames:validationRows.length,
+   validationStartsOn:'2024-10-04',validationEndsOn:'2025-04-17',exploratoryEvaluationSeason:20252026,
    exploratoryEvaluationGames:rows.length,
    trulyUntouchedFutureHoldout:{season:20262027,startsNoEarlierThan:'2026-11-19',
     status:'reserved_not_scored',requirement:'Archived, timestamped forecast created before game start, with future outcomes separately appended only AFTER completion'}},
