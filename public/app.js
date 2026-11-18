@@ -298,6 +298,8 @@ function modelPanel(g){
    <details class="model-method"><summary>How this estimate works</summary>
    <p>Version ${esc(m.version)} · ${esc(m.source)} · W–L records ${esc(m.awayRecord)} vs ${esc(m.homeRecord)}. ${m.validated?'Uses league-specific parameters learned from earlier games and calibrated on a separate season.':'Uses record shrinkage and an assumed home advantage.'} ${esc(m.note)} Injuries, lineup changes, verified quarterback/receiver matchups, sportsbook prices and player prop forecasts are not included. Do not interpret this as a betting edge or validated confidence grade.</p></details></div>`;
 }
+
+
 function marketCardLabel(game){
  const market=globalThis.SportsOdds?.marketConsensus?.(game,state.odds[game.league]);
  if(!market||game.status!=='scheduled')return modelLabel(game);
