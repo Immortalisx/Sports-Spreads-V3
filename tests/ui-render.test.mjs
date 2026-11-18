@@ -21,7 +21,7 @@ test('offline browser preview renders builder, saves immutable snapshot, and res
  ui.render();
  assert.match(app.innerHTML,/Save snapshot/);
  assert.match(app.innerHTML,/Model confidence/);
- assert.match(app.innerHTML,/Correlation review|Confidence awaits verified model/);
+ assert.match(app.innerHTML,/Ticket details|Bookmaker prices are not validated model confidence/);
  const original=ui.archiveTicket();
  assert.equal(ui.state.history.length,1);
  assert.equal(original.potentialReturn,21);
