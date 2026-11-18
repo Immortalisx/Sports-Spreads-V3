@@ -2,8 +2,12 @@
 // All external APIs are stubbed: no paid sportsbook calls.
 import {chromium,devices} from 'playwright';
 import {spawn} from 'node:child_process';
-import {writeFile,mkdir} from 'node:fs/promises';
+import {writeFile,mkdir,readFile} from 'node:fs/promises';
+import {brotliCompressSync,constants as zlibConstants} from 'node:zlib';
+import assert from 'node:assert/strict';
 const base='http://127.0.0.1:8977';
+// Enforce a realistic compressed-document transfer budget separately from raw bytes.
+const maxBrotliBytes=150*1024,maxMedianNavMs=200;
 const server=spawn('python3',['-m','http.server','8977','--bind','127.0.0.1','--directory','.'],{stdio:'ignore'});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function ready(){for(let i=0;i<60;i++){try{if((await fetch(base)).ok)return;}catch{}await sleep(100);}throw Error('Server not ready');}
@@ -21,6 +25,13 @@ async function run(){await ready();const browser=await chromium.launch({headless
    results.push({device:label,run:n+1,navMs,requests,bytes,...metrics});await context.close();
   }
  }
- await mkdir('qa/reports',{recursive:true});await writeFile('qa/reports/performance-lab.json',JSON.stringify({note:'Chromium emulation; mocked providers; not field INP/LCP or physical-device measurement',results},null,2));console.log(JSON.stringify(results,null,2));
+ const html=await readFile('index.html');
+ const brotliBytes=brotliCompressSync(html,{params:{[zlibConstants.BROTLI_PARAM_QUALITY]:5}}).byteLength;
+ const medians=Object.fromEntries(['mobile','desktop'].map(device=>{const rows=results.filter(r=>r.device===device);const sorted=rows.map(r=>r.navMs).sort((a,b)=>a-b);return [device,{medianBuilderNavMs:sorted[1],medianFirstPaintMs:rows.map(r=>r.firstContentfulPaintMs).sort((a,b)=>a-b)[1]}];}));
+ const report={note:'Chromium emulation with mocked providers. Brotli is a build-time compression estimate, NOT confirmed CDN wire transfer or physical-device data.',rawHtmlBytes:html.byteLength,brotliHtmlBytes:brotliBytes,budget:{maxBrotliHtmlBytes:maxBrotliBytes,maxMedianBuilderNavMs:maxMedianNavMs},medians,results};
+ await mkdir('qa/reports',{recursive:true});await writeFile('qa/reports/performance-lab.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+ assert.ok(brotliBytes<=maxBrotliBytes,`Brotli HTML ${brotliBytes} exceeds ${maxBrotliBytes} byte budget`);
+ for(const [device,metrics] of Object.entries(medians))assert.ok(metrics.medianBuilderNavMs<=maxMedianNavMs,`${device} builder navigation exceeds ${maxMedianNavMs}ms`);
+ assert.ok(results.every(r=>!r.viewportOverflow),'Viewport horizontal overflow detected');
  }finally{await browser.close();}}
 try{await run();}finally{server.kill('SIGTERM');}
