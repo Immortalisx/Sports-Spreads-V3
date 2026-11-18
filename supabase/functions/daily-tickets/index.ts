@@ -1,7 +1,7 @@
 // Daily suggested-ticket research; no provider APIs are called here.
 // GET is public cached data. POST requires the private Vault-backed cron token.
 import {buildDailySuggestions} from './generator.mjs';
-const originAllow=new Set(['https://sports-spreads.onrender.com','https://sports-spreads-v3.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
+const originAllow=new Set(['https://sports-spreads.onrender.com','https://sports-spreads-v3.onrender.com','https://sports-spreads-v4-staging.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
 const host=Deno.env.get('SUPABASE_URL')||'';
 let secret='';
 try{secret=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}')?.default||'';}catch{}
