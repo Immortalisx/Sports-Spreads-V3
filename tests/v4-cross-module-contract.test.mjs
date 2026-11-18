@@ -125,7 +125,7 @@ test('pregame game cards only expose final-hour sourced research and fail closed
  assert.match(src,/const inPregameWindow=until<=60&&until>0/);
  assert.match(src,/best&&fresh&&inPregameWindow/);
  assert.match(src,/PASS · no fresh verified line/);
- assert.match(src,/Player props unpriced/);
+ assert.match(src,/no verified prop prices or joint model/);
 });
 test('ticket dashboard refreshes only shared cached odds, never upstream provider',()=>{
  const src=read('src/app/30-controller.js');
