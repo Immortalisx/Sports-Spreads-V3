@@ -1,0 +1,35 @@
+name: Offline opponent calibration replay (research only)
+on:
+  push:
+    branches: [research-opponent-adjusted-matchups-2026-11-18]
+    paths:
+      - 'engine/opponent-adjusted-research.mjs'
+      - 'engine/recency-research.mjs'
+      - 'engine/collect-opponent-replay.mjs'
+      - '.github/workflows/opponent-replay-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  replay:
+    name: ${{ matrix.league }} real-scoreboard replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        league: [nfl, nhl]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Replay historical finals against baseline (no paid API)
+        run: node engine/collect-opponent-replay.mjs ${{ matrix.league }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opponent-replay-${{ matrix.league }}
+          path: research/${{ matrix.league }}-opponent-replay.json
+          if-no-files-found: ignore
+          retention-days: 7
