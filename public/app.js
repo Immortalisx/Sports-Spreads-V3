@@ -144,27 +144,60 @@ function nflAvailabilityPanel(g){
   x.homeTeamId===String(g.home?.id)&&x.awayTeamId===String(g.away?.id)&&
   Math.abs(Date.parse(x.start||'')-Date.parse(g.start||''))<3600000&&
   Date.parse(x.asOf||'')<Date.parse(g.start||'')):null;
- const heading='<div class="current-form-heading"><span class="block-label">NFL · QB & INJURIES</span>'+
-  '<small>'+esc(snapshot?.generatedAt?formatFresh(snapshot.generatedAt):'Source pending')+'</small></div>';
- if(!game)return '<section class="panel availability-panel">'+heading+
-  '<p class="muted-sm">'+esc(state.nflAvailabilityLoading?'Loading shared NFL availability cache…':
-  state.nflAvailabilityError||'No current verified injury/depth-chart snapshot for this game. Starter and injuries are unknown.')+'</p></section>';
- const side=(team,result)=>{
-  const qb=result.depthChartQB1,report=result.qbInjury;
-  const list=(result.injuries||[]).filter(x=>x.status!=='unknown').slice(0,6);
-  const qbLine=qb?esc(qb.name)+' · '+esc(result.starterStatus==='projected'?'Projected QB1':'QB1 availability uncertain'):
-    'Unknown (no reliable QB1)';
-  return '<div class="availability-team"><strong>'+esc(team.name)+'</strong>'+
-   '<div class="availability-qb">'+qbLine+'</div>'+
-   '<div class="muted-sm">'+esc(report?('QB injury: '+report.status.replaceAll('_',' ')):'QB injury report: unknown / not listed')+'</div>'+
-   (list.length?'<ul class="availability-injuries">'+list.map(p=>'<li>'+esc(p.position)+' · '+esc(p.name)+' — <b>'+esc(p.status.replaceAll('_',' '))+'</b></li>').join('')+'</ul>':
-     '<p class="muted-sm">No reportable entries in the cached source; this does not confirm health.</p>')+
-   '<small>'+esc(result.note||'Participation not confirmed')+'</small></div>';
+ const fresh=snapshot?.generatedAt?formatFresh(snapshot.generatedAt):'Not yet verified';
+ const heading='<div class="availability-heading"><div><span class="block-label">NFL · STARTING QB & INJURIES</span>'+
+  '<div class="availability-timestamp">Source check: '+esc(fresh)+'</div></div>'+
+  '<button class="neutral-button availability-retry" data-action="retry-nfl-availability" aria-label="Check cached NFL availability again">'+
+  (state.nflAvailabilityLoading?'Checking…':'Check updates')+'</button></div>';
+ if(!game){
+  const message=state.nflAvailabilityLoading?'Checking the shared NFL availability snapshot…':
+   state.nflAvailabilityError||'No verified source snapshot for this upcoming matchup yet. Player availability is unknown.';
+  return '<section class="panel availability-panel">'+heading+
+   '<div class="availability-empty"><span aria-hidden="true">?</span><div><strong>Availability not verified</strong>'+
+   '<p>'+esc(message)+'</p></div></div>'+
+   '<p class="availability-disclaimer">Data is published only after its game and team identifiers match this matchup. No guessed starters or injury confidence are used.</p></section>';
+ }
+ const statusName=x=>String(x||'unknown').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+ const overview=(result)=>{
+  const list=(result.injuries||[]).filter(x=>x&&x.status&&x.status!=='unknown');
+  const out=list.filter(x=>x.status==='out'||x.status==='injured_reserve').length;
+  const questions=list.filter(x=>x.status==='questionable'||x.status==='doubtful').length;
+  return {list,out,questions};
  };
+ const side=(team,result)=>{
+  const qb=result?.depthChartQB1,report=result?.qbInjury,info=overview(result);
+  const starter=result?.starterStatus==='projected'?'projected':
+   result?.starterStatus==='uncertain'?'uncertain':'unknown';
+  const tag=starter==='projected'?'Projected QB1':starter==='uncertain'?'Starter uncertain':'Starter unknown';
+  const qbLabel=qb?.name?esc(qb.name):'QB not verified';
+  const reportLine=report?'QB injury: '+statusName(report.status):
+    'No QB injury status verified';
+  const injuries=info.list.slice(0,6);
+  const listing=injuries.length?
+   '<ul class="availability-injuries">'+injuries.map(p=>'<li><span class="availability-position">'+esc(p.position||'')+'</span>'+
+    '<span class="availability-player">'+esc(p.name||'Player')+'</span>'+
+    '<span class="availability-status availability-status--'+esc(p.status)+'">'+esc(statusName(p.status))+'</span></li>').join('')+'</ul>':
+   '<p class="availability-no-list">No currently listed high-impact injuries in this snapshot. This does not mean the roster is healthy.</p>';
+  const counts='<div class="availability-mini-counts"><span>'+info.out+' out / IR listed</span><span>'+
+   info.questions+' questionable / doubtful listed</span></div>';
+  return '<article class="availability-team">'+
+   '<div class="availability-team-head"><strong>'+esc(team?.name||'Team')+'</strong>'+
+   '<span class="availability-badge availability-badge--'+starter+'">'+tag+'</span></div>'+
+   '<div class="availability-qb">'+qbLabel+'</div>'+
+   '<div class="availability-qb-note">'+esc(reportLine)+'</div>'+
+   counts+listing+
+   '<p class="availability-team-note">'+esc(result?.note||'No confirmed game-day starter')+'</p>'+
+   '</article>';
+ };
+ const sourceState=snapshot.injurySourceStatus==='retrieved'?
+  '<span class="availability-source-ok">Injury feed retrieved</span>':
+  '<span class="availability-source-missing">Injury feed unavailable</span>';
  return '<section class="panel availability-panel">'+heading+
+  '<div class="availability-sourcebar">'+sourceState+
+  '<span>Depth charts: '+esc(snapshot.depthChartTeams??0)+' teams</span></div>'+
   '<div class="availability-grid">'+side(g.away,game.away)+side(g.home,game.home)+'</div>'+
-  '<p class="availability-disclaimer">Source: ESPN injuries and depth charts · observed '+esc(game.asOf)+
-  '. <strong>Depth-chart QB1 is projected, not a confirmed starter.</strong> '+ 
+  '<p class="availability-disclaimer">ESPN public injury/depth-chart data · observed '+esc(game.asOf)+
+  '. <strong>Depth-chart QB1 is projected, not a confirmed starter.</strong> '+
   (snapshot.injurySourceStatus==='unavailable'?'The injury feed could not be verified; injury statuses are unknown. ':'')+
   'No injury impact or starter certainty has been included in win probabilities or ticket confidence.</p></section>';
 }
@@ -497,8 +530,9 @@ function loadSuggestedTicket(id){
  state.autoTicket.status=card.name+' loaded from one sportsbook. The grade is market-implied, not validated parlay confidence.';
  render();notify('Suggested ticket added locally. No bet placed.');
 }
-async function loadNflAvailability(){
- if(state.nflAvailabilityLoading||state.nflAvailability)return;
+async function loadNflAvailability(force=false){
+ if(state.nflAvailabilityLoading||(!force&&state.nflAvailability))return;
+ if(force)state.nflAvailability=null;
  state.nflAvailabilityLoading=true;state.nflAvailabilityError='';render();
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
  try{
@@ -711,7 +745,7 @@ async function generateAutomaticTicket(){
  state.autoTicket.status=result.legs.length+' market-derived selection'+(result.legs.length===1?'':'s')+' generated. These are bookmaker estimates, NOT validated model picks. Recheck every price.';
  render();
 }
-document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='generate-ticket'){await generateAutomaticTicket();return;}if(action==='ticket-mode'){state.ticketMode=el.dataset.mode==='manual'?'manual':'automatic';render();if(state.ticketMode==='automatic')void loadDailySuggestions();return;}if(action==='daily-ticket-load'){loadSuggestedTicket(el.dataset.id);return;}if(action==='autocomplete-select'){await acceptLookup(Number(el.dataset.index));return;}if(action==='big-screen'){changeBigScreen();return;}if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='copy-feedback'){const type=document.getElementById('feedback-kind')?.value||'Feedback';const note=(document.getElementById('feedback-note')?.value||'').trim();if(!note){notify('Enter your feedback first.');return;}const report=`Sports Spreads beta feedback\n${type}\n${note}`;const ok=await copyText(report);notify(ok?'Feedback copied — paste it in Discord.':'Copy the feedback text into Discord.');if(ok){state.drawer=null;render();}return;}else if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();if(state.section==='tickets')void loadDailySuggestions();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);void loadSportsbookOdds(game);void loadCurrentSeasonForm(game.league);if(game.league==='nfl')void loadNflAvailability();}}else if(action==='load-signals'){void loadPregameSignals(getGame(el.dataset.game));}else if(action==='load-odds'){void loadSportsbookOdds(getGame(el.dataset.game));}else if(action==='odds-pick'){useSportsbookQuote(getGame(el.dataset.game),el.dataset.side,el.dataset.index);}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){await SportsCloud.signOut();state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='retry-nfl-availability'){void loadNflAvailability(true);return;}if(action==='generate-ticket'){await generateAutomaticTicket();return;}if(action==='ticket-mode'){state.ticketMode=el.dataset.mode==='manual'?'manual':'automatic';render();if(state.ticketMode==='automatic')void loadDailySuggestions();return;}if(action==='daily-ticket-load'){loadSuggestedTicket(el.dataset.id);return;}if(action==='autocomplete-select'){await acceptLookup(Number(el.dataset.index));return;}if(action==='big-screen'){changeBigScreen();return;}if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='copy-feedback'){const type=document.getElementById('feedback-kind')?.value||'Feedback';const note=(document.getElementById('feedback-note')?.value||'').trim();if(!note){notify('Enter your feedback first.');return;}const report=`Sports Spreads beta feedback\n${type}\n${note}`;const ok=await copyText(report);notify(ok?'Feedback copied — paste it in Discord.':'Copy the feedback text into Discord.');if(ok){state.drawer=null;render();}return;}else if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();if(state.section==='tickets')void loadDailySuggestions();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);void loadSportsbookOdds(game);void loadCurrentSeasonForm(game.league);if(game.league==='nfl')void loadNflAvailability();}}else if(action==='load-signals'){void loadPregameSignals(getGame(el.dataset.game));}else if(action==='load-odds'){void loadSportsbookOdds(getGame(el.dataset.game));}else if(action==='odds-pick'){useSportsbookQuote(getGame(el.dataset.game),el.dataset.side,el.dataset.index);}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){await SportsCloud.signOut();state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
 document.addEventListener('change',e=>{if(e.target.id==='date'){state.date=e.target.value||getTodayET();state.search='';loadBoard();}else if(e.target.id==='stake'){state.stake=e.target.value;render();}else if(e.target.id==='leg-market'||e.target.id==='leg-league'){const league=document.getElementById('leg-league').value;const marketSelect=document.getElementById('leg-market');if(e.target.id==='leg-league'){marketSelect.innerHTML=(MARKETS[league]||[]).map(m=>`<option>${esc(m)}</option>`).join('');}const market=marketSelect.value;state.lookup.chosen=null;if(e.target.id==='leg-league'){state.lookup.selectedTeam=null;state.lookup.roster=[];state.lookup.request++;state.lookup.league=league;state.lookup.query='';}drawLookup();document.getElementById('prop-controls')?.remove();const box=document.createElement('div');box.innerHTML=propFields(league,market);document.getElementById('leg-market').closest('.form-item').insertAdjacentElement('afterend',box.firstElementChild);const form=document.getElementById('leg-form');const control=document.getElementById('prop-line');if(control){const text=propNote(market,Number(control.value));document.getElementById('leg-notes').value=text;}}});
 document.addEventListener('input',e=>{if(e.target.id==='auto-confidence'){
  const target=Number(e.target.value);state.autoTicket.target=target;state.autoTicket.status='';

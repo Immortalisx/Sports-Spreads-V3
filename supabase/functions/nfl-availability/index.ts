@@ -64,12 +64,22 @@ function upcomingGames(data:any,now:number){
     !Number.isFinite(kickoff)||kickoff<=now||kickoff>now+9*86400_000)continue;
   gameMap.set(id,{gameId:id,start:new Date(kickoff).toISOString(),homeTeamId,awayTeamId});
  }
- return [...gameMap.values()].sort((a,b)=>a.start.localeCompare(b.start)).slice(0,16);
+ return [...gameMap.values()].sort((a,b)=>a.start.localeCompare(b.start)).slice(0,24);
 }
 async function refresh(){
  const observedAt=new Date().toISOString(),time=Date.parse(observedAt);
- const scoreboard=await source('/scoreboard',1_200_000);
- const fixtures=upcomingGames(scoreboard,time);
+ const month=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',
+  year:'numeric',month:'2-digit'}).format(new Date(observedAt)).replace('-','');
+ const scoreboard=await source('/scoreboard?dates='+month+'&limit=100',1_200_000);
+ // Request the following calendar month only near rollover, without year-wide truncation.
+ let events=scoreboard.events||[];
+ if(Number(month.slice(4))&&Number(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',day:'2-digit'}).format(new Date(observedAt)))>=25){
+  const nextMonth=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(4)),7));
+  const date=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',year:'numeric',month:'2-digit'}).format(nextMonth).replace('-','');
+  const more=await source('/scoreboard?dates='+date+'&limit=100',1_200_000);
+  events=[...events,...(more.events||[])];
+ }
+ const fixtures=upcomingGames({events},time);
  if(!fixtures.length)throw Error('No qualifying upcoming NFL fixtures; existing snapshot preserved');
  // Missing ESPN data must remain UNKNOWN, not healthy or confirmed.
  let injuries=new Map(),injurySource='unavailable';
@@ -88,7 +98,7 @@ async function refresh(){
   await Promise.all(ids.slice(i,i+6).map(async id=>{
    try{
     const payload=await source('/teams/'+id+'/depthcharts',1_000_000);
-    if(!Array.isArray(payload?.depthCharts))throw Error('No usable depth charts');
+    if(!Array.isArray(payload?.depthchart)&&!Array.isArray(payload?.depthCharts))throw Error('No usable depth charts');
     charts.set(id,payload);
    }catch{errorTeams.push(id);}
   }));

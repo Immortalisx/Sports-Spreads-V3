@@ -320,3 +320,52 @@ body:not(.big-screen-mode){
 .availability-disclaimer{color:var(--muted);font-size:10px;line-height:1.6;margin:11px 0 0}
 .availability-disclaimer strong{color:#f1ddb0}
 @media(max-width:560px){.availability-grid{grid-template-columns:1fr}}
+
+/* Availability refresh: status hierarchy, source freshness, compact mobile cards. */
+.availability-panel{padding:18px}
+.availability-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:13px}
+.availability-heading .block-label{display:block;font-size:11px;letter-spacing:.095em}
+.availability-timestamp{margin-top:4px;color:var(--muted);font-size:11px}
+.availability-retry{font-size:11px;padding:7px 11px;white-space:nowrap;min-width:110px}
+.availability-sourcebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 13px;
+ padding:9px 11px;margin-bottom:13px;border:1px solid #344957;border-radius:9px;
+ background:rgba(18,33,47,.5);font-size:11px;color:var(--muted)}
+.availability-source-ok{color:#8ed5b2;font-weight:700}
+.availability-source-missing{color:#f3c58a;font-weight:700}
+.availability-empty{display:flex;align-items:center;gap:12px;padding:17px 13px;
+ border:1px dashed #526275;border-radius:10px;background:rgba(20,37,55,.45)}
+.availability-empty>span{flex:0 0 34px;width:34px;height:34px;display:grid;place-items:center;
+ border-radius:50%;border:1px solid #4a6275;color:#e1d0a4;font-size:20px;font-weight:700}
+.availability-empty strong{display:block;font-size:13px;margin-bottom:5px}
+.availability-empty p{margin:0;color:var(--muted);font-size:11px;line-height:1.5}
+.availability-grid{gap:12px}
+.availability-team{padding:15px;background:rgba(14,30,44,.8);border-color:#354b5e}
+.availability-team-head{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:13px;flex-wrap:wrap}
+.availability-team-head>strong{font-size:13px;margin:0;line-height:1.25}
+.availability-badge{display:inline-flex;align-items:center;font-size:10px;line-height:1.1;
+ padding:6px 8px;border:1px solid;border-radius:999px;font-weight:700;white-space:nowrap}
+.availability-badge--projected{background:rgba(51,129,98,.12);border-color:#467a65;color:#9bd6bc}
+.availability-badge--uncertain{background:rgba(178,127,55,.12);border-color:#94754a;color:#f3d0a4}
+.availability-badge--unknown{background:rgba(126,135,150,.1);border-color:#687585;color:#c9d4dc}
+.availability-qb{font-size:18px;line-height:1.25;letter-spacing:-.01em;margin-bottom:5px}
+.availability-qb-note{color:var(--muted);font-size:11px;min-height:18px}
+.availability-mini-counts{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0 10px}
+.availability-mini-counts span{border:1px solid #3c5362;border-radius:6px;
+ padding:5px 7px;font-size:10px;color:#ced9df;background:rgba(16,37,54,.45)}
+.availability-injuries{margin:11px 0;gap:0}
+.availability-injuries li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;
+ align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid rgba(119,140,154,.2)}
+.availability-position{color:#8faebb;font-size:10px;font-weight:800}
+.availability-player{min-width:0;overflow-wrap:anywhere}
+.availability-status{font-size:10px;border-radius:5px;padding:3px 6px;background:#283b49;color:#c5d4df}
+.availability-status--out,.availability-status--injured_reserve{background:rgba(165,75,67,.18);color:#f0afa9}
+.availability-status--questionable,.availability-status--doubtful{background:rgba(178,130,58,.18);color:#efc790}
+.availability-no-list{font-size:11px;line-height:1.5;color:var(--muted);margin:10px 0}
+.availability-team-note{font-size:10px;line-height:1.45;color:var(--muted);margin:10px 0 0}
+@media(max-width:560px){
+ .availability-panel{padding:14px}
+ .availability-heading{gap:8px}
+ .availability-retry{padding:7px 8px;min-width:0}
+ .availability-team{padding:12px}
+ .availability-injuries li{grid-template-columns:26px minmax(0,1fr) auto}
+}
