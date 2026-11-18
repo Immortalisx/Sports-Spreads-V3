@@ -51,27 +51,60 @@ function nflAvailabilityPanel(g){
   x.homeTeamId===String(g.home?.id)&&x.awayTeamId===String(g.away?.id)&&
   Math.abs(Date.parse(x.start||'')-Date.parse(g.start||''))<3600000&&
   Date.parse(x.asOf||'')<Date.parse(g.start||'')):null;
- const heading='<div class="current-form-heading"><span class="block-label">NFL · QB & INJURIES</span>'+
-  '<small>'+esc(snapshot?.generatedAt?formatFresh(snapshot.generatedAt):'Source pending')+'</small></div>';
- if(!game)return '<section class="panel availability-panel">'+heading+
-  '<p class="muted-sm">'+esc(state.nflAvailabilityLoading?'Loading shared NFL availability cache…':
-  state.nflAvailabilityError||'No current verified injury/depth-chart snapshot for this game. Starter and injuries are unknown.')+'</p></section>';
- const side=(team,result)=>{
-  const qb=result.depthChartQB1,report=result.qbInjury;
-  const list=(result.injuries||[]).filter(x=>x.status!=='unknown').slice(0,6);
-  const qbLine=qb?esc(qb.name)+' · '+esc(result.starterStatus==='projected'?'Projected QB1':'QB1 availability uncertain'):
-    'Unknown (no reliable QB1)';
-  return '<div class="availability-team"><strong>'+esc(team.name)+'</strong>'+
-   '<div class="availability-qb">'+qbLine+'</div>'+
-   '<div class="muted-sm">'+esc(report?('QB injury: '+report.status.replaceAll('_',' ')):'QB injury report: unknown / not listed')+'</div>'+
-   (list.length?'<ul class="availability-injuries">'+list.map(p=>'<li>'+esc(p.position)+' · '+esc(p.name)+' — <b>'+esc(p.status.replaceAll('_',' '))+'</b></li>').join('')+'</ul>':
-     '<p class="muted-sm">No reportable entries in the cached source; this does not confirm health.</p>')+
-   '<small>'+esc(result.note||'Participation not confirmed')+'</small></div>';
+ const fresh=snapshot?.generatedAt?formatFresh(snapshot.generatedAt):'Not yet verified';
+ const heading='<div class="availability-heading"><div><span class="block-label">NFL · STARTING QB & INJURIES</span>'+
+  '<div class="availability-timestamp">Source check: '+esc(fresh)+'</div></div>'+
+  '<button class="neutral-button availability-retry" data-action="retry-nfl-availability" aria-label="Check cached NFL availability again">'+
+  (state.nflAvailabilityLoading?'Checking…':'Check updates')+'</button></div>';
+ if(!game){
+  const message=state.nflAvailabilityLoading?'Checking the shared NFL availability snapshot…':
+   state.nflAvailabilityError||'No verified source snapshot for this upcoming matchup yet. Player availability is unknown.';
+  return '<section class="panel availability-panel">'+heading+
+   '<div class="availability-empty"><span aria-hidden="true">?</span><div><strong>Availability not verified</strong>'+
+   '<p>'+esc(message)+'</p></div></div>'+
+   '<p class="availability-disclaimer">Data is published only after its game and team identifiers match this matchup. No guessed starters or injury confidence are used.</p></section>';
+ }
+ const statusName=x=>String(x||'unknown').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+ const overview=(result)=>{
+  const list=(result.injuries||[]).filter(x=>x&&x.status&&x.status!=='unknown');
+  const out=list.filter(x=>x.status==='out'||x.status==='injured_reserve').length;
+  const questions=list.filter(x=>x.status==='questionable'||x.status==='doubtful').length;
+  return {list,out,questions};
  };
+ const side=(team,result)=>{
+  const qb=result?.depthChartQB1,report=result?.qbInjury,info=overview(result);
+  const starter=result?.starterStatus==='projected'?'projected':
+   result?.starterStatus==='uncertain'?'uncertain':'unknown';
+  const tag=starter==='projected'?'Projected QB1':starter==='uncertain'?'Starter uncertain':'Starter unknown';
+  const qbLabel=qb?.name?esc(qb.name):'QB not verified';
+  const reportLine=report?'QB injury: '+statusName(report.status):
+    'No QB injury status verified';
+  const injuries=info.list.slice(0,6);
+  const listing=injuries.length?
+   '<ul class="availability-injuries">'+injuries.map(p=>'<li><span class="availability-position">'+esc(p.position||'')+'</span>'+
+    '<span class="availability-player">'+esc(p.name||'Player')+'</span>'+
+    '<span class="availability-status availability-status--'+esc(p.status)+'">'+esc(statusName(p.status))+'</span></li>').join('')+'</ul>':
+   '<p class="availability-no-list">No currently listed high-impact injuries in this snapshot. This does not mean the roster is healthy.</p>';
+  const counts='<div class="availability-mini-counts"><span>'+info.out+' out / IR listed</span><span>'+
+   info.questions+' questionable / doubtful listed</span></div>';
+  return '<article class="availability-team">'+
+   '<div class="availability-team-head"><strong>'+esc(team?.name||'Team')+'</strong>'+
+   '<span class="availability-badge availability-badge--'+starter+'">'+tag+'</span></div>'+
+   '<div class="availability-qb">'+qbLabel+'</div>'+
+   '<div class="availability-qb-note">'+esc(reportLine)+'</div>'+
+   counts+listing+
+   '<p class="availability-team-note">'+esc(result?.note||'No confirmed game-day starter')+'</p>'+
+   '</article>';
+ };
+ const sourceState=snapshot.injurySourceStatus==='retrieved'?
+  '<span class="availability-source-ok">Injury feed retrieved</span>':
+  '<span class="availability-source-missing">Injury feed unavailable</span>';
  return '<section class="panel availability-panel">'+heading+
+  '<div class="availability-sourcebar">'+sourceState+
+  '<span>Depth charts: '+esc(snapshot.depthChartTeams??0)+' teams</span></div>'+
   '<div class="availability-grid">'+side(g.away,game.away)+side(g.home,game.home)+'</div>'+
-  '<p class="availability-disclaimer">Source: ESPN injuries and depth charts · observed '+esc(game.asOf)+
-  '. <strong>Depth-chart QB1 is projected, not a confirmed starter.</strong> '+ 
+  '<p class="availability-disclaimer">ESPN public injury/depth-chart data · observed '+esc(game.asOf)+
+  '. <strong>Depth-chart QB1 is projected, not a confirmed starter.</strong> '+
   (snapshot.injurySourceStatus==='unavailable'?'The injury feed could not be verified; injury statuses are unknown. ':'')+
   'No injury impact or starter certainty has been included in win probabilities or ticket confidence.</p></section>';
 }
