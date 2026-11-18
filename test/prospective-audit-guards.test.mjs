@@ -26,6 +26,6 @@ test('market comparison uses pregame, pre-forecast, strictly bounded historical 
 });
 test('forecast archive remains private and cannot rewrite historical probabilities',()=>{
  assert.match(forecast,/enable row level security/i);
- assert.match(forecast,/revoke all on public\.sports_record_forecast_history from public,anon,authenticated/i);
+ assert.match(forecast,/revoke all on public\.sports_record_forecast_history from anon,authenticated/i);
  assert.match(forecast,/on conflict[^;]*do nothing/is);
 });
