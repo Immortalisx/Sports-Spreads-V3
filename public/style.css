@@ -568,6 +568,8 @@ body:not(.big-screen-mode){
 /* UX V7: separate suggestion and manual workflows; restrained visual hierarchy. */
 .ticket-layout.auto-only{grid-template-columns:minmax(0,1fr);max-width:950px;margin-top:16px}
 .ticket-layout.auto-only>.form-card{padding:18px 20px}
+/* Automatic mode now renders only the current ticket review card. */
+.ticket-layout.auto-only>.form-card:first-child{display:block}
 .ux-secondary-matchups{border:1px solid var(--stroke);border-radius:13px;background:rgba(19,32,45,.7);margin:16px 0 20px;overflow:hidden}
 .ux-secondary-matchups>summary{cursor:pointer;min-height:46px;display:flex;align-items:center;padding:12px 17px;color:#d7e9f6;font-weight:800;font-size:12px}
 .ux-secondary-matchups[open]>summary{border-bottom:1px solid var(--stroke)}
