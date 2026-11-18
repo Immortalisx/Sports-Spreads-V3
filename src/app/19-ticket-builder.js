@@ -68,7 +68,8 @@ function pregameGameTickets(){
  if(!games.length)return '<section class="daily-suggestions"><h3>Game tickets</h3><p class="muted-sm">No upcoming games on this selected date.</p></section>';
  const odds=state.odds[state.league];
  const cards=games.map(g=>{
-  const until=Math.round((Date.parse(g.start)-Date.now())/60000);
+  const until=Math.ceil((Date.parse(g.start)-Date.now())/60000);
+  const eligible=until<=60&&until>0;
   const market=odds&&['ok','cached'].includes(odds.status)?SportsOdds.marketConsensus(g,odds):null;
   const sides=market?['home','away'].map(side=>{
    const quote=side==='home'?market.bestHome:market.bestAway;
@@ -77,13 +78,14 @@ function pregameGameTickets(){
   }).filter(Boolean):[];
   sides.sort((a,b)=>b.probability-a.probability);
   const best=sides[0];
-  const inPregameWindow=until<=60&&until>0;
-  const asOf=best?Date.parse(best.quote.asOf||''):NaN;
-  const fresh=Number.isFinite(asOf)&&asOf<=Date.now()&&Date.now()-asOf<=8*3600000;
-  const selection=best&&fresh&&inPregameWindow?'<strong>'+esc(g[best.side].name)+' ML</strong> <span>'+esc(best.quote[best.side==='home'?'homePrice':'awayPrice'])+'</span> <small>'+Math.round(best.probability*100)+'% market*</small>' :!inPregameWindow?'<span>Pregame pick at T−60m</span>':'<span>PASS · no fresh verified line</span>';
-  return '<article class="daily-ticket-card"><div class="daily-card-title"><strong>'+esc(g.away.name)+' @ '+esc(g.home.name)+'</strong><span>'+ (until<=90?until+'m to start':'Upcoming')+'</span></div><div class="daily-picks">'+selection+'</div><div class="daily-card-sub">Player parlay: unavailable · no verified prop prices or joint model</div></article>';
+  const quoteAge=best?Date.now()-Date.parse(best.quote.asOf||''):NaN;
+  const fresh=Number.isFinite(quoteAge)&&quoteAge>=0&&quoteAge<=8*3600000;
+  // Market favorite alone cannot establish positive expected value or an optimal wager.
+  const status=!eligible?'T−60m pending':!best||!fresh?'PASS · no verified line':'PASS · no validated edge';
+  const favorite=eligible&&best&&fresh?'<div class="daily-card-sub">Market favorite: '+esc(g[best.side].name)+' · '+Math.round(best.probability*100)+'% implied*</div>':'';
+  return '<article class="daily-ticket-card"><div class="daily-card-title"><strong>'+esc(g.away.name)+' @ '+esc(g.home.name)+'</strong><span>'+ (until<=90?until+'m to start':'Upcoming')+'</span></div><div class="daily-picks"><strong>'+status+'</strong></div>'+favorite+'<div class="daily-card-sub">Team + player SGP: no verified prop prices or joint model</div></article>';
  }).join('');
- return '<section class="daily-suggestions" aria-label="Per-game pregame tickets"><div class="daily-section-head"><h3>Every game</h3><small>Automatic · market research</small></div><div class="daily-ticket-grid">'+cards+'</div><details class="daily-disclaimer"><summary>Data limits</summary><p>* Moneyline probability is bookmaker consensus, not model confidence. No validated player-prop odds or same-game correlation model is connected, so player parlays are withheld rather than fabricated. Recheck prices.</p></details></section>';
+ return '<section class="daily-suggestions" aria-label="Per-game pregame tickets"><div class="daily-section-head"><h3>Every game</h3><small>Automatic · research only</small></div><div class="daily-ticket-grid">'+cards+'</div><details class="daily-disclaimer"><summary>Why PASS?</summary><p>* Market favorite probability is not an edge or validated model confidence. An optimal parlay needs independently calibrated probabilities, current player prices and a correlation-aware joint model. Unavailable data means PASS.</p></details></section>';
 }
 function dailySuggestionsPanel(){
  const d=state.daily||{},stamp=d.generatedAt?formatFresh(d.generatedAt):'Not generated';
