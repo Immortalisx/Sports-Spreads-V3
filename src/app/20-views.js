@@ -173,7 +173,7 @@ function gameCard(game){
  const startName={nfl:'Kickoff',nba:'Tipoff',nhl:'Puck drop',mlb:'First pitch'}[game.league]||'Start time';
  const middle=scored?
   '<span class="score">'+esc(game.away.score)+'–'+esc(game.home.score)+'</span>':
-  '<span class="versus">VS</span><small class="game-center-time">'+esc(game.demo?'Sample':time)+'</small>';
+  '<span class="versus">VS</span>';
  const when=game.demo?'<span class="game-date">SAMPLE MATCHUP</span>':
   '<div class="game-when"><span class="game-date">'+esc(formatDay(game.start))+'</span>'+
   '<span class="game-start-time" aria-label="'+esc(startName)+' at '+esc(time)+'">'+
@@ -345,7 +345,7 @@ function weatherPanel(g){
  const key=SportsWeather.key(g),value=state.weather[key];
  if(g.demo)return `<div class="panel weather-panel"><span class="block-label">GAME-DAY WEATHER</span><strong>Preview only</strong><p>Weather is not attached to example games.</p></div>`;
  if(!value||value.status==='loading')return `<div class="panel weather-panel"><span class="block-label">GAME-DAY WEATHER</span><p>Checking venue conditions…</p></div>`;
- if(value.status==='indoors')return `<div class="panel weather-panel"><span class="block-label">GAME-DAY WEATHER</span><div class="weather-summary">🏟️ <strong>Indoors</strong></div><p>${esc(value.note||'Outdoor conditions are not expected to affect play.')}</p></div>`;
+ if(value.status==='indoors')return `<div class="panel weather-panel weather-compact" aria-label="Game-day weather: indoor venue"><span class="weather-compact-line">🏟️ <strong>Indoor venue</strong><small>No outdoor weather impact expected</small></span></div>`;
  if(value.status==='forecast')return `<div class="panel weather-panel"><div class="weather-title"><span class="block-label">GAME-DAY WEATHER</span><span class="weather-source">Forecast · ${esc(formatFresh(value.fetchedAt))}</span></div><div class="weather-summary"><span class="weather-icon" aria-hidden="true">${esc(value.icon)}</span><div><strong>${esc(Math.round(value.tempF))}°F · ${esc(value.description)}</strong><div class="person-info">${esc(value.city)} · Near kickoff</div></div></div><div class="weather-grid"><div><small>Wind</small><strong>${esc(Math.round(value.windMph))} mph</strong></div><div><small>Gusts</small><strong>${esc(Math.round(value.gustMph))} mph</strong></div><div><small>Precipitation</small><strong>${esc(Math.round(value.precipChance))}% chance</strong></div></div>${value.flags?.length?`<p class="weather-flag">${esc(value.flags.join(' · '))}</p>`:''}${(() => {const context=globalThis.SportsWeatherModel?.assess(g,value);return context?.available?`<div class="weather-context"><span class="block-label">WEATHER MODEL · ${esc(context.tier)} RISK</span><p>${esc(context.signals.join(' · '))}</p><details><summary>Model inputs & limits</summary><p>Weather features: ${esc(context.features.wind_mph)} mph wind, ${esc(context.features.gust_mph)} mph gusts, ${esc(context.features.precipitation_probability_pct)}% precipitation chance, ${esc(context.features.temperature_f)}°F. These influence contextual risk, not a calibrated win probability. Roof status can change exposure.</p></details></div>`:'';})()}<p class="weather-note">${esc(value.roofNote||'Forecast for the venue area, not an observed stadium reading.')} Weather is included in matchup risk analysis; calibrated prediction confidence is not available. <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo ↗</a></p></div>`;
  return `<div class="panel weather-panel"><div class="weather-title"><span class="block-label">GAME-DAY WEATHER</span><button class="neutral-button small-btn" data-action="weather-retry" data-game="${esc(g.id)}">Retry</button></div><p>${esc(value.message||'Forecast is unavailable for this game.')}</p></div>`;
 }
@@ -362,11 +362,22 @@ async function loadGameWeather(g,force=false){
 function matchupFactorsPanel(g){
  const advanced=globalThis.SportsMultifactor?.evaluate?.(g,{})||[];
  if(!advanced.length)return '';
- const count=advanced.filter(f=>f.ok).length;
- const rows=advanced.map(f=>`<div class="result-row factor-row"><span>${esc(f.label)}</span><small class="muted">${f.ok?'Sourced · '+esc(f.sampleSize)+' observations':'Awaiting verified data'}</small></div>`).join('');
- return `<details class="panel data-panel"><summary>Matchup factors · ${count}/${advanced.length} sourced</summary>
-   <p class="muted-sm factor-intro">${esc(g.league.toUpperCase())} scheme, personnel and coaching factors are tracked individually. Sources and point-in-time samples are required before anything changes a prediction.</p>${rows}
-   <p class="muted-sm">The current on-screen estimate uses season records only. No unsourced blitz, coaching, pitcher-hitter or lineup rating is substituted. Advanced coefficients require a passing historical holdout test.</p></details>`;
+ const sourced=advanced.filter(f=>f.ok);
+ const missing=advanced.filter(f=>!f.ok);
+ const summary=sourced.length?'Advanced matchup research · '+sourced.length+' sourced':
+  'Advanced matchup research';
+ const status=sourced.length?'<span class="research-status research-status--partial">Research only</span>':
+  '<span class="research-status">Not yet verified</span>';
+ const ready=sourced.map(f=>'<div class="result-row factor-row"><span>'+esc(f.label)+'</span>'+
+  '<small class="muted">Sourced · '+esc(f.sampleSize)+' observations</small></div>').join('');
+ const pending=missing.length?'<details class="research-missing"><summary>See '+missing.length+
+  ' missing input'+(missing.length===1?'':'s')+'</summary><ul>'+
+  missing.map(f=>'<li>'+esc(f.label)+'</li>').join('')+'</ul></details>':'';
+ return '<details class="panel data-panel research-panel"><summary class="research-summary">'+
+  esc(summary)+status+'</summary>'+
+  (sourced.length?'<p>Available research inputs are shown below. They do not alter the prediction without validated model coefficients.</p>'+ready:
+  '<p>Scheme, personnel and coaching inputs have not been verified for this matchup. No placeholder ratings are used.</p>')+
+  pending+'</details>';
 }
 function pregameStarterPanel(g){
  if(g.league!=='mlb'||g.demo||g.status!=='scheduled')return '';
