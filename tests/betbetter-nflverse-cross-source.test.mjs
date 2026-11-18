@@ -39,3 +39,36 @@ test('source identifiers and integrity hashes are pinned', () => {
   assert.match(fixture.sources.nflverseSha256, /^[a-f0-9]{64}$/);
   assert.equal(fixture.sources.nflverseBlobSha, '77580b1ff3255acb477153f993954f6e1c60a5c8');
 });
+
+
+test('all 50 excluded teaching NFL games are individually pinned and disjoint', () => {
+  const csv = readFileSync(new URL('./fixtures/betbetter-nfl-excluded-2026.csv', import.meta.url), 'utf8');
+  const lines = csv.trim().split(/\r?\n/).filter(line => !line.startsWith('#'));
+  const excluded = lines.map((line) => {
+    const cells = line.split(',');
+    assert.equal(cells.length, 5);
+    const [date, home, away, hs, as] = cells;
+    assert.match(date, /^2026-\d{2}-\d{2}$/);
+    assert.match(home, /^[A-Z]{2,3}$/);
+    assert.match(away, /^[A-Z]{2,3}$/);
+    assert.notEqual(home, away);
+    assert.match(hs, /^\d+$/);
+    assert.match(as, /^\d+$/);
+    return { date, home, away, homeScore: Number(hs), awayScore: Number(as) };
+  });
+  assert.equal(excluded.length, 50);
+  assert.equal(excluded.filter(g => g.home === 'AFC' && g.away === 'NFC').length, 1);
+  assert.equal(excluded.filter(g => g.date.startsWith('2026-08-')).length, 49);
+  const matched = fixture.matchedGames;
+  const all = [
+    ...matched.map(g => [g.teachingDate, g.home, g.away, g.homeScore, g.awayScore].join('|')),
+    ...excluded.map(g => [g.date, g.home, g.away, g.homeScore, g.awayScore].join('|'))
+  ];
+  assert.equal(all.length, 95);
+  assert.equal(new Set(all).size, 95);
+  const matchupKeys = [
+    ...matched.map(g => [g.teachingDate, g.home, g.away].join('|')),
+    ...excluded.map(g => [g.date, g.home, g.away].join('|'))
+  ];
+  assert.equal(new Set(matchupKeys).size, 95);
+});
