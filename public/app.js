@@ -30,12 +30,34 @@ async function directJson(url){
 function mapDirectTeam(x,c={}){return {id:String(x.id??c.id??''),name:x.displayName??x.name??x.shortDisplayName??'Unknown team',abbr:x.abbreviation??'',shortName:x.shortDisplayName??x.name??'',record:c.records?.find(y=>y.type==='total')?.summary??c.records?.[0]?.summary??null,logo:x.logo??x.logos?.[0]?.href??null,score:c.score?.displayValue??c.score?.value??c.score??null};}
 function mapDirectEvent(e,l){const c=e.competitions?.[0]??{},cs=c.competitors??[],home=cs.find(x=>x.homeAway==='home')??cs[0]??{},away=cs.find(x=>x.homeAway==='away')??cs[1]??{};let status=e.status?.type??{};return {id:String(e.id??''),league:l,home:mapDirectTeam(home.team??{},home),away:mapDirectTeam(away.team??{},away),start:e.date??c.date??null,status:status.state==='in'?'live':status.state==='post'?'final':'scheduled',statusText:status.shortDetail??status.detail??'Scheduled',venue:c.venue?.fullName??c.venue?.name??null,venueCity:c.venue?.address?.city??null,venueState:c.venue?.address?.state??null,venueCountry:c.venue?.address?.country??null,venueIndoor:typeof c.venue?.indoor==='boolean'?c.venue.indoor:null,venueLatitude:c.venue?.latitude??null,venueLongitude:c.venue?.longitude??null,marketLine:null,model:null,demo:false};}
 function mapDirectPlayer(item){const p=item.athlete??item;return {id:String(p.id??''),name:p.displayName??p.fullName??p.name??'Player',position:p.position?.abbreviation??item.position?.abbreviation??'',jersey:p.jersey??'',headshot:p.headshot?.href??null,profileUrl:p.links?.[0]?.href??null};}
+// Read-only API-Sports daily game cache. This never spends provider credits.
+async function apiSportsBoard(league,date){
+ const today=new Date().toISOString().slice(0,10);
+ if(date&&date!==today.replaceAll('-',''))return null;
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),5000);
+ try{
+  const res=await fetch('https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/api-sports-cache?league='+league,{signal:ctrl.signal});
+  if(!res.ok)return null;
+  const snapshot=await res.json();
+  if(!snapshot.cached||snapshot.data?.date!==today||!Array.isArray(snapshot.data?.games))return null;
+  const games=snapshot.data.games.map(item=>{
+   const game=item.game??item,home=item.teams?.home??{},away=item.teams?.away??{};
+   const start=game.date?.start??game.date?.date??game.date??item.date?.start??item.date;
+   const raw=String(game.status?.long??item.status?.long??item.status?.short??'Scheduled');
+   const status=/final|finished|ended/i.test(raw)?'final':/live|progress|quarter|period|half/i.test(raw)?'live':'scheduled';
+   const team=(t,side)=>({id:String(t.id??''),name:t.name??'',abbr:t.code??'',shortName:t.name??'',logo:t.logo??null,score:item.scores?.[side]?.total??item.scores?.[side]?.points??null});
+   return {id:String(game.id??item.id??''),league,home:team(home,'home'),away:team(away,'away'),start:typeof start==='string'?start:null,status,statusText:raw,venue:null,marketLine:null,model:null,demo:false};
+  }).filter(g=>g.id&&g.home.id&&g.away.id&&g.start);
+  return games.length?{source:'API-Sports daily cache',updatedAt:snapshot.fetched_at,cache:'shared-daily',league,date:date||today.replaceAll('-',''),games}:null;
+ }catch{return null;}finally{clearTimeout(timer);}
+}
 async function directSportsData(route){
  const u=new URL(route,'https://local.invalid'),seg=u.pathname.split('/').filter(Boolean),league=u.searchParams.get('league')||'nba';
  let base=directBase(league),payload;
  const timestamp=new Date().toISOString(),meta={source:'ESPN public website feed (unofficial)',updatedAt:timestamp,cache:'relay-or-direct'};
  if(u.pathname==='/api/scoreboard'){
   const date=u.searchParams.get('date')||'';if(date&&!/^\d{8}$/.test(date))throw Error('Invalid game date');
+  if(league==='nba'||league==='nhl'){const cached=await apiSportsBoard(league,date);if(cached)return cached;}
   payload=await directJson(base+'/scoreboard'+(date?'?dates='+date+'&limit=100':'?limit=100'));
   return {...meta,league,date,games:(payload.events||[]).map(e=>mapDirectEvent(e,league))};
  }
