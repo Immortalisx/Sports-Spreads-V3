@@ -1,0 +1,21 @@
+name: Verify real NFL injuries and depth-chart source (free)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/probe-live-nfl-availability.mjs'
+      - 'engine/nfl-availability-snapshot.mjs'
+      - '.github/workflows/probe-nfl-availability.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check public ESPN season scoreboard, injuries and QB charts
+        run: node engine/probe-live-nfl-availability.mjs
