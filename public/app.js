@@ -86,7 +86,7 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 const safeUrl=x=>{try{const url=new URL(x);return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return'';}};
 const money=x=>Number(x).toLocaleString('en-US',{style:'currency',currency:'USD'});
 const formatDay=x=>{if(!x)return 'TBD';const d=new Date(x);if(Number.isNaN(d.getTime()))return 'TBD';return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',timeZone:'America/New_York'}).format(d);};
-const formatTime=x=>{if(!x)return 'TBD';const d=new Date(x);if(Number.isNaN(d.getTime()))return 'TBD';return new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York',timeZoneName:'short'}).format(d);};
+const formatTime=x=>{if(!x)return 'TBD';const d=new Date(x);if(Number.isNaN(d.getTime()))return 'TBD';const time=new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'}).format(d);const tz=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',timeZoneName:'short'}).formatToParts(d).find(p=>p.type==='timeZoneName')?.value;return time+' '+(tz==='EDT'?'EDT':tz==='EST'?'EST':'ET');};
 const formatFresh=x=>{if(!x)return 'Unavailable';const n=Date.now()-new Date(x).getTime();if(!Number.isFinite(n))return 'Unknown';if(n<60000)return 'Just fetched';if(n<3600000)return `${Math.max(1,Math.floor(n/60000))}m ago`;return `${Math.max(1,Math.floor(n/3600000))}h ago`;};
 function icon(name){const paths={teams:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M2 20v-2a7 7 0 0 1 14 0v2M17 15a5 5 0 0 1 5 5"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',ticket:'<path d="M3 7V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a3 3 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a3 3 0 0 0 0-6Z" transform="translate(0 2)"/><path d="M12 6v2m0 4v2m0 4v1"/>',history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1-2 2-.1-.1a1.6 1.6 0 0 0-1.8-.3l-.2.1V21h-3v-2.4l-.3-.1a1.6 1.6 0 0 0-1.8.3l-.1.1-2-2 .1-.1a1.6 1.6 0 0 0 .3-1.8L8.8 15H6v-3h2.5l.1-.3a1.6 1.6 0 0 0-.3-1.8l-.1-.1 2-2 .1.1a1.6 1.6 0 0 0 1.8.3l.2-.1V6h3v2.1l.3.1a1.6 1.6 0 0 0 1.8-.3l.1-.1 2 2-.1.1a1.6 1.6 0 0 0-.3 1.8l.1.3H21v3h-1.7Z" transform="translate(-2 -2)"/>',refresh:'<path d="M20 11a8 8 0 0 0-14-5L3 9m0-6v6h6M4 13a8 8 0 0 0 14 5l3-3m0 6v-6h-6"/>',link:'<path d="M7 17 17 7M9 7h8v8"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>'};return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`;}
 
@@ -266,7 +266,7 @@ function gameCard(game){
  const startName={nfl:'Kickoff',nba:'Tipoff',nhl:'Puck drop',mlb:'First pitch'}[game.league]||'Start time';
  const middle=scored?
   '<span class="score">'+esc(game.away.score)+'–'+esc(game.home.score)+'</span>':
-  '<span class="versus">VS</span><small class="game-center-time">'+esc(game.demo?'Sample':time)+'</small>';
+  '<span class="versus">VS</span>';
  const when=game.demo?'<span class="game-date">SAMPLE MATCHUP</span>':
   '<div class="game-when"><span class="game-date">'+esc(formatDay(game.start))+'</span>'+
   '<span class="game-start-time" aria-label="'+esc(startName)+' at '+esc(time)+'">'+
@@ -438,7 +438,7 @@ function weatherPanel(g){
  const key=SportsWeather.key(g),value=state.weather[key];
  if(g.demo)return `<div class="panel weather-panel"><span class="block-label">GAME-DAY WEATHER</span><strong>Preview only</strong><p>Weather is not attached to example games.</p></div>`;
  if(!value||value.status==='loading')return `<div class="panel weather-panel"><span class="block-label">GAME-DAY WEATHER</span><p>Checking venue conditions…</p></div>`;
- if(value.status==='indoors')return `<div class="panel weather-panel"><span class="block-label">GAME-DAY WEATHER</span><div class="weather-summary">🏟️ <strong>Indoors</strong></div><p>${esc(value.note||'Outdoor conditions are not expected to affect play.')}</p></div>`;
+ if(value.status==='indoors')return `<div class="panel weather-panel weather-compact" aria-label="Game-day weather: indoor venue"><span class="weather-compact-line">🏟️ <strong>Indoor venue</strong><small>No outdoor weather impact expected</small></span></div>`;
  if(value.status==='forecast')return `<div class="panel weather-panel"><div class="weather-title"><span class="block-label">GAME-DAY WEATHER</span><span class="weather-source">Forecast · ${esc(formatFresh(value.fetchedAt))}</span></div><div class="weather-summary"><span class="weather-icon" aria-hidden="true">${esc(value.icon)}</span><div><strong>${esc(Math.round(value.tempF))}°F · ${esc(value.description)}</strong><div class="person-info">${esc(value.city)} · Near kickoff</div></div></div><div class="weather-grid"><div><small>Wind</small><strong>${esc(Math.round(value.windMph))} mph</strong></div><div><small>Gusts</small><strong>${esc(Math.round(value.gustMph))} mph</strong></div><div><small>Precipitation</small><strong>${esc(Math.round(value.precipChance))}% chance</strong></div></div>${value.flags?.length?`<p class="weather-flag">${esc(value.flags.join(' · '))}</p>`:''}${(() => {const context=globalThis.SportsWeatherModel?.assess(g,value);return context?.available?`<div class="weather-context"><span class="block-label">WEATHER MODEL · ${esc(context.tier)} RISK</span><p>${esc(context.signals.join(' · '))}</p><details><summary>Model inputs & limits</summary><p>Weather features: ${esc(context.features.wind_mph)} mph wind, ${esc(context.features.gust_mph)} mph gusts, ${esc(context.features.precipitation_probability_pct)}% precipitation chance, ${esc(context.features.temperature_f)}°F. These influence contextual risk, not a calibrated win probability. Roof status can change exposure.</p></details></div>`:'';})()}<p class="weather-note">${esc(value.roofNote||'Forecast for the venue area, not an observed stadium reading.')} Weather is included in matchup risk analysis; calibrated prediction confidence is not available. <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo ↗</a></p></div>`;
  return `<div class="panel weather-panel"><div class="weather-title"><span class="block-label">GAME-DAY WEATHER</span><button class="neutral-button small-btn" data-action="weather-retry" data-game="${esc(g.id)}">Retry</button></div><p>${esc(value.message||'Forecast is unavailable for this game.')}</p></div>`;
 }
@@ -455,11 +455,22 @@ async function loadGameWeather(g,force=false){
 function matchupFactorsPanel(g){
  const advanced=globalThis.SportsMultifactor?.evaluate?.(g,{})||[];
  if(!advanced.length)return '';
- const count=advanced.filter(f=>f.ok).length;
- const rows=advanced.map(f=>`<div class="result-row factor-row"><span>${esc(f.label)}</span><small class="muted">${f.ok?'Sourced · '+esc(f.sampleSize)+' observations':'Awaiting verified data'}</small></div>`).join('');
- return `<details class="panel data-panel"><summary>Matchup factors · ${count}/${advanced.length} sourced</summary>
-   <p class="muted-sm factor-intro">${esc(g.league.toUpperCase())} scheme, personnel and coaching factors are tracked individually. Sources and point-in-time samples are required before anything changes a prediction.</p>${rows}
-   <p class="muted-sm">The current on-screen estimate uses season records only. No unsourced blitz, coaching, pitcher-hitter or lineup rating is substituted. Advanced coefficients require a passing historical holdout test.</p></details>`;
+ const sourced=advanced.filter(f=>f.ok);
+ const missing=advanced.filter(f=>!f.ok);
+ const summary=sourced.length?'Advanced matchup research · '+sourced.length+' sourced':
+  'Advanced matchup research';
+ const status=sourced.length?'<span class="research-status research-status--partial">Research only</span>':
+  '<span class="research-status">Not yet verified</span>';
+ const ready=sourced.map(f=>'<div class="result-row factor-row"><span>'+esc(f.label)+'</span>'+
+  '<small class="muted">Sourced · '+esc(f.sampleSize)+' observations</small></div>').join('');
+ const pending=missing.length?'<details class="research-missing"><summary>See '+missing.length+
+  ' missing input'+(missing.length===1?'':'s')+'</summary><ul>'+
+  missing.map(f=>'<li>'+esc(f.label)+'</li>').join('')+'</ul></details>':'';
+ return '<details class="panel data-panel research-panel"><summary class="research-summary">'+
+  esc(summary)+status+'</summary>'+
+  (sourced.length?'<p>Available research inputs are shown below. They do not alter the prediction without validated model coefficients.</p>'+ready:
+  '<p>Scheme, personnel and coaching inputs have not been verified for this matchup. No placeholder ratings are used.</p>')+
+  pending+'</details>';
 }
 function pregameStarterPanel(g){
  if(g.league!=='mlb'||g.demo||g.status!=='scheduled')return '';
