@@ -11,19 +11,20 @@ const routes=[
  ['matchup-signals',false]
 ];
 let failed=0;
-async function check(name,url,expectHtml=false){
+async function check(name,url,kind='json'){
  try{
-  const r=await fetch(url,{headers:{Origin:site,Accept:expectHtml?'text/html':'application/json'},signal:AbortSignal.timeout(18000),redirect:'follow'});
+  const r=await fetch(url,{headers:{Origin:site,Accept:kind==='html'?'text/html':kind==='js'?'application/javascript':'application/json'},signal:AbortSignal.timeout(18000),redirect:'follow'});
   const cors=r.headers.get('access-control-allow-origin');
-  if(!expectHtml&&cors!==site)throw Error('CORS mismatch: '+cors);
+  if(kind==='json'&&cors!==site)throw Error('CORS mismatch: '+cors);
   if(!r.ok)throw Error('HTTP '+r.status);
   const body=await r.text();
-  if(expectHtml){if(!body.includes('Sports Spreads')||!body.includes('app.js'))throw Error('Staging HTML missing expected app');}
+  if(kind==='html'){if(!body.includes('Sports Spreads')||!body.includes('app.js'))throw Error('Staging HTML missing expected app');}
+  else if(kind==='js'){if(!body.includes('function ')||body.length<10000)throw Error('Staging app JS missing expected bundle');}
   else{const parsed=JSON.parse(body);if(!parsed||typeof parsed!=='object')throw Error('No JSON payload');}
   console.log('PASS '+name+' '+r.status);
  }catch(e){failed++;console.error('FAIL '+name+' '+e.message);}
 }
-await check('staging index',site+'/',true);
-await check('staging app JS',site+'/app.js',true===false);
+await check('staging index',site+'/','html');
+await check('staging app JS',site+'/app.js','js');
 for(const [route] of routes)await check(route,api+'/'+route);
 if(failed)process.exitCode=1;
