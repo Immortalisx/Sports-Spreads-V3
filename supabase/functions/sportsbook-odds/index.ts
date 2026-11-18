@@ -3,7 +3,7 @@
 // Free-plan guard: 1 US region * 1 market (h2h) = 1 credit per upstream request;
 // 8h per-league cache, 400 max reserved credits per UTC month (free tier has 500).
 const LEAGUES:Record<string,string>={nfl:'americanfootball_nfl',nba:'basketball_nba',nhl:'icehockey_nhl',mlb:'baseball_mlb'};
-const ORIGINS=new Set(['https://sports-spreads.onrender.com','https://sports-spreads-v3.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
+const ORIGINS=new Set(['https://sports-spreads.onrender.com','https://sports-spreads-v3.onrender.com','https://sports-spreads-v4-staging.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
 const CACHE_MS=8*60*60*1000;const MAX_PER_MONTH=400;
 const MAX_BOOKS=35,MAX_EVENTS=120;
 function cors(req:Request){const origin=req.headers.get('origin')||'';return {'access-control-allow-origin':ORIGINS.has(origin)?origin:'https://sports-spreads.onrender.com','access-control-allow-methods':'GET,OPTIONS','access-control-allow-headers':'apikey, authorization, content-type','vary':'Origin'};}
