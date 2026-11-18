@@ -26,7 +26,7 @@ function gameCard(game){
   '<div class="match-center">'+middle+'</div><div class="team-col">'+logo(game.home,game.league)+
   '<button data-action="team" data-team="home" data-game="'+esc(game.id)+'" title="View '+esc(game.home.name)+' team report">'+
   esc(game.home.name)+'</button><span class="record">'+esc(game.home.record||game.home.abbr||'')+'</span></div></div>'+
-  '<div class="game-foot"><span>'+marketCardLabel(game)+'</span>'+
+  '<div class="game-foot"><span>'+esc(game.status==='scheduled'?'Matchup overview':game.status==='live'?'Live game':'Game result')+'</span>'+
   '<button class="drill" data-action="game" data-game="'+esc(game.id)+'">Game details ↗</button></div></article>';
 }
 function filteredGames(){const games=state.feed?.games??[];const q=state.search.trim().toLowerCase();return q?games.filter(x=>(x.home.name+' '+x.away.name+' '+x.home.abbr+' '+x.away.abbr).toLowerCase().includes(q)):games;}
