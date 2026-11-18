@@ -1,12 +1,5 @@
 name: Offline opponent calibration replay (research only)
 on:
-  push:
-    branches: [research-opponent-adjusted-matchups-2026-11-18]
-    paths:
-      - 'engine/opponent-adjusted-research.mjs'
-      - 'engine/recency-research.mjs'
-      - 'engine/collect-opponent-replay.mjs'
-      - '.github/workflows/opponent-replay-research.yml'
   workflow_dispatch:
 permissions:
   contents: read
