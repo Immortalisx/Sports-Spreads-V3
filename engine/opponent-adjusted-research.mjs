@@ -123,7 +123,26 @@ export function evaluateOpponentFactors(games,league){
  const selected=candidates[0];
  const baseline=measure(holdout,selected.feature,0);
  const candidate=measure(holdout,selected.feature,selected.strength);
+ const dates=new Map();
+ for(const r of holdout){
+  const group=dates.get(r.gameDate)||[];
+  const base=probability(r,selected.feature,0),pred=probability(r,selected.feature,selected.strength);
+  group.push((base-r.y)**2-(pred-r.y)**2);dates.set(r.gameDate,group);
+ }
+ const dayGroups=[...dates.values()],gains=[];
+ let seed=13071991;
+ const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)|0)>>>0)/4294967296;
+ for(let i=0;i<500;i++){
+  let sum=0,count=0;
+  for(let j=0;j<dayGroups.length;j++){
+   const sampled=dayGroups[Math.floor(rand()*dayGroups.length)];
+   for(const d of sampled){sum+=d;count++;}
+  }
+  gains.push(sum/count);
+ }
+ gains.sort((a,b)=>a-b);
+ const interval95=[gains[12],gains[487]];
  return {...out,validationSeason,holdoutSeason,selected,holdout:{baseline,candidate,
-  brierGain:baseline.brier-candidate.brier},
+  brierGain:baseline.brier-candidate.brier,gameDateBlockBootstrap95:interval95},
   reviewOnly:false,reason:'Historical evaluation only; paired uncertainty and prospective source equivalence still required.'};
 }
