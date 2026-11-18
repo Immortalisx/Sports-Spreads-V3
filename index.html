@@ -574,6 +574,13 @@ body:not(.big-screen-mode){
 @media(max-width:719px){.game-grid{grid-template-columns:minmax(0,1fr)}.game-card-v3{min-width:0;max-width:100%}.game-card-v3 .match-team-name button{overflow-wrap:anywhere}.game-card-v3 .match-v3-foot{flex-wrap:wrap}}
 @media(max-width:375px){.game-card-v3 .match-team-row{gap:8px;padding:7px}.game-card-v3 .team-logo{width:40px;height:40px}.game-card-v3 .match-team-name button{font-size:13px}}
 
+/* Compact mobile ticket dock: keep it against the safe-area edge instead of floating over game rows. */
+@media(max-width:640px){
+ .ticket-dock{bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;left:12px;right:12px;padding:10px 13px;gap:12px;min-height:54px;max-width:calc(100vw - 24px)}
+ .ticket-dock strong{font-size:14px}
+ .main,.content,main{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+}
+
 </style>
   <script>window.SS_CLOUD_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co',publishableKey:'sb_publishable_BX7-wUhJWAp7d3fa3I7Uew_VZc4JHE6'};</script>
   <script>window.SS_FEED_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/sports-feed'};</script>
