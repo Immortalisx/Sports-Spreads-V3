@@ -1252,7 +1252,7 @@ async function apiSportsBoard(league,date){
   const snapshot=await res.json();
   if(!snapshot.cached||snapshot.data?.date!==today||!Array.isArray(snapshot.data?.games))return null;
   const games=snapshot.data.games.map(item=>{
-   const game=item.game??item,home=item.teams?.home??{},away=item.teams?.away??{};
+   const game=item.game??item,home=item.teams?.home??{},away=item.teams?.away??item.teams?.visitors??{};
    const start=game.date?.start??game.date?.date??game.date??item.date?.start??item.date;
    const raw=String(game.status?.long??item.status?.long??item.status?.short??'Scheduled');
    const status=/final|finished|ended/i.test(raw)?'final':/live|progress|quarter|period|half/i.test(raw)?'live':'scheduled';
