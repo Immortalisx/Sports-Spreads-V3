@@ -13,7 +13,8 @@ async function get(path,max=11000000){
  if(body.length>max)throw Error('Too large '+path+' '+body.length);
  return JSON.parse(body);
 }
-const scoreboard=await get('/scoreboard',1200000);
+const month=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',year:'numeric',month:'2-digit'}).format(new Date()).replace('-','');
+const scoreboard=await get('/scoreboard?dates='+month+'&limit=100',1200000);
 const games=[];
 for(const e of scoreboard.events||[]){
  const first=e.competitions?.[0];
@@ -32,12 +33,12 @@ try{
  console.log('PROBE_INJURIES='+JSON.stringify({rootKeys:Object.keys(data).slice(0,16),
  season:data.season,groups:data.injuries?.length,
  groupKeys:data.injuries?.[0]?Object.keys(data.injuries[0]):[],
- firstTeam:data.injuries?.[0]?.team?.id,
+ firstTeam:data.injuries?.[0]?.team?.id,groupId:data.injuries?.[0]?.id,displayName:data.injuries?.[0]?.displayName,
  firstInjuries:data.injuries?.[0]?.injuries?.length,
  sample:data.injuries?.[0]?.injuries?.[0] ?{
   keys:Object.keys(data.injuries[0].injuries[0]),
   status:data.injuries[0].injuries[0].status,
-  athlete:data.injuries[0].injuries[0].athlete?.id,
+  athlete:data.injuries[0].injuries[0].athlete?.id,athleteKeys:Object.keys(data.injuries[0].injuries[0].athlete||{}),athleteRef:data.injuries[0].injuries[0].athlete?.$ref,athleteName:data.injuries[0].injuries[0].athlete?.displayName,
   position:data.injuries[0].injuries[0].athlete?.position?.abbreviation
  }:null}));
  injMap=parseLeagueInjuries(data,{observedAt});
