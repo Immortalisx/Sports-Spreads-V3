@@ -440,3 +440,17 @@ body:not(.big-screen-mode){
 .goalie-empty p{font-size:11px;color:var(--muted);line-height:1.45;margin:9px 0}
 .goalie-missing{color:var(--muted);font-size:11px}
 @media(max-width:560px){.goalie-grid{grid-template-columns:1fr}.goalie-panel{padding:12px}}
+
+/* Compact ticket builder: prioritize choices, reveal calculations on demand. */
+.ticket-ticker-compact{position:relative;top:auto;padding:15px 17px;margin-bottom:14px}
+.ticket-ticker-compact .ticker-label{margin-bottom:9px}
+.ticket-ticker-compact .ticker-values{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ticket-ticker-compact .ticker-stat{padding:0;min-width:0}
+.ticket-ticker-compact .ticker-stat strong{font-size:clamp(20px,4vw,27px)}
+.ticket-math{border-top:1px solid var(--stroke);padding-top:9px;margin-top:12px;color:var(--muted);font-size:12px;line-height:1.7}
+.ticket-math summary,.daily-disclaimer summary{cursor:pointer;color:var(--muted)}
+.daily-disclaimer{font-size:11px;line-height:1.6;margin-top:12px;color:var(--muted)}
+.daily-disclaimer p{margin:8px 0}
+.daily-suggestions{margin-bottom:14px}
+.daily-section-head .block-label:empty{display:none}
+@media(max-width:620px){.ticket-ticker-compact{padding:13px 15px}.ticket-ticker-compact .ticker-values{gap:8px}.ticket-ticker-compact .ticker-name{font-size:11px}.ticket-ticker-compact .ticker-stat strong{font-size:21px}.auto-ticket-card{padding:16px!important}.auto-ticket-card .auto-ticket-top{margin-bottom:8px}.auto-ticket-card .auto-ticket-bottom p{font-size:11px}.daily-suggestions .daily-section-head{margin-bottom:10px}}
