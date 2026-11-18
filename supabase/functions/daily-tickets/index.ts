@@ -1,6 +1,7 @@
 // Daily suggested-ticket research; no provider APIs are called here.
 // GET is public cached data. POST requires the private Vault-backed cron token.
 import {buildDailySuggestions} from './generator.mjs';
+import {evaluatePregameParlay} from './pregame-parlay-engine.mjs';
 const originAllow=new Set(['https://sports-spreads.onrender.com','https://sports-spreads-v3.onrender.com','https://sports-spreads-v4-staging.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
 const host=Deno.env.get('SUPABASE_URL')||'';
 let secret='';
@@ -32,7 +33,28 @@ Deno.serve(async(req:Request)=>{
  if(req.method==='GET'){
   try{
    const rows=await api('sports_daily_tickets?date_et=eq.'+date+'&select=snapshot,generated_at&limit=1');
-   return answer(req,200,rows?.[0]?{status:'ready',...rows[0].snapshot}:{status:'pending',dateET:date,cards:[],note:'Daily suggestions are published only after the scheduled refresh. No provider credits were consumed.'});
+   // All upcoming fixtures are derived from the existing shared cache.
+   // No paid odds calls, speculative player prices or fabricated model records.
+   const sources=await api('sports_odds_cache?select=league,snapshot,fetched_at&limit=4');
+   const now=new Date();
+   const perGame=[];
+   for(const row of sources||[]){
+    const age=now.getTime()-Date.parse(row.fetched_at||'');
+    if(!Number.isFinite(age)||age<0||age>8*3600000)continue;
+    for(const event of row.snapshot?.events||[]){
+     const start=event.commence_time;
+     if(!event.id||!start||!Number.isFinite(Date.parse(start)))continue;
+     const minutes=(Date.parse(start)-now.getTime())/60000;
+     if(minutes<=0||minutes>60)continue;
+     const game={id:String(event.id),league:row.league,start};
+     const result=evaluatePregameParlay(game,[],{now});
+     perGame.push({gameId:game.id,league:game.league,start,homeTeam:String(event.home_team||'').slice(0,100),
+      awayTeam:String(event.away_team||'').slice(0,100),status:result.status,reason:result.reason,legs:[]});
+    }
+   }
+   const snapshot=rows?.[0]?{status:'ready',...rows[0].snapshot}:{status:'pending',dateET:date,cards:[]};
+   return answer(req,200,{...snapshot,pregame:{asOf:now.toISOString(),games:perGame,modelStatus:'not_validated',source:'shared_odds_cache'}});
+
   }catch{return answer(req,503,{status:'unavailable',cards:[]});}
  }
  if(!(await authorized(req)))return answer(req,403,{error:'Private daily refresh only'});
