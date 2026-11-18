@@ -50,7 +50,10 @@ for(let idx=0;idx<teams.length;idx+=5){
   try{
    const data=await get('/teams/'+teamId+'/depthcharts',1000000);
    if(idx===0)console.log('PROBE_CHART='+JSON.stringify({teamId,keys:Object.keys(data),
-    chartCount:data.depthCharts?.length,depthchartType:Array.isArray(data.depthchart)?'array':typeof data.depthchart,depthchartKeys:Object.keys(data.depthchart||{}).slice(0,15),depthchartPreview:JSON.stringify(data.depthchart||{}).slice(0,1800),chartSample:data.depthCharts?.[0]?{
+    chartCount:data.depthCharts?.length,depthchartType:Array.isArray(data.depthchart)?'array':typeof data.depthchart,depthchartKeys:Object.keys(data.depthchart||{}).slice(0,15),qbPositions:(data.depthchart||[]).flatMap(chart=>
+  Object.entries(chart.positions||{}).filter(([k,v])=>k.toLowerCase()==='qb'||v?.abbreviation==='QB')
+   .map(([key,v])=>({chart:chart.name,key,posKeys:Object.keys(v||{}),
+      players:v?.athletes?.slice(0,3)?.map((a,i)=>({keys:Object.keys(a),name:a.displayName,id:a.id,rank:a.rank,index:i}))}))),chartSample:data.depthCharts?.[0]?{
     keys:Object.keys(data.depthCharts[0]),
     positions:Object.keys(data.depthCharts[0].positions||{}).slice(0,5),
     positionSample:Object.values(data.depthCharts[0].positions||{})[0]?{
