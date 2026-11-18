@@ -120,12 +120,20 @@ test('release build has no forbidden legacy production model promotion',()=>{
  assert.match(read('engine/backtest.mjs'),/allowPromotion:false/);
 });
 
-test('pregame game cards only expose final-hour sourced research and fail closed',()=>{
+test('per-game dashboard refuses to present unvalidated favorites as optimal bets',()=>{
  const src=read('src/app/19-ticket-builder.js');
- assert.match(src,/const inPregameWindow=until<=60&&until>0/);
- assert.match(src,/best&&fresh&&inPregameWindow/);
- assert.match(src,/PASS · no fresh verified line/);
+ assert.match(src,/const eligible=until<=60&&until>0/);
+ assert.match(src,/PASS · no validated edge/);
+ assert.match(src,/PASS · no verified line/);
  assert.match(src,/no verified prop prices or joint model/);
+ assert.doesNotMatch(src,/const selection=best&&fresh&&inPregameWindow/);
+});
+test('pregame cache refresh is bounded to ticket view and final-hour games',()=>{
+ const src=read('src/app/30-controller.js');
+ assert.match(src,/state.section!=='tickets'\|\|document.hidden/);
+ assert.match(src,/now-pregameLastChecked<5\*60\*1000/);
+ assert.match(src,/m>0&&m<=65/);
+ assert.match(src,/setInterval\(\(\)=>void refreshPregameDashboard\(\),60\*1000\)/);
 });
 test('ticket dashboard refreshes only shared cached odds, never upstream provider',()=>{
  const src=read('src/app/30-controller.js');
