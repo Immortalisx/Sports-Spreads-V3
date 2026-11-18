@@ -632,6 +632,66 @@ async function loadTeam(tab,force=false){
 }
 
 
+async function loadPregameSignals(game){
+ if(!game||game.league!=='mlb'||game.demo||state.signalsLoading[game.id])return;
+ state.signalsLoading[game.id]=true;render();
+ try{state.signals[game.id]=await SportsSignals.get(game);}
+ catch(e){state.signals[game.id]={status:'unavailable',note:e?.message||'Official signal feed unavailable'};}
+ finally{state.signalsLoading[game.id]=false;render();}
+}
+async function loadSportsbookOdds(game){
+ if(!game||game.demo||game.status!=='scheduled'||!globalThis.SportsOdds)return;
+ const league=game.league;
+ if(state.oddsLoading[league])return;
+ if(state.odds[league]&&Date.now()-Date.parse(state.odds[league].asOf||'')<5*60*1000)return;
+ state.oddsLoading[league]=true;state.oddsError[league]='';render();
+ try{state.odds[league]=await SportsOdds.getBoard(league);}
+ catch(e){state.oddsError[league]=e?.message||'Cached sportsbook quotes unavailable';}
+ finally{state.oddsLoading[league]=false;render();}
+}
+function useSportsbookQuote(game,side,index){
+ if(!game||game.demo||game.status!=='scheduled')return;
+ const snap=state.odds[game.league];
+ if(!snap||!['ok','cached'].includes(snap.status)||!Number.isFinite(Date.parse(snap.asOf))||Date.now()-Date.parse(snap.asOf)>8*60*60*1000)return;
+ const match=SportsOdds.booksForGame(game,snap),book=match.books[Number(index)];
+ if(!match.matched||!Number.isInteger(Number(index))||!book)return;
+ const team=game[side],price=side==='home'?book.homePrice:side==='away'?book.awayPrice:null;
+ if(!team||!SportsOdds.validPrice(price))return;
+ // Copy quoted price to draft; NEVER auto-submit and NEVER claim a wager was placed.
+ state.draft={league:game.league,market:'Moneyline',selection:team.name+' to win',odds:String(price),gameId:game.id,bookmaker:book.title,bookmakerKey:book.key,oddsAsOf:book.asOf};
+ state.section='tickets';state.drawer=null;render();notify('Cached bookmaker quote copied. Recheck the live price before placing any wager.');
+}
+
+
+async function loadCloudConfig(){
+ if(!globalThis.SportsCloud)return;
+ const c=SportsCloud.config();state.cloud.configured=c.configured;state.cloud.url=c.url;state.cloud.key=c.key;
+ if(!c.configured)return;
+ const newLogin=SportsCloud.consumeRedirect();state.cloud.token=SportsCloud.credentials().access;
+ if(newLogin)state.cloud.status='Signed in securely for this tab.';
+ if(state.cloud.token)await fetchCloudTickets();else render();
+}
+async function fetchCloudTickets(){
+ if(!state.cloud.configured||!SportsCloud.credentials().access)return;
+ try{state.cloud.tickets=await SportsCloud.tickets();state.cloud.token=SportsCloud.credentials().access;state.cloud.status=`${state.cloud.tickets.length} cloud snapshots loaded.`;}
+ catch(e){state.cloud.status=e.message||'Cloud history unavailable.';}render();
+}
+async function sendLogin(email){
+ try{await SportsCloud.emailLink(email);state.cloud.status='Check your email for the secure sign-in link.';}
+ catch(e){state.cloud.status=e.message||'Sign-in failed.';}render();
+}
+async function saveCloudTicket(){
+ const c=state.cloud;if(!c.configured||!SportsCloud.credentials().access)return;
+ const estimate=calcTicket();if(!estimate){c.status='Enter valid odds and stake first.';render();return;}
+ try{await SportsCloud.saveTicket({label:`Ticket · ${new Date().toLocaleDateString()}`,stake:Number(state.stake),legs:state.ticket});c.status='Saved securely to your account.';await fetchCloudTickets();}
+ catch(e){c.status=e.message||'Cloud save failed.';render();}
+}
+function exportTicket(){const payload={format:'sports-spreads-v2-ticket',exportedAt:new Date().toISOString(),source:'user-entered',disclaimer:'No bet was placed; odds are not verified; model probabilities are not calculated.',legs:state.ticket,stake:state.stake};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='sports-spreads-ticket.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+// Progressive autocomplete: one bounded directory fetch per league, optional
+// roster fetch only after selecting a team, no API request per typed letter.
+let suggestionTimer=null;
+
+
 async function copyText(value){try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(value);return true;}}catch{}try{const field=document.createElement('textarea');field.value=value;field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();const worked=document.execCommand('copy');field.remove();return worked;}catch{return false;}}
 function overlay(){if(!state.drawer)return'';return `<div class="shade" data-action="close" aria-hidden="true"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Details panel">${state.drawer.type==='team'?teamDrawer():state.drawer.type==='player'?playerDrawer():state.drawer.type==='feedback'?feedbackDrawer():gameDrawer()}</aside>`;}
 function ticketDock(){
@@ -695,66 +755,10 @@ function loadSuggestedTicket(id){
  state.autoTicket.status=card.name+' loaded from one sportsbook. The grade is market-implied, not validated parlay confidence.';
  render();notify('Suggested ticket added locally. No bet placed.');
 }
-async function loadPregameSignals(game){
- if(!game||game.league!=='mlb'||game.demo||state.signalsLoading[game.id])return;
- state.signalsLoading[game.id]=true;render();
- try{state.signals[game.id]=await SportsSignals.get(game);}
- catch(e){state.signals[game.id]={status:'unavailable',note:e?.message||'Official signal feed unavailable'};}
- finally{state.signalsLoading[game.id]=false;render();}
-}
-async function loadSportsbookOdds(game){
- if(!game||game.demo||game.status!=='scheduled'||!globalThis.SportsOdds)return;
- const league=game.league;
- if(state.oddsLoading[league])return;
- if(state.odds[league]&&Date.now()-Date.parse(state.odds[league].asOf||'')<5*60*1000)return;
- state.oddsLoading[league]=true;state.oddsError[league]='';render();
- try{state.odds[league]=await SportsOdds.getBoard(league);}
- catch(e){state.oddsError[league]=e?.message||'Cached sportsbook quotes unavailable';}
- finally{state.oddsLoading[league]=false;render();}
-}
-function useSportsbookQuote(game,side,index){
- if(!game||game.demo||game.status!=='scheduled')return;
- const snap=state.odds[game.league];
- if(!snap||!['ok','cached'].includes(snap.status)||!Number.isFinite(Date.parse(snap.asOf))||Date.now()-Date.parse(snap.asOf)>8*60*60*1000)return;
- const match=SportsOdds.booksForGame(game,snap),book=match.books[Number(index)];
- if(!match.matched||!Number.isInteger(Number(index))||!book)return;
- const team=game[side],price=side==='home'?book.homePrice:side==='away'?book.awayPrice:null;
- if(!team||!SportsOdds.validPrice(price))return;
- // Copy quoted price to draft; NEVER auto-submit and NEVER claim a wager was placed.
- state.draft={league:game.league,market:'Moneyline',selection:team.name+' to win',odds:String(price),gameId:game.id,bookmaker:book.title,bookmakerKey:book.key,oddsAsOf:book.asOf};
- state.section='tickets';state.drawer=null;render();notify('Cached bookmaker quote copied. Recheck the live price before placing any wager.');
-}
 function openTeam(game,side){if(!game)return;const team=game[side];if(!team?.id){notify('This team has no provider identifier.');return;}state.drawer={type:'team',league:game.league,team};state.teamTab='injuries';render();loadTeam('injuries');}
 function openDirectoryTeam(id){const team=state.directory[state.league]?.teams?.find(t=>t.id===id);if(team){state.drawer={type:'team',league:state.league,team};state.teamTab='injuries';render();loadTeam('injuries');}}
 function getRosterPlayer(id){const key=`${state.drawer.league}-${state.drawer.team.id}-roster`;return state.teamCache[key]?.roster?.find(p=>p.id===id);}
 function saveTicket(){try{localStorage.setItem('ss-v2-ticket',JSON.stringify(state.ticket));}catch{notify('Browser storage is not available.');}}
-async function loadCloudConfig(){
- if(!globalThis.SportsCloud)return;
- const c=SportsCloud.config();state.cloud.configured=c.configured;state.cloud.url=c.url;state.cloud.key=c.key;
- if(!c.configured)return;
- const newLogin=SportsCloud.consumeRedirect();state.cloud.token=SportsCloud.credentials().access;
- if(newLogin)state.cloud.status='Signed in securely for this tab.';
- if(state.cloud.token)await fetchCloudTickets();else render();
-}
-async function fetchCloudTickets(){
- if(!state.cloud.configured||!SportsCloud.credentials().access)return;
- try{state.cloud.tickets=await SportsCloud.tickets();state.cloud.token=SportsCloud.credentials().access;state.cloud.status=`${state.cloud.tickets.length} cloud snapshots loaded.`;}
- catch(e){state.cloud.status=e.message||'Cloud history unavailable.';}render();
-}
-async function sendLogin(email){
- try{await SportsCloud.emailLink(email);state.cloud.status='Check your email for the secure sign-in link.';}
- catch(e){state.cloud.status=e.message||'Sign-in failed.';}render();
-}
-async function saveCloudTicket(){
- const c=state.cloud;if(!c.configured||!SportsCloud.credentials().access)return;
- const estimate=calcTicket();if(!estimate){c.status='Enter valid odds and stake first.';render();return;}
- try{await SportsCloud.saveTicket({label:`Ticket · ${new Date().toLocaleDateString()}`,stake:Number(state.stake),legs:state.ticket});c.status='Saved securely to your account.';await fetchCloudTickets();}
- catch(e){c.status=e.message||'Cloud save failed.';render();}
-}
-function exportTicket(){const payload={format:'sports-spreads-v2-ticket',exportedAt:new Date().toISOString(),source:'user-entered',disclaimer:'No bet was placed; odds are not verified; model probabilities are not calculated.',legs:state.ticket,stake:state.stake};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='sports-spreads-ticket.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-// Progressive autocomplete: one bounded directory fetch per league, optional
-// roster fetch only after selecting a team, no API request per typed letter.
-let suggestionTimer=null;
 function lookupLeague(){return document.getElementById('leg-league')?.value||state.league;}
 function lookupIsProp(){const league=lookupLeague(),market=document.getElementById('leg-market')?.value||'';return Boolean(propInfo(league,market));}
 function lookupOptions(){
