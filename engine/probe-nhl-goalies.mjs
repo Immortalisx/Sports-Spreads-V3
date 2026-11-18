@@ -31,4 +31,14 @@ console.log('GOALIE_WEEK_SCHEDULE='+JSON.stringify({keys:Object.keys(schedule),w
  sample:schedule.gameWeek[0].games?.[0]?{id:schedule.gameWeek[0].games[0].id,
  home:schedule.gameWeek[0].games[0].homeTeam?.abbrev,away:schedule.gameWeek[0].games[0].awayTeam?.abbrev,
  state:schedule.gameWeek[0].games[0].gameState}:null}:null}));
+const cached=await fetch('https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/nhl-goalie-form',{
+ headers:{Accept:'application/json'},signal:AbortSignal.timeout(15000)});
+if(!cached.ok)throw Error('Public NHL goalie cache HTTP '+cached.status);
+const cache=await cached.json();
+const full=(cache.games||[]).filter(g=>g.home?.mostRecentStarter&&g.away?.mostRecentStarter).length;
+console.log('GOALIE_PUBLIC_CACHE='+JSON.stringify({status:cache.status,games:cache.games?.length,
+ bothTeams:full,teamCount:cache.teamCount,rows:cache.goalieGameRows,generatedAt:cache.generatedAt,
+ noPaidApiRequests:cache.noPaidApiRequests}));
+if(cache.status!=='cached'||!Array.isArray(cache.games)||cache.games.length<10||
+ full<10||cache.noPaidApiRequests!==true)throw Error('NHL public cached goalie research coverage gate failed');
 console.log('GOALIE_SOURCE_PROBE_COMPLETE='+JSON.stringify({goalieRows:team.goalies?.length,logRows:rows.length,games:slate.games?.length}));
