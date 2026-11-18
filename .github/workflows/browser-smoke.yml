@@ -37,10 +37,13 @@ jobs:
       - name: Install temporary test-only Chromium
         timeout-minutes: 5
         run: |
+          echo "Starting isolated headless Chromium QA setup (no provider access)"
           # Avoid root postinstall (npm test) running again during the temporary QA install.
           npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          npx playwright --version
           # Both QA scripts launch headless Chromium; skip the unused full browser download.
           npx playwright install --with-deps --only-shell chromium
+          echo "Headless Chromium QA setup completed"
       - name: Run desktop, mobile and TV browser interaction checks
         run: node qa/browser-smoke.mjs
       - name: Benchmark emulated mobile and desktop (no provider credits)
