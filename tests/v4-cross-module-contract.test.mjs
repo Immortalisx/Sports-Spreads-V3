@@ -145,7 +145,7 @@ test('ticket dashboard refreshes only shared cached odds, never upstream provide
 test('pregame endpoint consumes only shared cached events and returns explicit model status',()=>{
  const src=read('supabase/functions/daily-tickets/index.ts');
  assert.match(src,/sports_odds_cache\?select=league,snapshot,fetched_at/);
- assert.match(src,/evaluatePregameParlay\(game,\[\],\{now\}\)/);
+ assert.match(src,/evaluatePregameParlay\(game,normalized\.offers,\{now\}\)/);
  assert.match(src,/modelStatus:'not_validated'/);
  assert.doesNotMatch(src,/THE_ODDS_API_KEY/);
 });
