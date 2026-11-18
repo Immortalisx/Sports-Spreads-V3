@@ -30,3 +30,9 @@ These offsets are **consistent with**, but do not prove, a UTC/local-time or cal
 
 ## Guardrails
 This fixture is an offline regression artifact, not a production feed or live inference source. No historical ticket returns, calibration, or market probabilities are inferred. Run `node --test tests/betbetter-nflverse-cross-source.test.mjs` and repository CI. Do not deploy or merge this draft PR as part of this research.
+
+
+## Exclusion coverage improvement
+`tests/fixtures/betbetter-nfl-excluded-2026.csv` now pins the 50 individually excluded teaching NFL rows (dates, normalized teams and final scores): 49 August preseason games and the February AFC/NFC Pro Bowl. The test checks every record's schema, 95 combined unique teaching matchup keys, and no overlap with the 45 matched records. This is materially stronger than testing exclusion totals alone.
+
+**Source-byte limitation:** The uploaded original teaching CSV was SHA-256 verified locally (390,940 bytes, digest above). The complete original teaching CSV and complete nflverse CSV are **not** committed into the repository, so GitHub CI cannot independently recompute those two original file digests or reconstruct each normalized record from raw source bytes. The checked-in matched/excluded snapshots are deterministic research fixtures, not proof of byte-level provenance. The test verifies that stored digest identifiers have valid syntax, not that they match files present in CI. Do not misrepresent the fixture tests as independent full-source integrity verification.
