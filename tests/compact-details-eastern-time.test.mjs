@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const state=readFileSync(new URL('../src/app/10-state.js',import.meta.url),'utf8');
-const views=readFileSync(new URL('../src/app/20-views.js',import.meta.url),'utf8');
+const views=['20-views','21-game-detail'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
 const css=readFileSync(new URL('../public/style.css',import.meta.url),'utf8');
 const formatter=state.split('\n').find(line=>line.startsWith('const formatTime='));
 if(!formatter)throw Error('Eastern start-time formatter missing');
@@ -21,7 +21,7 @@ test('cards show game time once prominently; game details show the same Eastern 
  assert.ok(card.includes('class="game-start-time"'));
  assert.match(card,/esc\(time\)/);
  assert.ok(!card.includes('class="game-center-time"'));
- const drawer=views.slice(views.indexOf('function gameDrawer(){'),views.indexOf('function playerDrawer(){'));
+ const drawer=views.slice(views.indexOf('function gameDrawer(){'));
  assert.match(drawer,/Scheduled start \(Eastern Time\)/);
  assert.match(drawer,/formatTime\(g\.start\)/);
 });

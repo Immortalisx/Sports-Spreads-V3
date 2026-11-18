@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const view=['18-prediction-views','20-views'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
+const view=['18-prediction-views','20-views','21-game-detail'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
 const controller=readFileSync(new URL('../src/app/30-controller.js',import.meta.url),'utf8');
 const state=readFileSync(new URL('../src/app/10-state.js',import.meta.url),'utf8');
 test('NFL availability is displayed only for matching fixture and team IDs',()=>{
