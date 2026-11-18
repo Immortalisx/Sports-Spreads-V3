@@ -4,8 +4,8 @@ import {readFileSync} from 'node:fs';
 const src=readFileSync(new URL('../supabase/functions/season-form/index.ts',import.meta.url),'utf8');
 const core=readFileSync(new URL('../engine/current-season-rolling.mjs',import.meta.url),'utf8');
 const deployed=readFileSync(new URL('../supabase/functions/season-form/current-season-rolling.mjs',import.meta.url),'utf8');
-const view=readFileSync(new URL('../src/app/20-views.js',import.meta.url),'utf8');
-const ctrl=readFileSync(new URL('../src/app/30-controller.js',import.meta.url),'utf8');
+const view=['18-prediction-views','20-views'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
+const ctrl=['26-cached-research','30-controller'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
 const schema=readFileSync(new URL('../supabase/migrations/005_current_season_rolling_form.sql',import.meta.url),'utf8');
 test('source-proven current-form computation matches the packaged Edge module',()=>{
  assert.equal(core,deployed);

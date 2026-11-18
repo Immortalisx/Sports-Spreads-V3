@@ -79,7 +79,7 @@ test('NBA/MLB holdout-calibrated records remain untouched by NFL/NHL recency',()
  assert.doesNotMatch(c.exposed.modelPanel(g),/Preliminary estimate/);
 });
 test('betting-related daily cards visibly mark unvalidated joint chances but retain exact odds',()=>{
- const s=readFileSync(new URL('../src/app/20-views.js',import.meta.url),'utf8');
+ const s=['19-ticket-builder','20-views'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
  assert.match(s,/\+'%\*<\/strong><small>Independence illustration/);
  assert.match(s,/not validated wagering confidence/);
  assert.match(s,/Bookmaker-implied /);

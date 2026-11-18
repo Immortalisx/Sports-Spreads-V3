@@ -10,7 +10,7 @@ const KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||fallback;
 const HEADERS={'apikey':KEY,'content-type':'application/json',
  ...(KEY.startsWith('sb_secret_')?{}:{authorization:'Bearer '+KEY})};
 const ORIGINS=new Set(['https://sports-spreads.onrender.com',
- 'https://sports-spreads-v3.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
+ 'https://sports-spreads-v3.onrender.com','https://sports-spreads-v4-staging.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
 const ESPN='https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const MAX_BODY=11_000_000;
 function cors(req:Request){

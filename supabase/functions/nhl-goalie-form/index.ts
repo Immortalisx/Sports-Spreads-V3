@@ -11,7 +11,7 @@ const KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||other;
 const HEADERS={'apikey':KEY,'content-type':'application/json',
  ...(KEY.startsWith('sb_secret_')?{}:{authorization:'Bearer '+KEY})};
 const ORIGINS=new Set(['https://sports-spreads.onrender.com',
- 'https://sports-spreads-v3.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
+ 'https://sports-spreads-v3.onrender.com','https://sports-spreads-v4-staging.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
 const reply=(req:Request,code:number,payload:unknown)=>new Response(JSON.stringify(payload),{
  status:code,headers:{'content-type':'application/json',
  'access-control-allow-origin':ORIGINS.has(req.headers.get('origin')||'')?

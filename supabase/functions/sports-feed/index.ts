@@ -2,7 +2,7 @@
 // Public read-only endpoint, no user data and no secret keys.
 const PROVIDER = "https://site.api.espn.com";
 const ALLOWED = new Set(["football/nfl", "basketball/nba", "hockey/nhl", "baseball/mlb"]);
-const ORIGINS = new Set(["https://sports-spreads.onrender.com","https://sports-spreads-v3.onrender.com","http://localhost:4173","http://127.0.0.1:4173"]);
+const ORIGINS = new Set(["https://sports-spreads.onrender.com","https://sports-spreads-v3.onrender.com","https://sports-spreads-v4-staging.onrender.com","http://localhost:4173","http://127.0.0.1:4173"]);
 const cache = new Map<string, {data: string; expires: number}>();
 function cors(req: Request): Record<string,string> {
  const origin=req.headers.get("origin")||"";

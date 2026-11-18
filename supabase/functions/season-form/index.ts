@@ -8,7 +8,7 @@ import {buildCurrentSeasonSnapshots} from './current-season-rolling.mjs';
 const LEAGUES:Record<string,string>={nfl:'football/nfl',nba:'basketball/nba',
  nhl:'hockey/nhl',mlb:'baseball/mlb'};
 const ORIGINS=new Set(['https://sports-spreads.onrender.com',
- 'https://sports-spreads-v3.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
+ 'https://sports-spreads-v3.onrender.com','https://sports-spreads-v4-staging.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
 const DB=Deno.env.get('SUPABASE_URL')||'';
 let envSecret='';try{envSecret=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}')?.default||'';}catch{}
 const KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||envSecret;
