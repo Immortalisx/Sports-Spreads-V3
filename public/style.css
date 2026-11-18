@@ -563,3 +563,48 @@ body:not(.big-screen-mode){
  .ticket-dock strong{font-size:14px}
  .main,.content,main{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 }
+
+
+/* UX V7: separate suggestion and manual workflows; restrained visual hierarchy. */
+.ticket-layout.auto-only{grid-template-columns:minmax(0,1fr);max-width:950px;margin-top:16px}
+.ticket-layout.auto-only>.form-card{padding:18px 20px}
+/* Automatic mode now renders only the current ticket review card. */
+.ticket-layout.auto-only>.form-card:first-child{display:block}
+.ux-secondary-matchups{border:1px solid var(--stroke);border-radius:13px;background:rgba(19,32,45,.7);margin:16px 0 20px;overflow:hidden}
+.ux-secondary-matchups>summary{cursor:pointer;min-height:46px;display:flex;align-items:center;padding:12px 17px;color:#d7e9f6;font-weight:800;font-size:12px}
+.ux-secondary-matchups[open]>summary{border-bottom:1px solid var(--stroke)}
+.ux-secondary-matchups>.daily-suggestions{margin:14px 16px 18px}
+.ux-secondary-matchups .daily-section-head small{color:var(--muted)}
+.daily-ticket-card.big-one.big-one-hero{grid-column:1/-1;min-width:0}
+.daily-ticket-card.big-one.big-one-hero .daily-card-metrics{max-width:650px}
+.daily-ticket-card.big-one.big-one-hero .daily-load{min-height:45px;border-color:#b99763;color:#ffe1a9}
+.game-card-v3 .match-v3-head .tag.live{border-color:#628858;color:#c8ff98;background:rgba(90,148,75,.12)}
+.game-card-v3 .match-v3-time{align-items:center;flex-wrap:wrap}
+.game-card-v3 .game-start-time{font-variant-numeric:tabular-nums;white-space:nowrap}
+.game-card-v3 .match-v3-foot{justify-content:flex-end;border-top:1px solid rgba(164,202,220,.11);margin-top:10px}
+.game-card-v3 .match-v3-foot .drill{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:11px;padding:9px 16px}
+.game-card-v3 .match-v3-foot .drill:hover{background:#2d5147;border-color:#85bca2}
+.game-card-v3 .match-team-name button{min-height:29px}
+.game-card-v3 .match-team-name button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(max-width:830px){
+ /* Reuse existing semantic nav controls, not duplicate action handlers. */
+ .sidebar .nav{position:fixed;left:0;right:0;bottom:0;z-index:19;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:8px max(10px,env(safe-area-inset-left,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-right,0px));background:rgba(10,21,32,.97);border-top:1px solid #385268;box-shadow:0 -10px 30px rgba(0,0,0,.28);backdrop-filter:blur(14px)}
+ .sidebar .nav button{min-width:0;min-height:55px;padding:7px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;box-shadow:none}
+ .sidebar .nav button svg{width:21px;height:21px;flex:none}
+ .sidebar .nav button span{display:block;font-size:11px;line-height:1.15;letter-spacing:.1px}
+ .sidebar .nav button.active{box-shadow:inset 0 2px var(--accent);color:var(--accent);background:#1b3430}
+ .sidebar{position:relative;z-index:10}
+ main.site{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
+ .ticket-dock{bottom:calc(86px + env(safe-area-inset-bottom,0px))!important}
+}
+@media(max-width:620px){
+ .top-actions [data-action="share"],.top-actions .big-screen-launch{display:none}
+ .topbar{gap:10px}
+ .hero h1{margin:4px 0;font-size:27px}
+ .hero p{display:none}
+ .site{padding-left:14px;padding-right:14px}
+ .game-card-v3 .match-v3-foot .drill{width:100%;min-height:44px}
+ .ticket-layout.auto-only>.form-card{padding:15px}
+ .ux-secondary-matchups>.daily-suggestions{margin:12px}
+}
+@media(prefers-reduced-motion:reduce){.sidebar .nav{backdrop-filter:none}.game-card-v3 .match-v3-foot .drill{transition:none!important}}

@@ -27,6 +27,6 @@ test('player suggestions use selected team roster, never invented names',async()
  await ui.acceptLookup(0);assert.equal(mk('leg-selection').value,'Jalen Brunson');assert.equal(ui.state.lookup.chosen.id,'123');
 });
 test('builder exposes an accessible combobox and shows its source limitation',()=>{
- const {ui}=page();ui.state.section='tickets';let html=ui.ticketView();
+ const {ui}=page();ui.state.section='tickets';ui.state.ticketMode='manual';let html=ui.ticketView();
  assert.match(html,/role="combobox"/);assert.match(html,/aria-controls="selection-suggestions"/);assert.match(html,/Type 3 letters/);
 });

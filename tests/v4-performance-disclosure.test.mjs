@@ -6,7 +6,7 @@ test('game cards do not surface technical bookmaker probabilities by default',()
  const source=read('src/app/20-views.js');
  const card=source.slice(source.indexOf('function gameCard('),source.indexOf('function filteredGames('));
  assert.doesNotMatch(card,/marketCardLabel\(game\)/);
- assert.match(card,/Matchup overview/);
+ assert.match(card,/View matchup/);
  assert.match(card,/data-action="game"/);
 });
 test('unchanged render does not destroy DOM',()=>{

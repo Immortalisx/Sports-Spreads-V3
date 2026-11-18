@@ -57,7 +57,7 @@ test('matchup UI distinguishes historically calibrated record estimates from unc
  vm.runInContext(source+'\nthis.exposed={gameCard,modelPanel,state};',context);
  const g=game('9-5','6-8');
  let card=context.exposed.gameCard(g);
- assert.match(card,/Matchup overview/);
+ assert.match(card,/View matchup/);
  assert.doesNotMatch(card,/Holdout-tested form|Bookmaker-implied/);
  let drawer=context.exposed.modelPanel(g);
  assert.match(drawer,/TEAM-RECORD MODEL/);

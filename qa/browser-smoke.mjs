@@ -56,6 +56,13 @@ async function run(){
   await desktop.screenshot({path:'qa/screenshots/desktop.png'});
   await desktop.locator('nav.nav [data-section="tickets"]').click();
   await desktop.locator('#auto-confidence').waitFor({timeout:5000});
+  assert.equal(await desktop.locator('#leg-form').count(),0,'Suggested tickets must not duplicate the manual entry form');
+  assert.equal(await desktop.locator('.ux-secondary-matchups').count(),1,'Game-by-game research should be collapsed');
+  await desktop.locator('[data-action="ticket-mode"][data-mode="manual"]').click();
+  await desktop.locator('#leg-form').waitFor({timeout:5000});
+  assert.equal(await desktop.locator('#auto-confidence').count(),0,'Manual builder must not duplicate automatic suggestions');
+  await desktop.locator('[data-action="ticket-mode"][data-mode="automatic"]').click();
+  await desktop.locator('#auto-confidence').waitFor({timeout:5000});
   await desktop.locator('#auto-confidence').evaluate(el=>{el.value='65';el.dispatchEvent(new Event('input',{bubbles:true}));});
   await desktop.waitForFunction(()=>document.querySelector('#auto-target')?.textContent?.trim()==='65%',null,{timeout:5000}).catch(async()=>{await desktop.locator('#auto-confidence').evaluate(el=>{el.value='65';el.dispatchEvent(new Event('input',{bubbles:true}));});await desktop.waitForFunction(()=>document.querySelector('#auto-target')?.textContent?.trim()==='65%',null,{timeout:5000});});
   assert.equal(await desktop.locator('#auto-target').innerText(),'65%');
@@ -63,7 +70,7 @@ async function run(){
   await desktop.locator('.ticket-item').first().waitFor({timeout:10000});
   assert.match(await desktop.locator('.ticket-item').first().innerText(),/Test Home Team/);
   assert.match(await desktop.locator('.auto-ticket-status').innerText(),/market-derived/i);
-  await desktop.locator('.daily-ticket-card.big-one').waitFor({timeout:8000});
+  await desktop.locator('.daily-ticket-card.big-one.big-one-hero').waitFor({timeout:8000});
   assert.match(await desktop.locator('.daily-ticket-card.big-one').innerText(),/the big one/i);
   await desktop.locator('[data-action="clear-ticket"]').first().click();
   await desktop.locator('.daily-ticket-card.big-one [data-action="daily-ticket-load"]').click();
@@ -79,12 +86,40 @@ async function run(){
   await mobile.route('**/*',router);await mobile.goto(url,{waitUntil:'domcontentloaded'});
   await mobile.locator('.game').first().waitFor({timeout:15000});
   assert.equal(await mobile.evaluate('document.documentElement.scrollWidth>window.innerWidth'),false,'Mobile overflow');
+  const mobileNav=mobile.locator('.sidebar .nav');
+  assert.equal(await mobileNav.evaluate(el=>getComputedStyle(el).position),'fixed','Mobile bottom nav must remain in place');
+  assert.equal(await mobileNav.locator('button').count(),4);
+  for(const button of await mobileNav.locator('button').all()){
+   assert.ok((await button.boundingBox()).height>=44,'Mobile navigation touch targets must be at least 44px');
+   assert.equal(await button.locator('span').isVisible(),true,'Mobile navigation labels should be visible');
+  }
+  await mobileNav.locator('[data-section="tickets"]').click();
+  await mobile.locator('[data-action="ticket-mode"][data-mode="manual"]').click();
+  await mobile.locator('#leg-form').waitFor({timeout:5000});
+  assert.equal(await mobile.locator('#auto-confidence').count(),0);
+  await mobileNav.locator('[data-section="games"]').click();
+  await mobile.locator('.game [data-action="game"]').first().click();
+  await mobile.locator('.drawer').waitFor({timeout:5000});
+  await mobile.locator('[data-action="close"]').last().click();
+  assert.equal(await mobile.locator('.drawer').count(),0);
   await mobile.screenshot({path:'qa/screenshots/mobile.png'});
+  const tablet=await browser.newPage({viewport:{width:768,height:1024}});
+  await tablet.route('**/*',router);await tablet.goto(url,{waitUntil:'domcontentloaded'});
+  await tablet.locator('.game').first().waitFor({timeout:15000});
+  assert.equal(await tablet.locator('.sidebar .nav').evaluate(el=>getComputedStyle(el).position),'fixed');
+  assert.equal(await tablet.evaluate('document.documentElement.scrollWidth>window.innerWidth'),false,'Tablet overflow');
+  await tablet.close();
   const tv=await browser.newPage({viewport:{width:1920,height:1080}});
   await tv.route('**/*',router);await tv.goto(url+'/?display=tv',{waitUntil:'domcontentloaded'});
   await tv.locator('.tv-game-grid .game').first().waitFor({timeout:15000});
   await tv.screenshot({path:'qa/screenshots/tv.png'});
-  console.log('PASS: desktop startup, schedule, clean share preview, mobile fit, TV enter/exit and direct TV URL');
+  const tv4k=await browser.newPage({viewport:{width:3840,height:2160}});
+  await tv4k.route('**/*',router);await tv4k.goto(url+'/?display=tv',{waitUntil:'domcontentloaded'});
+  await tv4k.locator('.tv-game-grid .game').first().waitFor({timeout:15000});
+  const cols=await tv4k.locator('.tv-game-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
+  assert.ok(cols>=4,'4K TV should retain a four-column grid');
+  await tv4k.close();
+  console.log('PASS: desktop, separated builder, hero ticket, mobile/tablet bottom navigation, matchup detail, TV/4K, no overflow');
  }finally{await browser.close();}
 }
 try{await run();}finally{server.kill('SIGTERM');}
