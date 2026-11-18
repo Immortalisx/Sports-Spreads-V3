@@ -2,6 +2,7 @@
 // GET is public cached data. POST requires the private Vault-backed cron token.
 import {buildDailySuggestions} from './generator.mjs';
 import {evaluatePregameParlay} from './pregame-parlay-engine.mjs';
+import {extractCachedOffers} from './market-normalizer.mjs';
 const originAllow=new Set(['https://sports-spreads.onrender.com','https://sports-spreads-v3.onrender.com','https://sports-spreads-v4-staging.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
 const host=Deno.env.get('SUPABASE_URL')||'';
 let secret='';
@@ -47,9 +48,10 @@ Deno.serve(async(req:Request)=>{
      const minutes=(Date.parse(start)-now.getTime())/60000;
      if(minutes<=0||minutes>60)continue;
      const game={id:String(event.id),league:row.league,start};
-     const result=evaluatePregameParlay(game,[],{now});
+     const normalized=extractCachedOffers(event);
+     const result=evaluatePregameParlay(game,normalized.offers,{now});
      perGame.push({gameId:game.id,league:game.league,start,homeTeam:String(event.home_team||'').slice(0,100),
-      awayTeam:String(event.away_team||'').slice(0,100),status:result.status,reason:result.reason,legs:[]});
+      awayTeam:String(event.away_team||'').slice(0,100),status:result.status,reason:result.reason,legs:[],marketCoverage:normalized.counts});
     }
    }
    const snapshot=rows?.[0]?{status:'ready',...rows[0].snapshot}:{status:'pending',dateET:date,cards:[]};
