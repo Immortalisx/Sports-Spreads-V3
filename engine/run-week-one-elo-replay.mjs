@@ -18,7 +18,7 @@ export function runWeekOneElo({historicalNfl=nfl,historicalNba=nba,historicalNhl
  const nhlRows=Array.isArray(historicalNhl?.rows)?historicalNhl.rows:[];
  const nhlVerified=nhlRows.length===2624 && [20242025,20252026].every(season=>nhlRows.filter(r=>r[1]===season).length===1312)
   && new Set(nhlRows.map(r=>r[0])).size===2624
-  && nhlRows.every(r=>r.length===7 && /^202[45]-\d{2}-\d{2}$/.test(r[2])
+  && nhlRows.every(r=>r.length===7 && /^202[4-6]-\d{2}-\d{2}$/.test(r[2])
    && Number.isInteger(r[5]) && Number.isInteger(r[6]) && r[5]>=0 && r[6]>=0
    && r[5]!==r[6] && r[3]!==r[4] && /^[A-Z]{2,4}$/.test(r[3]) && /^[A-Z]{2,4}$/.test(r[4]));
  const nhlHistory=nhlVerified?nhlRows.map(([id,season,gameDate,homeTeam,awayTeam,homeScore,awayScore])=>({
