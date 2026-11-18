@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
  * No-key historical research replay. Runs only in manually triggered CI.
- * NHL uses bounded official club-schedule GETs (32 per season).
+ * NHL uses one official Stats REST bulk listing per season, capped at two.
  * NBA requires an attributed offline input; no unlimited day-by-day API scan.
  */
 import {writeFile,mkdir} from 'node:fs/promises';
-import {collectHistorical,nflFromCsv} from './historical-sources.mjs';
+import {nflFromCsv} from './historical-sources.mjs';
+import {fetchNhlSeasonListing} from './nhl-bulk-history.mjs';
 import {evaluateOpponentFactors} from './opponent-adjusted-research.mjs';
 import {validateRecency} from './recency-research.mjs';
 const league=process.argv[2];
@@ -19,7 +20,7 @@ if(league==='nfl'){
  for(const year of seasons)games.push(...nflFromCsv(csv,year));
 }else{
  for(const year of seasons){
-  const rows=await collectHistorical({league,season:year,onProgress:x=>{if(x.error)console.error(year,x.club,x.error);}});
+  const {games:rows}=await fetchNhlSeasonListing(year);
   games.push(...rows);
  }
 }
