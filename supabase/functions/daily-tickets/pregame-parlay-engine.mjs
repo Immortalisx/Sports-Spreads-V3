@@ -24,18 +24,21 @@ export function evaluatePregameParlay(game,offers,{now=new Date(),model=null}={}
    !isISO(model.asOf)||t-Date.parse(model.asOf)<0||t-Date.parse(model.asOf)>15*60000)
   return {...base,reason:'joint_model_unvalidated'};
  const eligible=[];
+ // Same-game parlay payouts are sportsbook-specific. Multiplying standalone
+ // leg prices is not a verified executable SGP quote.
  for(const ticket of model.tickets||[]){
   if(!Array.isArray(ticket.legIds)||ticket.legIds.length<2||ticket.legIds.length>6||
-    new Set(ticket.legIds).size!==ticket.legIds.length||!finiteProbability(ticket.jointProbability))continue;
+    new Set(ticket.legIds).size!==ticket.legIds.length||!finiteProbability(ticket.jointProbability)||!validPrice(ticket.combinedPrice)||
+    typeof ticket.bookmakerKey!=='string'||!isISO(ticket.quoteAsOf)||t-Date.parse(ticket.quoteAsOf)<0||t-Date.parse(ticket.quoteAsOf)>15*60000)continue;
   const selected=ticket.legIds.map(id=>legs.find(l=>l.id===id));
-  if(selected.some(x=>!x)||new Set(selected.map(x=>x.bookmakerKey)).size!==1)continue;
+  if(selected.some(x=>!x)||new Set(selected.map(x=>x.bookmakerKey)).size!==1||selected[0].bookmakerKey!==ticket.bookmakerKey)continue;
   if(new Set(selected.map(x=>x.market+'|'+x.selection)).size!==selected.length)continue;
-  const payout=selected.reduce((p,x)=>p*decimal(x.price),1);
+  const payout=decimal(ticket.combinedPrice);
   const edge=ticket.jointProbability*payout-1;
   if(!Number.isFinite(edge)||edge<.05)continue;
   eligible.push({status:'READY',gameId:game.id,bookmakerKey:selected[0].bookmakerKey,
    legs:selected.map(x=>({id:x.id,market:x.market,selection:x.selection,price:x.price,playerId:x.playerId||null})),
-   jointProbability:ticket.jointProbability,expectedValue:edge,payoutMultiplier:payout,
+   jointProbability:ticket.jointProbability,expectedValue:edge,payoutMultiplier:payout,combinedPrice:ticket.combinedPrice,
    modelVersion:String(model.version||''),modelAsOf:model.asOf,oddsAsOf:selected.reduce((s,x)=>s>x.asOf?x.asOf:s,selected[0].asOf)});
  }
  eligible.sort((a,b)=>b.expectedValue-a.expectedValue||b.jointProbability-a.jointProbability);
