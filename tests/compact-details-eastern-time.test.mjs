@@ -18,9 +18,9 @@ test('explicit game start times show EST in winter and EDT in summer regardless 
 test('cards show game time once prominently; game details show the same Eastern time',()=>{
  const card=views.slice(views.indexOf('function gameCard(game){'),views.indexOf('function filteredGames(){'));
  assert.match(card,/const time=game.start\?formatTime\(game.start\)/);
- assert.match(card,/class=\\"game-start-time\\"/);
+ assert.ok(card.includes('class="game-start-time"'));
  assert.match(card,/esc\(time\)/);
- assert.doesNotMatch(card,/class=\\"game-center-time\\"/);
+ assert.ok(!card.includes('class="game-center-time"'));
  const drawer=views.slice(views.indexOf('function gameDrawer(){'),views.indexOf('function playerDrawer(){'));
  assert.match(drawer,/Scheduled start \(Eastern Time\)/);
  assert.match(drawer,/formatTime\(g\.start\)/);
