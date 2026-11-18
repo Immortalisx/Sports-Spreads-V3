@@ -73,8 +73,16 @@ console.log('PROBE_SUMMARY='+JSON.stringify({games:result.games.length,teams:tea
  chartSuccess:charts.size,chartFail:failed.length,injurySourceStatus,
  injuryGroups:injMap.size,projectedQB:result.games.flatMap(g=>[g.home,g.away]).filter(s=>s.projectedQB).length,
  firstSummary:result.games[0]?{id:result.games[0].gameId,home:result.games[0].home.starterStatus,away:result.games[0].away.starterStatus}:null}));
-if(games.length&&charts.size+injMap.size>0){
- // Reporting only 6 injury records/team keeps logs reasonably sized.
- for(const game of snapshot.games)for(const side of ['home','away'])game[side].injuries=game[side].injuries.slice(0,6);
- console.log('BACKFILL_JSON='+JSON.stringify(snapshot));
-}else console.log('BACKFILL_UNAVAILABLE=No verified, current game and player data');
+// Aggregate-only reporting after the one-time source-verified backfill. Never
+// redistribute league-wide athlete rows in a public CI log.
+console.log('PROBE_SOURCE_COMPLETE='+JSON.stringify({games:games.length,charts:charts.size,
+ injuryFeed:injurySourceStatus,missingCharts:failed.length}));
+try{
+ const response=await fetch('https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/nfl-availability',
+  {headers:{accept:'application/json'},signal:AbortSignal.timeout(12000)});
+ const publicCache=await response.json();
+ console.log('PROBE_PUBLIC_CACHE='+JSON.stringify({http:response.status,status:publicCache?.status,
+  games:publicCache?.games?.length,injuryFeed:publicCache?.injurySourceStatus,
+  chartTeams:publicCache?.depthChartTeams,generatedAt:publicCache?.generatedAt,
+  noPaidApiRequests:publicCache?.noPaidApiRequests}));
+}catch(e){console.log('PROBE_PUBLIC_CACHE_UNAVAILABLE='+String(e.message||e).slice(0,130));}
