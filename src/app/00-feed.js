@@ -44,7 +44,7 @@ async function apiSportsBoard(league,date){
    const start=game.date?.start??game.date?.date??game.date??item.date?.start??item.date;
    const raw=String(game.status?.long??item.status?.long??item.status?.short??'Scheduled');
    const status=/final|finished|ended/i.test(raw)?'final':/live|progress|quarter|period|half/i.test(raw)?'live':'scheduled';
-   const team=(t,side)=>({id:String(t.id??''),name:t.name??'',abbr:t.code??'',shortName:t.name??'',logo:t.logo??null,score:item.scores?.[side]?.total??item.scores?.[side]?.points??null});
+   const team=(t,side)=>({id:String(t.id??''),name:t.name??'',abbr:t.code??'',shortName:t.name??'',logo:t.logo??null,score:item.scores?.[side]?.total??item.scores?.[side]?.points??(side==='away'?item.scores?.visitors?.points??item.scores?.visitors?.total:null)??null});
    return {id:String(game.id??item.id??''),league,home:team(home,'home'),away:team(away,'away'),start:typeof start==='string'?start:null,status,statusText:raw,venue:null,marketLine:null,model:null,demo:false};
   }).filter(g=>g.id&&g.home.id&&g.away.id&&g.start);
   return games.length?{source:'API-Sports daily cache',updatedAt:snapshot.fetched_at,cache:'shared-daily',league,date:date||today.replaceAll('-',''),games}:null;
