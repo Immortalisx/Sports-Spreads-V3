@@ -130,7 +130,19 @@ function topbar(){
  return `<div class="topbar"><div class="hero"><div class="eyebrow">THE GAME, AT A GLANCE</div><h1>${esc(h)}</h1><p>${esc(sub)}</p></div><div class="top-actions"><button class="header-action big-screen-launch" data-action="big-screen" aria-label="Enter big screen mode" title="TV / big screen display">▣ Big Screen</button><button class="header-action" data-action="share" aria-label="Copy clean website link">↗ Share</button><button class="header-action header-feedback" data-action="feedback" aria-label="Give feedback">Feedback</button><div class="status ${state.error?'warning':''}" title="${esc(state.error?'Live feed unavailable — examples shown':state.loading?'Checking sports feed':state.feed?.demo?'Sample preview':'Sports feed connected')}"><i></i>${state.loading?'Checking':state.error?'Examples':'Feed ready'}</div><button class="icon-button about-trigger" data-action="about" aria-label="About data sources" title="About sources">ⓘ</button></div></div>`;
 }
 function leaguebar(){return `<div class="leaguebar" role="tablist" aria-label="League">${Object.entries(SPORTS).map(([id,s])=>`<button role="tab" aria-selected="${state.league===id}" class="league ${state.league===id?'active':''}" data-action="league" data-league="${id}"><span class="emoji">${s.emoji}</span> ${s.label}</button>`).join('')}</div>`;}
-function logo(team,league){const abbr=String(team.abbr||'').toLowerCase();const special=league==='nba'&&(/trail blazers/i.test(team.name||'')||abbr==='por')?'por':league==='nba'&&(/spurs/i.test(team.name||'')||abbr==='sas')?'sa':abbr;const fallback=/^[a-z0-9]{2,5}$/.test(special)?'https://a.espncdn.com/i/teamlogos/'+encodeURIComponent(league)+'/500/'+encodeURIComponent(special)+'.png':null;const url=safeUrl(team.logo)||safeUrl(fallback);const initials=String(team.abbr||team.name||SPORTS[league]?.emoji||'●').slice(0,4).toUpperCase().replace(/[^A-Z0-9]/g,'');return `<span class="team-logo" aria-hidden="true">${url?`<img alt="" src="${esc(url)}" loading="lazy" onerror="this.onerror=null;this.remove();this.parentElement.textContent='${esc(initials||'●')}'">`:esc(initials||'●')}</span>`;}
+function logo(team,league){
+ const abbr=String(team.abbr||'').toLowerCase();
+ const name=String(team.name||'');
+ const code=league==='nba'&&(/trail blazers/i.test(name)||abbr==='por')?'por':league==='nba'&&(/spurs/i.test(name)||abbr==='sas')?'sa':abbr;
+ const fallback=/^[a-z0-9]{2,5}$/.test(code)?'https://a.espncdn.com/i/teamlogos/'+encodeURIComponent(league)+'/500/'+encodeURIComponent(code)+'.png':null;
+ const primary=safeUrl(team.logo);
+ const initials=String(team.abbr||name||'TEAM').replace(/[^a-z0-9]/gi,'').slice(0,4).toUpperCase()||'TEAM';
+ // Text remains in the DOM even if an external image fails or is blocked.
+ const image=primary||fallback;
+ const retry=fallback&&fallback!==primary?fallback:'';
+ return '<span class="team-logo" aria-hidden="true"><span class="team-logo-initials">'+esc(initials)+'</span>'+
+ (image?'<img alt="" src="'+esc(image)+'" loading="lazy" decoding="async" data-fallback="'+esc(retry)+'" onerror="if(this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback=\'\';}else{this.hidden=true;}" onload="this.previousElementSibling.hidden=true">':'')+'</span>';
+}
 
 
 function eligibleRecentSnapshot(g){
@@ -480,13 +492,13 @@ function gameCard(game){
   '<div class="game-when"><span class="game-date">'+esc(formatDay(game.start))+'</span>'+
   '<span class="game-start-time" aria-label="'+esc(startName)+' at '+esc(time)+'">'+
   '<small>'+esc(startName)+'</small><strong>'+esc(time)+'</strong></span></div>';
- return '<article class="game"><div class="game-top">'+when+
+ return '<article class="game game-card-v2" data-league="'+esc(game.league)+'"><div class="game-top">'+when+
   '<span class="tag '+(game.demo?'demo':game.status==='live'?'live':game.status==='final'?'final':'')+'">'+
   esc(game.demo?'Demo':game.status)+'</span></div>'+
-  '<div class="teams"><div class="team-col">'+logo(game.away,game.league)+
+  '<div class="game-card-matchup-label">'+esc(SPORTS[game.league]?.label||game.league)+' · '+esc(game.status==='scheduled'?'MATCHUP PREVIEW':game.status==='live'?'IN PROGRESS':'RESULT')+'</div><div class="teams"><div class="team-col">'+logo(game.away,game.league)+
   '<button data-action="team" data-team="away" data-game="'+esc(game.id)+'" title="View '+esc(game.away.name)+' team report">'+
   esc(game.away.name)+'</button><span class="record">'+esc(game.away.record||game.away.abbr||'')+'</span></div>'+
-  '<div class="match-center">'+middle+'</div><div class="team-col">'+logo(game.home,game.league)+
+  '<div class="match-center">'+middle+'<small>'+esc(game.status==='scheduled'?'AWAY  ·  HOME':'')+'</small></div><div class="team-col">'+logo(game.home,game.league)+
   '<button data-action="team" data-team="home" data-game="'+esc(game.id)+'" title="View '+esc(game.home.name)+' team report">'+
   esc(game.home.name)+'</button><span class="record">'+esc(game.home.record||game.home.abbr||'')+'</span></div></div>'+
   '<div class="game-foot"><span>'+esc(game.status==='scheduled'?'Matchup overview':game.status==='live'?'Live game':'Game result')+'</span>'+
