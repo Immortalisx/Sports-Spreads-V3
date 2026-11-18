@@ -23,3 +23,8 @@ This is a read-only assessment. **No production deployment, paid-provider refres
 ## Release decision
 
 **Automated structural integration: PASS. Live cache presence: PASS. Cache freshness / scheduled regeneration: PENDING. NFL/NHL advanced model calibration: NOT APPROVED. Staging end-to-end: PENDING. Production release: HOLD.**
+
+## Additional regression coverage
+
+- Added `tests/v4-point-in-time-calibration-gate.test.mjs`: NFL QB/blitz and NHL goalie feature contracts, pregame snapshot chronology, source provenance, minimum samples, synthetic-data rejection, and insufficient-history no-promotion checks. These fixtures validate **the guardrails**, not real predictive accuracy.
+- Confirmed Render production service remains on `main`, auto-deploy enabled, PR preview generation disabled. The integration branches are not a staging environment. Creating a staging service or deploying a branch requires separate explicit approval and workspace selection.
