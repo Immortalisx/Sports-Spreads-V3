@@ -32,3 +32,12 @@ Date: 2026-11-18
 ## Release verification
 
 \`npm test\`, \`npm run build:onefile\`, \`npm run build:static\`, \`npm run verify:release\`, Chromium browser smoke checks and the expanded emulated-device performance benchmark must pass before advancing the site. Keep inline release HTML in sync with modular source.
+
+
+## Immutable NBA/MLB pregame model forecasts and outcome comparisons
+
+A daily, service-role-only `sports-spreads-future-record-predictions` job archives genuine **NBA and MLB record-only** probabilities generated from strictly pregame snapshots, with the exact approved `public/prediction-model.js` model formula and coefficients. To avoid post-start data capture when the cached fixture lacks a start time, only **tomorrow or later** fixtures qualify. The unique game/date key prevents historical revisions. The first run on November 18 archived **81 upcoming NBA game forecasts**; MLB is out of season. No player or coaching factors are applied to those scores.
+
+The private `sports_model_vs_market_audit` security-invoker view joins immutable recorded forecasts with the later completed ESPN game ledger and, only where exact same game/team/start and a timely <=90-minute earlier market snapshot exist, matched no-vig market prices. Both model and market Brier components become available after the games finish. Zero completed outcomes existed when created. Missing joins remain missing; it does not backfill or falsely infer historical odds or profitability.
+
+Validation here means *future point-in-time accountability infrastructure*, not a claim of positive wagering edge or released calibrated player/parlay success probabilities.
