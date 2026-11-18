@@ -33,7 +33,7 @@ for(const league of ['nfl','nhl']){
   const tiny=Array.from({length:4},(_,i)=>row(league,key,{gameId:'fixture-'+i}));
   const report=walkForward(tiny,league,[key],{allowPromotion:false});
   assert.notEqual(report.approved,true);
-  assert.equal(report.status,'insufficient_sample');
+  assert.equal(report.status,'insufficient_historical_data');
   assert.ok(MIN_HOLDOUT[league]>=200);
  });
 }
