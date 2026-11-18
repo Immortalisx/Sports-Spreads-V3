@@ -38,7 +38,7 @@ try{
  sample:data.injuries?.[0]?.injuries?.[0] ?{
   keys:Object.keys(data.injuries[0].injuries[0]),
   status:data.injuries[0].injuries[0].status,
-  athlete:data.injuries[0].injuries[0].athlete?.id,athleteKeys:Object.keys(data.injuries[0].injuries[0].athlete||{}),athleteRef:data.injuries[0].injuries[0].athlete?.$ref,athleteName:data.injuries[0].injuries[0].athlete?.displayName,
+  athlete:data.injuries[0].injuries[0].athlete?.id,athleteKeys:Object.keys(data.injuries[0].injuries[0].athlete||{}),athleteRef:data.injuries[0].injuries[0].athlete?.$ref,athleteName:data.injuries[0].injuries[0].athlete?.displayName,athleteTeam:data.injuries[0].injuries[0].athlete?.team?.id,athleteLinks:data.injuries[0].injuries[0].athlete?.links?.slice(0,2)?.map(x=>({href:x.href,rel:x.rel})),
   position:data.injuries[0].injuries[0].athlete?.position?.abbreviation
  }:null}));
  injMap=parseLeagueInjuries(data,{observedAt});
@@ -50,7 +50,7 @@ for(let idx=0;idx<teams.length;idx+=5){
   try{
    const data=await get('/teams/'+teamId+'/depthcharts',1000000);
    if(idx===0)console.log('PROBE_CHART='+JSON.stringify({teamId,keys:Object.keys(data),
-    chartCount:data.depthCharts?.length,chartSample:data.depthCharts?.[0]?{
+    chartCount:data.depthCharts?.length,depthchartType:Array.isArray(data.depthchart)?'array':typeof data.depthchart,depthchartKeys:Object.keys(data.depthchart||{}).slice(0,15),depthchartPreview:JSON.stringify(data.depthchart||{}).slice(0,1800),chartSample:data.depthCharts?.[0]?{
     keys:Object.keys(data.depthCharts[0]),
     positions:Object.keys(data.depthCharts[0].positions||{}).slice(0,5),
     positionSample:Object.values(data.depthCharts[0].positions||{})[0]?{
