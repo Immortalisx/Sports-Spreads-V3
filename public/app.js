@@ -447,15 +447,25 @@ function pregameGameTickets(){
 }
 function dailySuggestionsPanel(){
  const d=state.daily||{},stamp=d.generatedAt?formatFresh(d.generatedAt):'Not generated';
+ const snapshotTime=Date.parse(d.generatedAt||'');
+ const snapshotFresh=Number.isFinite(snapshotTime)&&snapshotTime<=Date.now()+60_000&&snapshotTime>Date.now()-24*3600_000;
  let contents;
  if(d.loading&&!d.loaded)contents='<div class="daily-empty">Loading cached daily tickets…</div>';
  else if(d.error)contents='<div class="daily-empty">Suggestions unavailable. You can still use the manual ticket builder.</div>';
+ else if(d.loaded&&d.cards?.length&&!snapshotFresh)contents='<div class="daily-empty">Today’s ticket snapshot is outdated. No stale payouts or confidence estimates will be displayed. Try again after the next refresh.</div>';
  else if(!d.loaded||!d.cards?.length)contents='<article class="daily-ticket-card big-one big-one-hero"><div class="daily-card-title"><strong>✦ THE BIG ONE</strong><span>DAILY FEATURE</span></div><div class="daily-card-sub">High-payout multi-game ticket</div><p class="muted-sm">No verified ticket for this slate. It will appear here when fresh same-book odds and eligible games are available.</p><span class="big-one-status">Awaiting verified picks · No fabricated confidence</span></article>';
  else contents='<div class="daily-ticket-grid">'+[...d.cards].sort((a,b)=>(a.id==='big-one'?-1:0)-(b.id==='big-one'?-1:0)).map(c=>{
   if(!c.available)return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one':'')+'"><div class="daily-card-title"><strong>'+esc(c.name)+'</strong><span>NO SLATE</span></div><p class="muted-sm">'+esc(c.reason||'Insufficient verified games')+'</p></article>';
-  const valid=c.legs?.every(l=>Date.parse(l.oddsAsOf)>Date.now()-8*3600_000&&Date.parse(l.start)>Date.now());
+  const legs=Array.isArray(c.legs)?c.legs:[];
+  const valid=legs.length>=2&&legs.length===Number(c.legCount)&&
+   legs.every(l=>Number.isFinite(Date.parse(l.oddsAsOf))&&Date.parse(l.oddsAsOf)<=Date.now()&&Date.parse(l.oddsAsOf)>Date.now()-8*3600_000&&Date.parse(l.start)>Date.now()+5*60_000&&l.gameId&&l.selection&&l.bookmaker)&&
+   new Set(legs.map(l=>String(l.gameId))).size===legs.length&&
+   new Set(legs.map(l=>String(l.bookmaker).toLowerCase())).size===1&&
+   (!d.generatedAt||(Number.isFinite(Date.parse(d.generatedAt))&&Date.parse(d.generatedAt)>Date.now()-24*3600_000));
+
+  if(!valid)return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one':'')+'"><div class="daily-card-title"><strong>'+esc(c.id==='big-one'?'THE BIG ONE':c.name)+'</strong><span>PRICES EXPIRED</span></div><p class="muted-sm">Odds or game times need refreshing. No outdated payouts or probability estimates shown.</p></article>';
   const canLoad=valid&&!state.ticket.length;
-  const label=!valid?'Quotes expired':state.ticket.length?'Clear ticket first':'Load research ticket';
+  const label=!valid?'Recheck prices / slate':state.ticket.length?'Clear ticket first':'Load research ticket';
   return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one':'')+'">'+
    '<div class="daily-card-title"><strong>'+(c.id==='big-one'?'✦ THE BIG ONE':esc(c.name))+'</strong><span>MARKET GRADE '+esc(c.marketGrade||'—')+'</span></div>'+
    '<div class="daily-card-sub">'+esc(c.bookmaker)+' · '+esc(c.legCount)+' different games · Market-derived, not calibrated</div>'+
