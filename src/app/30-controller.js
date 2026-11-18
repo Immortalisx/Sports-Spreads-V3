@@ -5,8 +5,10 @@ function ticketDock(){
  const est=calcTicket();return `<button class="ticket-dock" data-action="nav" data-section="tickets" aria-label="Open parlay builder with ${state.ticket.length} legs"><span class="dock-label"><span class="dock-dot">●</span> MY TICKET <span class="dock-count">${state.ticket.length} legs</span></span><strong>${est?americanCombined(est.multiplier):'Build ticket'} <span aria-hidden="true">↗</span></strong></button>`;
 }
 function render(){
+ const next=state.bigScreen?bigScreenBoard()+overlay():`<div class="layout">${navigation()}<main class="site">${topbar()}${state.section==='games'?board():state.section==='teams'?directoryView():state.section==='tickets'?ticketView():state.section==='history'?historyView():aboutView()}</main></div>${ticketDock()}${overlay()}`;
+ // Avoid destroying DOM nodes, input focus and scroll position for unchanged views.
+ if(app.__lastMarkup!==next){app.innerHTML=next;app.__lastMarkup=next;}
  document.body.classList?.toggle?.('big-screen-mode',Boolean(state.bigScreen));
- app.innerHTML=state.bigScreen?bigScreenBoard()+overlay():`<div class="layout">${navigation()}<main class="site">${topbar()}${state.section==='games'?board():state.section==='teams'?directoryView():state.section==='tickets'?ticketView():state.section==='history'?historyView():aboutView()}</main></div>${ticketDock()}${overlay()}`;
  document.body.style.overflow=state.drawer?'hidden':'';
 }
 function changeBigScreen(){

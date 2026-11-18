@@ -439,7 +439,7 @@ function gameCard(game){
   '<div class="match-center">'+middle+'</div><div class="team-col">'+logo(game.home,game.league)+
   '<button data-action="team" data-team="home" data-game="'+esc(game.id)+'" title="View '+esc(game.home.name)+' team report">'+
   esc(game.home.name)+'</button><span class="record">'+esc(game.home.record||game.home.abbr||'')+'</span></div></div>'+
-  '<div class="game-foot"><span>'+marketCardLabel(game)+'</span>'+
+  '<div class="game-foot"><span>'+esc(game.status==='scheduled'?'Matchup overview':game.status==='live'?'Live game':'Game result')+'</span>'+
   '<button class="drill" data-action="game" data-game="'+esc(game.id)+'">Game details ↗</button></div></article>';
 }
 function filteredGames(){const games=state.feed?.games??[];const q=state.search.trim().toLowerCase();return q?games.filter(x=>(x.home.name+' '+x.away.name+' '+x.home.abbr+' '+x.away.abbr).toLowerCase().includes(q)):games;}
@@ -809,8 +809,10 @@ function ticketDock(){
  const est=calcTicket();return `<button class="ticket-dock" data-action="nav" data-section="tickets" aria-label="Open parlay builder with ${state.ticket.length} legs"><span class="dock-label"><span class="dock-dot">●</span> MY TICKET <span class="dock-count">${state.ticket.length} legs</span></span><strong>${est?americanCombined(est.multiplier):'Build ticket'} <span aria-hidden="true">↗</span></strong></button>`;
 }
 function render(){
+ const next=state.bigScreen?bigScreenBoard()+overlay():`<div class="layout">${navigation()}<main class="site">${topbar()}${state.section==='games'?board():state.section==='teams'?directoryView():state.section==='tickets'?ticketView():state.section==='history'?historyView():aboutView()}</main></div>${ticketDock()}${overlay()}`;
+ // Avoid destroying DOM nodes, input focus and scroll position for unchanged views.
+ if(app.__lastMarkup!==next){app.innerHTML=next;app.__lastMarkup=next;}
  document.body.classList?.toggle?.('big-screen-mode',Boolean(state.bigScreen));
- app.innerHTML=state.bigScreen?bigScreenBoard()+overlay():`<div class="layout">${navigation()}<main class="site">${topbar()}${state.section==='games'?board():state.section==='teams'?directoryView():state.section==='tickets'?ticketView():state.section==='history'?historyView():aboutView()}</main></div>${ticketDock()}${overlay()}`;
  document.body.style.overflow=state.drawer?'hidden':'';
 }
 function changeBigScreen(){
