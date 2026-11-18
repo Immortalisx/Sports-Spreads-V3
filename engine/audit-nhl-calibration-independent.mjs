@@ -133,7 +133,7 @@ export function runIndependentAudit({earlier=old,later=recent}={}){
   checks:{noFutureHoldoutLoaded:seasons.every(s=>s<=20252026),
    disjointSplit:[20222023,20232024,20242025,20252026],
    futureProspective2026_27:'NOT_SCORED',
-   2025_26PreviouslyInspected:true,
+   previouslyInspected2025_26:true,
    2024_25ValidationStrictlyLaterThanFit:true,
    noHyperparameterOptimizationInThisAudit:true,
    homeElo:28,kFactor:16,offseasonShrink:.65},
