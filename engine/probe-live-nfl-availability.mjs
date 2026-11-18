@@ -62,7 +62,7 @@ for(let idx=0;idx<teams.length;idx+=5){
     }:null
    }:null,
    qb:parseQbDepth(data,{observedAt})}));
-   if(Array.isArray(data.depthCharts))charts.set(teamId,data);else failed.push(teamId);
+   if(Array.isArray(data.depthchart)||Array.isArray(data.depthCharts))charts.set(teamId,data);else failed.push(teamId);
   }catch(e){failed.push(teamId);console.log('PROBE_CHART_ERROR='+JSON.stringify({teamId,error:String(e.message||e).slice(0,180)}));}
  }));
 }
