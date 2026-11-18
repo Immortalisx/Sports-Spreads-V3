@@ -27,7 +27,7 @@ test('missing and invalid event dates render TBD instead of false kickoff time',
 test('all game cards and details prominently show sourced Eastern starts',()=>{
  assert.match(views,/const startName=\{nfl:'Kickoff',nba:'Tipoff',nhl:'Puck drop',mlb:'First pitch'\}/);
  assert.match(views,/class="game-start-time"/);
- assert.match(views,/class="game-center-time"/);
+ assert.doesNotMatch(views.slice(views.indexOf('function gameCard(game){'),views.indexOf('function filteredGames(){')),/class="game-center-time"/);
  assert.match(views,/Scheduled start \(Eastern Time\)/);
  assert.match(views,/drawer-start-time/);
  assert.match(css,/\.game-start-time strong/);
