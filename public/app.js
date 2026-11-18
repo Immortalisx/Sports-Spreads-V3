@@ -90,7 +90,7 @@ function getTodayET(){const p=new Intl.DateTimeFormat('en-US',{timeZone:'America
 const persisted=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-ticket')||'[]');return Array.isArray(raw)?raw.slice(0,20):[];}catch{return[];}})();
 const archived=(()=>{try{const raw=JSON.parse(localStorage.getItem('ss-v2-archives')||'[]');return Array.isArray(raw)?raw.slice(0,100):[];}catch{return[];}})();
 const rememberedBigScreen=(()=>{try{if(window.location?.search&&new URLSearchParams(window.location.search).get('display')==='tv')return true;}catch{}try{return localStorage.getItem('ss-big-screen')==='1';}catch{return false;}})();
-const state={bigScreen:rememberedBigScreen,bigScreenReturnSection:'games',cloud:{configured:false,url:'',key:'',token:'',status:'',tickets:[]},history:archived,league:'nba',date:getTodayET(),section:'games',loading:true,feed:null,error:'',search:'',directory:{},directoryLoading:{},drawer:null,teamTab:'injuries',teamCache:{},teamLoading:{},teamErrors:{},weather:{},forms:{},formLoading:{},formErrors:{},nflAvailability:null,nflAvailabilityLoading:false,nflAvailabilityError:'',nhlGoalies:null,nhlGoaliesLoading:false,nhlGoaliesError:'',odds:{},oddsLoading:{},oddsError:{},signals:{},signalsLoading:{},ticket:persisted,draft:null,stake:'10',autoTicket:{target:75,status:''},ticketMode:'automatic',daily:{loaded:false,loading:false,status:'',cards:[],generatedAt:'',error:''},notice:'',lookup:{selectedTeam:null,chosen:null,rows:[],active:-1,loading:false,query:'',league:'',request:0,status:'',roster:[]}};
+const state={bigScreen:rememberedBigScreen,bigScreenReturnSection:'games',cloud:{configured:false,url:'',key:'',token:'',status:'',tickets:[]},history:archived,league:'nba',date:getTodayET(),section:'games',loading:true,feed:null,error:'',search:'',directory:{},directoryLoading:{},drawer:null,teamTab:'injuries',teamCache:{},teamLoading:{},teamErrors:{},weather:{},forms:{},formLoading:{},formErrors:{},nflAvailability:null,nflAvailabilityLoading:false,nflAvailabilityError:'',coaching:{},coachingLoading:{},coachingErrors:{},marketHistory:{},marketHistoryLoading:{},marketHistoryErrors:{},nhlGoalies:null,nhlGoaliesLoading:false,nhlGoaliesError:'',odds:{},oddsLoading:{},oddsError:{},signals:{},signalsLoading:{},ticket:persisted,draft:null,stake:'10',autoTicket:{target:75,status:''},ticketMode:'automatic',daily:{loaded:false,loading:false,status:'',cards:[],generatedAt:'',error:''},notice:'',lookup:{selectedTeam:null,chosen:null,rows:[],active:-1,loading:false,query:'',league:'',request:0,status:'',roster:[]}};
 let app; // Set after DOMContentLoaded so the mount is guaranteed to exist.
 const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const safeUrl=x=>{try{const url=new URL(x);return ['https:','http:'].includes(url.protocol)?url.href:'';}catch{return'';}};
@@ -273,7 +273,17 @@ function currentSeasonPanel(g){
  }
  const pct=x=>Number.isFinite(x)?Math.round(x*100)+'%':'—';
  const fmt=x=>Number.isFinite(x)?x.toFixed(2):'—';
- const card=(name,t)=>'<div class="current-form-team"><strong>'+esc(name)+'</strong>'+
+  const trend=t=>{
+  const games=Array.isArray(t?.recentGames)?t.recentGames.filter(x=>
+   x&&typeof x.win==='boolean'&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)).slice(-10):[];
+  if(!games.length)return '';
+  const results=games.map(x=>x.win?'W':'L').join(' ');
+  return '<div class="form-sparkline" role="img" aria-label="'+esc('Recent games: '+results)+'">'+
+   games.map(x=>'<span class="'+(x.win?'trend-win':'trend-loss')+'" title="'+
+    esc(x.date+' · '+(x.win?'Win':'Loss')+' · '+(x.margin>=0?'+':'')+x.margin)+'"></span>').join('')+
+   '</div><small class="trend-label">Last '+games.length+' results · oldest → newest</small>';
+ };
+const card=(name,t)=>'<div class="current-form-team"><strong>'+esc(name)+'</strong>'+trend(t)+
    '<span><b>'+pct(t.last5.winRate)+'</b><small>Last 5 win rate</small></span>'+
    '<span><b>'+pct(t.last10.winRate)+'</b><small>Last 10 win rate</small></span>'+
    '<span><b>'+fmt(t.last5.opponentAdjustedMargin)+'</b><small>Opponent-adjusted form index</small></span>'+
@@ -528,6 +538,53 @@ function matchupFactorsPanel(g){
   '<p>Scheme, personnel and coaching inputs have not been verified for this matchup. No placeholder ratings are used.</p>')+
   pending+'</details>';
 }
+
+
+/** Cross-league source-derived scouting context, never an estimated game score. */
+function recentScoringMatchupPanel(g){
+ if(!g||g.demo||g.status!=='scheduled')return '';
+ const r=state.forms[g.league]?.snapshots?.find(x=>x.gameId===g.id&&
+  x.homeTeamId===String(g.home?.id)&&x.awayTeamId===String(g.away?.id));
+ const h=r?.home?.last5,a=r?.away?.last5;
+ if(!h||!a||h.games<3||a.games<3||![h.pointsFor,h.pointsAgainst,a.pointsFor,a.pointsAgainst].
+  every(x=>typeof x==='number'&&Number.isFinite(x)))return '';
+ const unit=g.league==='mlb'?'Runs':g.league==='nhl'?'Goals':'Points';
+ const row=(team,offense,opponentAllowed)=>'<div class="scouting-row"><strong>'+esc(team.abbr||team.name)+'</strong>'+
+  '<span><b>'+esc(offense.toFixed(1))+'</b><small>'+unit+' scored/game</small></span>'+
+  '<span><b>'+esc(opponentAllowed.toFixed(1))+'</b><small>Opponent '+unit.toLowerCase()+' allowed/game</small></span></div>';
+ return '<details class="panel scouting-panel"><summary>Offense vs defense · last 5 completed games</summary>'+
+  '<p class="muted-sm">Recent scoring against each opponent’s recent allowance. These are observed averages, not predicted scores.</p>'+
+  row(g.away,a.pointsFor,h.pointsAgainst)+row(g.home,h.pointsFor,a.pointsAgainst)+
+  '<small class="muted-sm">Through '+esc(r.evidence?.latestCompletedGame||'unknown')+
+  ' · Matchup research only; opponent quality, lineup and scheme effects have not been calibrated.</small></details>';
+}
+function nflCoachingPanel(g){
+ if(g.league!=='nfl'||g.demo||g.status!=='scheduled')return '';
+ const data=state.coaching[g.id],busy=state.coachingLoading[g.id],error=state.coachingErrors[g.id];
+ const action='<button class="neutral-button small-btn" data-action="retry-nfl-coaching" data-game="'+esc(g.id)+'"'+(busy?' disabled':'')+'>'+
+  (busy?'Checking…':'Refresh cached history')+'</button>';
+ if(!data)return '<div class="panel coaching-panel"><span class="block-label">NFL COACHING MATCHUP · RESEARCH ONLY</span><p>'+
+  esc(busy?'Checking verified coach game history…':error||'Loading last recorded head-coach matchup data…')+
+  '</p><div class="form-actions">'+action+'</div></div>';
+ const coach=(side,team)=>{
+  const recent=side.recent||{},n=Number(recent.games)||0;
+  return '<div class="coach-card"><small class="muted">'+esc(team.abbr||team.name)+'</small>'+
+   '<strong>'+esc(side.coach)+'</strong><span class="muted-sm">Last recorded head coach · '+esc(side.lastRecorded||'Unknown date')+'</span>'+
+   '<span class="coach-stat">'+(n?esc(recent.wins)+'–'+esc(recent.losses)+' in last '+n+' coached games':'Recent results unavailable')+'</span>'+
+   (Number.isFinite(recent.pointsFor)?'<span class="muted-sm">'+esc(recent.pointsFor)+' points scored/game · '+esc(recent.pointsAgainst)+' allowed</span>':'')+
+   '</div>';
+ };
+ const h2h=data.headToHead;
+ const meeting=h2h?.meetings?'<div class="coach-h2h"><strong>Head-to-head: '+esc(h2h.homeCoachWins)+'–'+esc(h2h.awayCoachWins)+
+  '</strong><span class="muted-sm">Home coach wins – away coach wins · '+esc(h2h.meetings)+' previous meetings</span></div>':
+  '<p class="muted-sm">No recorded head-coach head-to-head meetings in the available history.</p>';
+ return '<div class="panel coaching-panel"><div class="coaching-heading"><span class="block-label">NFL COACHING MATCHUP</span>'+
+  '<span class="research-status research-status--partial">Research only</span></div>'+
+  '<div class="details-grid coach-grid">'+coach(data.away,g.away)+coach(data.home,g.home)+'</div>'+
+  meeting+'<p class="muted-sm">Results as of '+esc(data.asOf)+
+  '. Coach names are from completed games, not a confirmed game-day staff announcement. Historical head-to-head is descriptive, not a prediction or coaching advantage.</p>'+
+  '<div class="form-actions"><a class="inline-link" href="https://github.com/nflverse/nfldata/blob/master/data/games.csv" target="_blank" rel="noopener noreferrer">nflverse source ↗</a></div></div>';
+}
 function pregameStarterPanel(g){
  if(g.league!=='mlb'||g.demo||g.status!=='scheduled')return '';
  const value=state.signals[g.id],loading=state.signalsLoading[g.id];
@@ -536,6 +593,33 @@ function pregameStarterPanel(g){
  ${value?.status==='ok'?`<div class="odds-pair"><div><small>${esc(g.away.abbr)}</small><strong>${pitcher(value.awayPitcher)}</strong></div><div><small>${esc(g.home.abbr)}</small><strong>${pitcher(value.homePitcher)}</strong></div></div>`:`<p class="muted-sm">${loading?'Checking MLB schedule…':esc(value?.note||'On-demand official starting-pitcher lookup.')}</p>`}
  <div class="form-actions"><button class="neutral-button small-btn" data-action="load-signals" data-game="${esc(g.id)}" ${loading?'disabled':''}>${loading?'Checking…':'Check probable pitchers'}</button></div>
  <small class="muted-sm">MLB StatsAPI. Probable is not confirmed; pitcher-vs-hitter splits are not modeled without verified lineup and pregame samples.</small></div>`;
+}
+
+function marketHistoryPanel(g){
+ if(!g||g.demo||g.status!=='scheduled'||!state.odds[g.league]||!globalThis.SportsOdds)return '';
+ const match=SportsOdds.booksForGame(g,state.odds[g.league]);
+ if(!match.matched)return '';
+ const id=String(g.id),data=state.marketHistory[id],busy=state.marketHistoryLoading[id];
+ const points=data?.points||[],error=state.marketHistoryErrors[id];
+ const chart=points.length>=2?(()=>{
+  const first=points[0],last=points[points.length-1],w=242,h=62;
+  const coords=points.map((p,i)=>[8+(i/(points.length-1))*(w-16),
+   8+(1-p.homeNoVig)*(h-16)]);
+  const d=coords.map(x=>x.map(n=>n.toFixed(1)).join(',')).join(' ');
+  return '<div class="odds-history-chart"><svg viewBox="0 0 '+w+' '+h+
+   '" role="img" aria-label="Observed market-implied home chance '+Math.round(first.homeNoVig*100)+
+   ' percent to '+Math.round(last.homeNoVig*100)+' percent"><polyline fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="'+d+'"/></svg>'+
+   '<div class="odds-history-caption"><strong>'+Math.round(first.homeNoVig*100)+'% → '+
+   Math.round(last.homeNoVig*100)+'%</strong><small>Home team · no-vig market consensus</small></div></div>';
+ })():null;
+ const body=chart||'<p class="muted-sm">'+esc(error||(busy?'Checking shared archive…':
+  data?'Only one archived quote so far. A line needs two or more distinct refreshes.':
+  'Open the free, cached quote history for this matchup.'))+'</p>';
+ return '<details class="panel odds-history-panel"'+(busy||data||error?' open':'')+
+  '><summary>Market movement · archived quotes</summary>'+body+
+  '<div class="form-actions"><button class="neutral-button small-btn" data-action="load-market-history" data-game="'+
+  esc(g.id)+'"'+(busy?' disabled':'')+'>'+(busy?'Loading…':data?'Reload archive':'Load price history')+
+  '</button></div><small class="muted-sm">The Odds API · historical observations from shared twice-daily moneyline snapshots. Not live, not a calibrated model probability and not a profitability claim.</small></details>';
 }
 function sportsbookOddsPanel(g){
  const info=state.odds[g.league],busy=state.oddsLoading[g.league],problem=state.oddsError[g.league];
@@ -550,7 +634,7 @@ function sportsbookOddsPanel(g){
   `Bookmaker snapshot ${esc(formatFresh(info.asOf))} · ${info.status==='stale'||!current?'expired — check sportsbook':'reference quote — verify live price'}`;
  return `<div class="panel sportsbook-panel"><div class="odds-panel-heading"><span class="block-label">SPORTSBOOK MONEYLINE COMPARISON</span><span class="tag">US · Provider quotes</span></div><p class="muted-sm">${status}</p>${rows?.matched?`<div class="odds-books">${buttons}</div>`:''}<div class="form-actions"><button class="neutral-button small-btn" data-action="load-odds" data-game="${esc(g.id)}" ${busy?'disabled':''}>${busy?'Checking…':info?'Check cached prices':'Compare sportsbook odds'}</button></div><small class="muted-sm">The Odds API · up to 8-hour cached prices · moneyline only. Prices can change and may be unavailable. This is not live betting or a model confidence score. Quotes may be hours old; always confirm the current book price. Verify the current price directly at the sportsbook.</small></div>`;
 }
-function gameDrawer(){const d=state.drawer,g=d.game;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[g.league].emoji)}</span><div><div class="eyebrow">${esc(g.league.toUpperCase())} / MATCHUP</div><h2>${esc(g.away.abbr||g.away.name)} @ ${esc(g.home.abbr||g.home.name)}</h2><small>${g.demo?'Example matchup':`${formatDay(g.start)} · ${formatTime(g.start)}`}</small></div></div><button class="drawer-close" data-action="close" aria-label="Close panel">×</button></div>${g.demo?`<div class="error-note">UI example only. Do not treat this as a scheduled game.</div>`:''}${modelPanel(g)}${currentSeasonPanel(g)}${nhlGoaliePanel(g)}${nflAvailabilityPanel(g)}<div class="panel"><span class="block-label">MATCHUP</span><div class="details-grid"><div>${logo(g.away,g.league)}<div style="margin-top:8px"><strong>${esc(g.away.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="away" style="margin-top:6px">Injuries · Roster · News ↗</button></div><div>${logo(g.home,g.league)}<div style="margin-top:8px"><strong>${esc(g.home.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="home" style="margin-top:6px">Injuries · Roster · News ↗</button></div></div></div><div class="panel"><span class="block-label">GAME DETAILS</span><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Game status</span><strong>${esc(g.demo?'Example only':g.statusText)}</strong></div><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Scheduled start (Eastern Time)</span><strong class="drawer-start-time">${esc(g.demo?'Not verified':formatTime(g.start))}</strong></div><div class="result-row" style="justify-content:space-between"><span class="muted">Sportsbook odds</span><strong>See US market quotes below, if connected</strong></div></div>${sportsbookOddsPanel(g)}${pregameStarterPanel(g)}${weatherPanel(g)}${matchupFactorsPanel(g)}<div class="panel"><h3>Build a ticket</h3><p>Copy a sourced moneyline quote above, or enter a price manually.</p><button class="btn" data-action="quickpick" data-game="${esc(g.id)}" style="margin-top:13px">Add to ticket ↗</button></div><details class="panel data-panel"><summary>Model roadmap & limits</summary><p>This first transparent baseline uses season W-L form and assumed home advantage. Weather increases the displayed uncertainty range for outdoor games when a forecast is available. A trained Elo model, injury impact, sport-specific player projections, calibrated confidence, independent historical backtests and verified sportsbook prices still require a production data pipeline. A projected winner does not imply a profitable bet.</p></details>`;}
+function gameDrawer(){const d=state.drawer,g=d.game;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[g.league].emoji)}</span><div><div class="eyebrow">${esc(g.league.toUpperCase())} / MATCHUP</div><h2>${esc(g.away.abbr||g.away.name)} @ ${esc(g.home.abbr||g.home.name)}</h2><small>${g.demo?'Example matchup':`${formatDay(g.start)} · ${formatTime(g.start)}`}</small></div></div><button class="drawer-close" data-action="close" aria-label="Close panel">×</button></div>${g.demo?`<div class="error-note">UI example only. Do not treat this as a scheduled game.</div>`:''}${modelPanel(g)}${currentSeasonPanel(g)}${nflCoachingPanel(g)}${recentScoringMatchupPanel(g)}${nhlGoaliePanel(g)}${nflAvailabilityPanel(g)}<div class="panel"><span class="block-label">MATCHUP</span><div class="details-grid"><div>${logo(g.away,g.league)}<div style="margin-top:8px"><strong>${esc(g.away.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="away" style="margin-top:6px">Injuries · Roster · News ↗</button></div><div>${logo(g.home,g.league)}<div style="margin-top:8px"><strong>${esc(g.home.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="home" style="margin-top:6px">Injuries · Roster · News ↗</button></div></div></div><div class="panel"><span class="block-label">GAME DETAILS</span><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Game status</span><strong>${esc(g.demo?'Example only':g.statusText)}</strong></div><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Scheduled start (Eastern Time)</span><strong class="drawer-start-time">${esc(g.demo?'Not verified':formatTime(g.start))}</strong></div><div class="result-row" style="justify-content:space-between"><span class="muted">Sportsbook odds</span><strong>See US market quotes below, if connected</strong></div></div>${sportsbookOddsPanel(g)}${marketHistoryPanel(g)}${pregameStarterPanel(g)}${weatherPanel(g)}${matchupFactorsPanel(g)}<div class="panel"><h3>Build a ticket</h3><p>Copy a sourced moneyline quote above, or enter a price manually.</p><button class="btn" data-action="quickpick" data-game="${esc(g.id)}" style="margin-top:13px">Add to ticket ↗</button></div><details class="panel data-panel"><summary>Model roadmap & limits</summary><p>This first transparent baseline uses season W-L form and assumed home advantage. Weather increases the displayed uncertainty range for outdoor games when a forecast is available. A trained Elo model, injury impact, sport-specific player projections, calibrated confidence, independent historical backtests and verified sportsbook prices still require a production data pipeline. A projected winner does not imply a profitable bet.</p></details>`;}
 
 
 async function loadNflAvailability(force=false){
@@ -606,6 +690,57 @@ async function loadCurrentSeasonForm(league){
   }else state.formErrors[league]='Current-season history not yet published.';
  }catch(e){state.formErrors[league]=e?.message||'Form history unavailable';}
  finally{clearTimeout(timeout);state.formLoading[league]=false;render();}
+}
+
+
+/** One cached, game-scoped GET; no visitor-triggered nflverse imports. */
+async function loadNflCoaching(game,force=false){
+ if(game?.league!=='nfl'||game.demo||game.status!=='scheduled'||!game.start)return;
+ const id=String(game.id),day=new Intl.DateTimeFormat('sv-SE',
+  {timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(game.start));
+ if(state.coachingLoading[id]||(!force&&state.coaching[id]))return;
+ state.coachingLoading[id]=true;delete state.coachingErrors[id];render();
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),10000);
+ try{
+  const params=new URLSearchParams({home:game.home?.abbr||'',away:game.away?.abbr||'',date:day});
+  const r=await fetch('https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/nfl-coaching?'+params,
+   {headers:{accept:'application/json'},signal:ctrl.signal});
+  if(!r.ok)throw Error('Cached NFL coaching history unavailable');
+  const data=await r.json();
+  if(data?.status==='cached'&&data.league==='nfl'&&data.calibrated===false&&
+   data.appliedToForecast===false&&data.home?.coach&&data.away?.coach&&
+   data.asOf<day)state.coaching[id]=data;
+  else state.coachingErrors[id]='No eligible pregame coach history is available for this matchup.';
+ }catch(e){state.coachingErrors[id]=e?.message||'NFL coaching history unavailable';}
+ finally{clearTimeout(timer);state.coachingLoading[id]=false;render();}
+}
+
+
+/** Only loads when someone requests game-scoped price history; no Odds API calls. */
+async function loadMarketHistory(game,force=false){
+ if(!game||game.demo||game.status!=='scheduled'||!globalThis.SportsOdds)return;
+ const id=String(game.id),matched=SportsOdds.booksForGame(game,state.odds[game.league]);
+ const eventId=String(matched?.eventId||'');
+ if(!matched.matched||!/^[a-zA-Z0-9_-]{8,80}$/.test(eventId))return;
+ if(state.marketHistoryLoading[id]||(!force&&state.marketHistory[id]))return;
+ state.marketHistoryLoading[id]=true;delete state.marketHistoryErrors[id];render();
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),10000);
+ try{
+  const q=new URLSearchParams({league:game.league,event_id:eventId});
+  const r=await fetch('https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/market-history?'+q,{
+   headers:{accept:'application/json'},signal:ctrl.signal});
+  if(!r.ok)throw Error('Archived market history unavailable');
+  const data=await r.json();
+  if(!['cached','pending'].includes(data.status)||data.league!==game.league||
+    data.eventId!==eventId||!Array.isArray(data.points)||data.points.length>24||
+    data.calibrated!==false||data.appliedToForecast!==false||
+    data.points.some(x=>!Number.isFinite(x.homeNoVig)||x.homeNoVig<=0||
+     x.homeNoVig>=1||!Number.isFinite(Date.parse(x.asOf))||
+     Date.parse(x.asOf)>=Date.parse(game.start)))
+   throw Error('Unverified or mismatched market history');
+  state.marketHistory[id]=data;
+ }catch(e){state.marketHistoryErrors[id]=e?.message||'Market history unavailable';}
+ finally{clearTimeout(timer);state.marketHistoryLoading[id]=false;render();}
 }
 
 
@@ -864,7 +999,7 @@ function openTeam(game,side){if(!game)return;const team=game[side];if(!team?.id)
 function openDirectoryTeam(id){const team=state.directory[state.league]?.teams?.find(t=>t.id===id);if(team){state.drawer={type:'team',league:state.league,team};state.teamTab='injuries';render();loadTeam('injuries');}}
 function getRosterPlayer(id){const key=`${state.drawer.league}-${state.drawer.team.id}-roster`;return state.teamCache[key]?.roster?.find(p=>p.id===id);}
 function saveTicket(){try{localStorage.setItem('ss-v2-ticket',JSON.stringify(state.ticket));}catch{notify('Browser storage is not available.');}}
-document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='retry-nfl-availability'){void loadNflAvailability(true);return;}if(action==='retry-nhl-goalies'){void loadNhlGoalies(true);return;}if(action==='generate-ticket'){await generateAutomaticTicket();return;}if(action==='ticket-mode'){state.ticketMode=el.dataset.mode==='manual'?'manual':'automatic';render();if(state.ticketMode==='automatic')void loadDailySuggestions();return;}if(action==='daily-ticket-load'){loadSuggestedTicket(el.dataset.id);return;}if(action==='autocomplete-select'){await acceptLookup(Number(el.dataset.index));return;}if(action==='big-screen'){changeBigScreen();return;}if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='copy-feedback'){const type=document.getElementById('feedback-kind')?.value||'Feedback';const note=(document.getElementById('feedback-note')?.value||'').trim();if(!note){notify('Enter your feedback first.');return;}const report=`Sports Spreads beta feedback\n${type}\n${note}`;const ok=await copyText(report);notify(ok?'Feedback copied — paste it in Discord.':'Copy the feedback text into Discord.');if(ok){state.drawer=null;render();}return;}else if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();if(state.section==='tickets')void loadDailySuggestions();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);void loadSportsbookOdds(game);void loadCurrentSeasonForm(game.league);if(game.league==='nfl')void loadNflAvailability();if(game.league==='nhl')void loadNhlGoalies();}}else if(action==='load-signals'){void loadPregameSignals(getGame(el.dataset.game));}else if(action==='load-odds'){void loadSportsbookOdds(getGame(el.dataset.game));}else if(action==='odds-pick'){useSportsbookQuote(getGame(el.dataset.game),el.dataset.side,el.dataset.index);}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){await SportsCloud.signOut();state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='retry-nfl-availability'){void loadNflAvailability(true);return;}if(action==='retry-nfl-coaching'){void loadNflCoaching(getGame(el.dataset.game),true);return;}if(action==='load-market-history'){void loadMarketHistory(getGame(el.dataset.game),true);return;}if(action==='retry-nhl-goalies'){void loadNhlGoalies(true);return;}if(action==='generate-ticket'){await generateAutomaticTicket();return;}if(action==='ticket-mode'){state.ticketMode=el.dataset.mode==='manual'?'manual':'automatic';render();if(state.ticketMode==='automatic')void loadDailySuggestions();return;}if(action==='daily-ticket-load'){loadSuggestedTicket(el.dataset.id);return;}if(action==='autocomplete-select'){await acceptLookup(Number(el.dataset.index));return;}if(action==='big-screen'){changeBigScreen();return;}if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='copy-feedback'){const type=document.getElementById('feedback-kind')?.value||'Feedback';const note=(document.getElementById('feedback-note')?.value||'').trim();if(!note){notify('Enter your feedback first.');return;}const report=`Sports Spreads beta feedback\n${type}\n${note}`;const ok=await copyText(report);notify(ok?'Feedback copied — paste it in Discord.':'Copy the feedback text into Discord.');if(ok){state.drawer=null;render();}return;}else if(action==='nav'){state.section=el.dataset.section;state.drawer=null;state.draft=null;render();if(state.section==='teams')loadTeams();if(state.section==='tickets')void loadDailySuggestions();window.scrollTo({top:0,behavior:'instant'});}else if(action==='league'){state.league=el.dataset.league;state.search='';state.drawer=null;if(state.section==='teams')loadTeams();else loadBoard();}else if(action==='reload-teams'){loadTeams(true);}else if(action==='directory-team'){openDirectoryTeam(el.dataset.teamId);}else if(action==='refresh'){loadBoard();}else if(action==='close'){state.drawer=null;render();}else if(action==='team'){openTeam(getGame(el.dataset.game),el.dataset.team);}else if(action==='game'){const game=getGame(el.dataset.game);if(game){state.drawer={type:'game',game};render();void loadGameWeather(game);void loadSportsbookOdds(game);void loadCurrentSeasonForm(game.league);if(game.league==='nfl'){void loadNflAvailability();void loadNflCoaching(game);}if(game.league==='nhl')void loadNhlGoalies();}}else if(action==='load-signals'){void loadPregameSignals(getGame(el.dataset.game));}else if(action==='load-odds'){void loadSportsbookOdds(getGame(el.dataset.game));}else if(action==='odds-pick'){useSportsbookQuote(getGame(el.dataset.game),el.dataset.side,el.dataset.index);}else if(action==='weather-retry'){const game=getGame(el.dataset.game);if(game)void loadGameWeather(game,true);}else if(action==='teamtab'){state.teamTab=el.dataset.tab;loadTeam(state.teamTab);}else if(action==='retry-team'){loadTeam(state.teamTab,true);}else if(action==='player'){const player=getRosterPlayer(el.dataset.player);if(player){const team=state.drawer.team;state.drawer={type:'player',player,league:state.drawer.league,team};render();}}else if(action==='player-prop'){const d=state.drawer;if(d?.type==='player'){state.draft={league:d.league,selection:d.player.name,playerId:d.player.id,teamId:d.team.id,market:(PROPS[d.league]||[])[0]?.[0]||'Other'};state.league=d.league;state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}}else if(action==='back-team'){state.drawer={type:'team',league:state.drawer.league,team:state.drawer.team};state.teamTab='roster';render();}else if(action==='quickpick'){const game=getGame(el.dataset.game);state.draft={league:game.league,selection:`${game.away.name} to win`,gameId:game.demo?null:game.id};state.section='tickets';state.drawer=null;render();window.scrollTo(0,0);}else if(action==='remove-leg'){state.ticket.splice(Number(el.dataset.index),1);saveTicket();render();}else if(action==='clear-ticket'){state.ticket=[];saveTicket();render();}else if(action==='archive-ticket'){archiveTicket();}else if(action==='cloud-save'){await saveCloudTicket();}else if(action==='cloud-fetch'){await fetchCloudTickets();}else if(action==='cloud-signout'){await SportsCloud.signOut();state.cloud.token='';state.cloud.tickets=[];state.cloud.status='Signed out.';render();}else if(action==='restore-archive'){const snap=state.history[Number(el.dataset.index)];if(snap){state.ticket=JSON.parse(JSON.stringify(snap.legs));state.stake=String(snap.stake);state.section='tickets';saveTicket();render();notify('Loaded a copy. The saved snapshot is unchanged.');}}else if(action==='export-ticket'){exportTicket();}else if(action==='about'){state.section='about';render();}});
 document.addEventListener('change',e=>{if(e.target.id==='date'){state.date=e.target.value||getTodayET();state.search='';loadBoard();}else if(e.target.id==='stake'){state.stake=e.target.value;render();}else if(e.target.id==='leg-market'||e.target.id==='leg-league'){const league=document.getElementById('leg-league').value;const marketSelect=document.getElementById('leg-market');if(e.target.id==='leg-league'){marketSelect.innerHTML=(MARKETS[league]||[]).map(m=>`<option>${esc(m)}</option>`).join('');}const market=marketSelect.value;state.lookup.chosen=null;if(e.target.id==='leg-league'){state.lookup.selectedTeam=null;state.lookup.roster=[];state.lookup.request++;state.lookup.league=league;state.lookup.query='';}drawLookup();document.getElementById('prop-controls')?.remove();const box=document.createElement('div');box.innerHTML=propFields(league,market);document.getElementById('leg-market').closest('.form-item').insertAdjacentElement('afterend',box.firstElementChild);const form=document.getElementById('leg-form');const control=document.getElementById('prop-line');if(control){const text=propNote(market,Number(control.value));document.getElementById('leg-notes').value=text;}}});
 document.addEventListener('input',e=>{if(e.target.id==='auto-confidence'){
  const target=Number(e.target.value);state.autoTicket.target=target;state.autoTicket.status='';
