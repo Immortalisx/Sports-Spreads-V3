@@ -157,3 +157,17 @@ test('automatic tickets load server pregame snapshots without generating phantom
  assert.match(ui,/Server checked/);
  assert.match(ui,/PASS · no validated edge/);
 });
+
+test('feedback is sent directly to a private collector rather than clipboard or Discord',()=>{
+ const view=read('src/app/20-views.js');
+ const controller=read('src/app/30-controller.js');
+ const backend=read('supabase/functions/submit-feedback/index.ts');
+ assert.match(view,/data-action="submit-feedback"/);
+ assert.doesNotMatch(view,/Copy feedback for Discord/);
+ assert.match(controller,/functions\/v1\/submit-feedback/);
+ assert.match(controller,/button\.disabled=true/);
+ assert.match(backend,/site_feedback/);
+ assert.match(backend,/req\.method!=='POST'/);
+ assert.match(backend,/res\.status===409/);
+ assert.doesNotMatch(backend,/service_role.*client/i);
+});
