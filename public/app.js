@@ -496,13 +496,14 @@ function gameCard(game){
  const time=game.start?formatTime(game.start):'TBD';
  const startName={nfl:'Kickoff',nba:'Tipoff',nhl:'Puck drop',mlb:'First pitch'}[game.league]||'Start';
  const statusLabel=game.demo?'PREVIEW':game.status==='live'?'LIVE':game.status==='final'?'FINAL':'UPCOMING';
+ const visualStatus=game.demo?'preview':game.status==='live'?'live':game.status==='final'?'final':'upcoming';
  const date=game.demo?'SAMPLE MATCHUP':formatDay(game.start);
- const teamRow=(team,side)=>'<div class="match-team-row">'+logo(team,game.league)+
+ const teamRow=(team,side)=>'<div class="match-team-row" data-side="'+side+'">'+logo(team,game.league)+
   '<div class="match-team-name"><button data-action="team" data-team="'+side+'" data-game="'+esc(game.id)+'" aria-label="View '+esc(team.name)+' team details" title="View '+esc(team.name)+' team report">'+esc(team.name)+'</button><span>'+esc(team.record||team.abbr||'')+'</span></div>'+
   (scored?'<strong class="match-team-score">'+esc(team.score)+'</strong>':'<span class="match-team-side">'+(side==='away'?'AWAY':'HOME')+'</span>')+'</div>';
- return '<article class="game game-card-v3" data-league="'+esc(game.league)+'" aria-label="'+esc(game.away.name)+' at '+esc(game.home.name)+' matchup">'+
+ return '<article class="game game-card-v3" data-league="'+esc(game.league)+'" data-status="'+visualStatus+'" aria-label="'+esc(game.away.name)+' at '+esc(game.home.name)+' matchup">'+
   '<div class="match-v3-head"><span class="match-v3-league">'+esc((SPORTS[game.league]?.label||game.league).toUpperCase())+' <b>·</b> '+esc(date)+'</span>'+
-  '<span class="tag '+(game.status==='live'?'live':game.status==='final'?'final':'')+'">'+esc(statusLabel)+'</span></div>'+
+  '<span class="tag match-status '+visualStatus+'"><span class="status-indicator" aria-hidden="true"></span>'+esc(statusLabel)+'</span></div>'+
   '<div class="match-v3-time"><span>'+esc(startName)+'</span><strong class="game-start-time">'+esc(time)+'</strong></div>'+
   '<div class="match-v3-teams">'+teamRow(game.away,'away')+teamRow(game.home,'home')+'</div>'+
   '<div class="match-v3-foot"><button type="button" class="drill" data-action="game" data-game="'+esc(game.id)+'" aria-label="View '+esc(game.away.name)+' versus '+esc(game.home.name)+' matchup details">View matchup <span aria-hidden="true">↗</span></button></div></article>';
