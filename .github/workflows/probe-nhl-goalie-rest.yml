@@ -1,0 +1,18 @@
+name: Probe source-efficient NHL goalie game stats
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/probe-nhl-goalie-rest.mjs'
+      - '.github/workflows/probe-nhl-goalie-rest.yml'
+permissions: {contents: read}
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Confirm bulk per-game goalie stats without player-specific requests
+        run: node engine/probe-nhl-goalie-rest.mjs
