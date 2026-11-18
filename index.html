@@ -542,6 +542,32 @@ body:not(.big-screen-mode){
 .game-card-v2 .game-foot .drill{background:#283d50;border:1px solid #405c70;padding:9px 12px;border-radius:9px;color:#d5fca2}
 @media(max-width:640px){.game-card-v2{padding:15px 13px!important}.game-card-v2 .team-logo{width:64px;height:64px}.game-card-v2 .game-card-matchup-label{margin-bottom:14px}.game-card-v2 .team-col button{font-size:13px}.game-card-v2 .match-center{min-width:46px}.game-card-v2 .game-top{margin-bottom:12px}.game-card-v2 .game-foot .drill{font-size:11px;padding:8px}}
 
+/* V3: true two-row matchup cards, not the former centered logo tiles */
+.game-card-v3{padding:0!important;border-radius:17px!important;overflow:hidden;background:#142337!important;border:1px solid #354c63!important;box-shadow:0 9px 28px rgba(0,0,0,.16)}
+.game-card-v3 .match-v3-head{display:flex;align-items:center;justify-content:space-between;padding:13px 17px 8px;gap:8px}
+.game-card-v3 .match-v3-league{font-size:11px;letter-spacing:1.3px;color:#b6d0df;font-weight:800}
+.game-card-v3 .match-v3-league b{color:#7bbba9}
+.game-card-v3 .match-v3-time{display:flex;align-items:baseline;gap:8px;padding:0 17px 12px;color:#9db1c2;font-size:11px}
+.game-card-v3 .match-v3-time strong{color:#d9f6a4;font-size:13px}
+.game-card-v3 .match-v3-teams{display:grid;gap:1px;padding:0 11px}
+.game-card-v3 .match-team-row{display:flex;align-items:center;gap:13px;min-height:73px;padding:8px 10px;background:#1b2e42}
+.game-card-v3 .match-team-row:first-child{border-radius:12px 12px 3px 3px}
+.game-card-v3 .match-team-row:last-child{border-radius:3px 3px 12px 12px}
+.game-card-v3 .team-logo{position:relative;flex:none;isolation:isolate;width:47px;height:47px;border-radius:12px;background:#293f56;border:1px solid #3c556c;font-size:12px;overflow:hidden}
+.game-card-v3 .team-logo-initials{position:absolute;inset:0;display:grid;place-items:center;color:#dce9f4}
+.game-card-v3 .team-logo-initials[hidden],.game-card-v3 .team-logo img[hidden]{display:none}
+.game-card-v3 .team-logo img{position:relative;z-index:1;width:100%;height:100%;object-fit:contain}
+.game-card-v3 .match-team-name{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.game-card-v3 .match-team-name button{background:none;border:0;text-align:left;padding:0;color:#f2f7fc;font-weight:800;font-size:15px;line-height:1.2}
+.game-card-v3 .match-team-name button:hover{color:#d9f6a4}
+.game-card-v3 .match-team-name>span{color:#96aabc;font-size:11px}
+.game-card-v3 .match-team-side{color:#8499ad;font-size:10px;letter-spacing:1px;font-weight:800}
+.game-card-v3 .match-team-score{font-size:23px;color:#f1f8ff;font-family:'Space Grotesk',sans-serif}
+.game-card-v3 .match-v3-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 17px 14px}
+.game-card-v3 .match-v3-foot>span{color:#9fb3c4;font-size:11px}
+.game-card-v3 .match-v3-foot .drill{border:1px solid #4a7168;border-radius:9px;background:#213e3b;color:#d5fba7;font-size:12px;font-weight:800;padding:9px 11px}
+@media(max-width:640px){.game-card-v3 .match-v3-head{padding:12px 13px 6px}.game-card-v3 .match-v3-time{padding:0 13px 10px}.game-card-v3 .match-team-row{min-height:65px}.game-card-v3 .match-team-name button{font-size:14px}.game-card-v3 .match-v3-foot{padding:10px 13px 13px}.ticket-dock{bottom:calc(80px + env(safe-area-inset-bottom,0px))!important;left:12px;right:12px;min-width:0}.main,.content,main{padding-bottom:150px}}
+
 </style>
   <script>window.SS_CLOUD_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co',publishableKey:'sb_publishable_BX7-wUhJWAp7d3fa3I7Uew_VZc4JHE6'};</script>
   <script>window.SS_FEED_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/sports-feed'};</script>
@@ -1296,7 +1322,7 @@ async function apiSportsBoard(league,date){
    const start=game.date?.start??game.date?.date??game.date??item.date?.start??item.date;
    const raw=String(game.status?.long??item.status?.long??item.status?.short??'Scheduled');
    const status=/final|finished|ended/i.test(raw)?'final':/live|progress|quarter|period|half/i.test(raw)?'live':'scheduled';
-   const team=(t,side)=>({id:String(t.id??''),name:t.name??'',abbr:t.code??'',shortName:t.name??'',logo:t.logo??null,score:item.scores?.[side]?.total??item.scores?.[side]?.points??null});
+   const team=(t,side)=>({id:String(t.id??''),name:t.name??'',abbr:t.code??'',shortName:t.name??'',logo:t.logo??null,score:item.scores?.[side]?.total??item.scores?.[side]?.points??(side==='away'?item.scores?.visitors?.points??item.scores?.visitors?.total:null)??null});
    return {id:String(game.id??item.id??''),league,home:team(home,'home'),away:team(away,'away'),start:typeof start==='string'?start:null,status,statusText:raw,venue:null,marketLine:null,model:null,demo:false};
   }).filter(g=>g.id&&g.home.id&&g.away.id&&g.start);
   return games.length?{source:'API-Sports daily cache',updatedAt:snapshot.fetched_at,cache:'shared-daily',league,date:date||today.replaceAll('-',''),games}:null;
@@ -1736,24 +1762,17 @@ function gameCard(game){
  const scored=(game.status==='final'||game.status==='live')&&game.away.score!==null&&game.home.score!==null;
  const time=game.start?formatTime(game.start):'TBD';
  const startName={nfl:'Kickoff',nba:'Tipoff',nhl:'Puck drop',mlb:'First pitch'}[game.league]||'Start time';
- const middle=scored?
-  '<span class="score">'+esc(game.away.score)+'–'+esc(game.home.score)+'</span>':
-  '<span class="versus">VS</span>';
- const when=game.demo?'<span class="game-date">SAMPLE MATCHUP</span>':
-  '<div class="game-when"><span class="game-date">'+esc(formatDay(game.start))+'</span>'+
-  '<span class="game-start-time" aria-label="'+esc(startName)+' at '+esc(time)+'">'+
-  '<small>'+esc(startName)+'</small><strong>'+esc(time)+'</strong></span></div>';
- return '<article class="game game-card-v2" data-league="'+esc(game.league)+'"><div class="game-top">'+when+
-  '<span class="tag '+(game.demo?'demo':game.status==='live'?'live':game.status==='final'?'final':'')+'">'+
-  esc(game.demo?'Demo':game.status)+'</span></div>'+
-  '<div class="game-card-matchup-label">'+esc(SPORTS[game.league]?.label||game.league)+' · '+esc(game.status==='scheduled'?'MATCHUP PREVIEW':game.status==='live'?'IN PROGRESS':'RESULT')+'</div><div class="teams"><div class="team-col">'+logo(game.away,game.league)+
-  '<button data-action="team" data-team="away" data-game="'+esc(game.id)+'" title="View '+esc(game.away.name)+' team report">'+
-  esc(game.away.name)+'</button><span class="record">'+esc(game.away.record||game.away.abbr||'')+'</span></div>'+
-  '<div class="match-center">'+middle+'<small>'+esc(game.status==='scheduled'?'AWAY  ·  HOME':'')+'</small></div><div class="team-col">'+logo(game.home,game.league)+
-  '<button data-action="team" data-team="home" data-game="'+esc(game.id)+'" title="View '+esc(game.home.name)+' team report">'+
-  esc(game.home.name)+'</button><span class="record">'+esc(game.home.record||game.home.abbr||'')+'</span></div></div>'+
-  '<div class="game-foot"><span>'+esc(game.status==='scheduled'?'Matchup overview':game.status==='live'?'Live game':'Game result')+'</span>'+
-  '<button class="drill" data-action="game" data-game="'+esc(game.id)+'">Game details ↗</button></div></article>';
+ const date=game.demo?'SAMPLE MATCHUP':formatDay(game.start);
+ const teamRow=(team,side)=>'<div class="match-team-row">'+logo(team,game.league)+
+  '<div class="match-team-name"><button data-action="team" data-team="'+side+'" data-game="'+esc(game.id)+'" title="View '+esc(team.name)+' team report">'+esc(team.name)+'</button><span>'+esc(team.record||team.abbr||'')+'</span></div>'+
+  (scored?'<strong class="match-team-score">'+esc(team.score)+'</strong>':'<span class="match-team-side">'+(side==='away'?'AWAY':'HOME')+'</span>')+'</div>';
+ return '<article class="game game-card-v3" data-league="'+esc(game.league)+'">'+
+  '<div class="match-v3-head"><span class="match-v3-league">'+esc((SPORTS[game.league]?.label||game.league).toUpperCase())+' <b>·</b> '+esc(date)+'</span>'+
+  '<span class="tag '+(game.status==='live'?'live':game.status==='final'?'final':'')+'">'+esc(game.demo?'Demo':game.status)+'</span></div>'+
+  '<div class="match-v3-time"><span>'+esc(startName)+'</span><strong>'+esc(time)+'</strong></div>'+
+  '<div class="match-v3-teams">'+teamRow(game.away,'away')+teamRow(game.home,'home')+'</div>'+
+  '<div class="match-v3-foot"><span>'+esc(scored?'Final score':game.status==='final'?'Final · score unavailable':game.status==='live'?'Live matchup':'Matchup preview')+'</span>'+
+  '<button class="drill" data-action="game" data-game="'+esc(game.id)+'">Explore matchup <span aria-hidden="true">↗</span></button></div></article>';
 }
 function filteredGames(){const games=state.feed?.games??[];const q=state.search.trim().toLowerCase();return q?games.filter(x=>(x.home.name+' '+x.away.name+' '+x.home.abbr+' '+x.away.abbr).toLowerCase().includes(q)):games;}
 /** Dedicated viewing mode: no sidebar or betting widgets, full-screen compatible. */
