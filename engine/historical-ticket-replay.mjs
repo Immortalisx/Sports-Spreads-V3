@@ -42,7 +42,7 @@ export function validateHistoricalTicket(row){
   return reject('settlement_mismatch');
  if(!finite(row.predictedJointProbability)||row.predictedJointProbability<=0||row.predictedJointProbability>=1||
    !Number.isFinite(parse(row.modelAsOf))||parse(row.modelAsOf)>quoted||
-   row.modelAsOf>=row.start)return reject('leaky_or_missing_prediction');
+   parse(row.modelAsOf)>=start)return reject('leaky_or_missing_prediction');
  return {valid:true,payoutMultiplier:payout};
 }
 export function replayHistoricalTickets(rows,{stake=10,minHoldout=200}={}){
@@ -62,7 +62,7 @@ export function replayHistoricalTickets(rows,{stake=10,minHoldout=200}={}){
   const bin=bins[Math.min(9,Math.floor(p*10))];bin.n++;bin.expected+=p;bin.observed+=y;
  }
  const n=ordered.length;
- const ece=bins.reduce((sum,b)=>sum+(b.n/n)*Math.abs(b.expected/b.n-b.observed/b.n)*(b.n>0?1:0),0);
+ const ece=bins.reduce((sum,b)=>b.n?sum+(b.n/n)*Math.abs(b.expected/b.n-b.observed/b.n):sum,0);
  const report={status:n>=minHoldout?'research_only':'insufficient_data',
   reason:n>=minHoldout?'offline_historical_holdout':'holdout_below_minimum',
   n,wins,winRate:wins/n,roi:(gross-stake*n)/(stake*n),brier:brier/n,ece,
