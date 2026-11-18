@@ -2278,8 +2278,8 @@ async function refreshPregameDashboard(){
  if(state.section==='tickets')render();
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshPregameDashboard();});
-window.addEventListener('focus',()=>void refreshPregameDashboard());
-setInterval(()=>void refreshPregameDashboard(),60*1000);
+if(typeof window.addEventListener==='function')window.addEventListener('focus',()=>void refreshPregameDashboard());
+if(typeof setInterval==='function')setInterval(()=>void refreshPregameDashboard(),60*1000);
 function bootSportsSpreads(){
  app=document.getElementById('app');
  if(!app){console.error('Sports Spreads startup failed: #app is missing.');return;}
