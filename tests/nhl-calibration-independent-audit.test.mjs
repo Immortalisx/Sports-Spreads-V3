@@ -13,7 +13,7 @@ test('fully independent Elo and frozen Platt calculations match the existing res
  assert.equal(audit.fixtureIntegrity.games,5248);
  assert.deepEqual(audit.checks.disjointSplit,[20222023,20232024,20242025,20252026]);
  assert.equal(audit.checks.futureProspective2026_27,'NOT_SCORED');
- assert.equal(audit.checks.2025_26PreviouslyInspected,true);
+ assert.equal(audit.checks.previouslyInspected2025_26,true);
  assert.ok(Math.abs(audit.fit.intercept-model.calibration.fit.intercept)<1e-13);
  assert.ok(Math.abs(audit.fit.slope-model.calibration.fit.slope)<1e-13);
  const pairs=[
