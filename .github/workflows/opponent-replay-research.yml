@@ -1,5 +1,9 @@
 name: Offline opponent calibration replay (research only)
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/opponent-replay-research.yml'
+      - 'engine/verify-opponent-replay.mjs'
   workflow_dispatch:
     inputs:
       league:
@@ -25,7 +29,7 @@ jobs:
       - name: Build exact requested league matrix (no provider calls)
         id: selection
         env:
-          SELECTED_LEAGUE: ${{ inputs.league }}
+          SELECTED_LEAGUE: ${{ github.event_name == 'pull_request' && 'both' || inputs.league }}
         run: node engine/replay-league-matrix.mjs "$SELECTED_LEAGUE" >> "$GITHUB_OUTPUT"
   replay:
     name: ${{ matrix.league }} real-scoreboard replay
