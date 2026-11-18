@@ -1,0 +1,48 @@
+name: NFL QB vs blitz + rolling form held-out evaluation
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/collect-qb-blitz-holdout.py'
+      - 'engine/evaluate-qb-blitz-holdout.mjs'
+      - 'engine/run-qb-blitz-holdout.mjs'
+      - 'tests/qb-blitz-holdout.test.mjs'
+      - 'tests/collect-qb-blitz-holdout.test.py'
+      - '.github/workflows/nfl-qb-blitz-holdout.yml'
+permissions:
+  contents: read
+jobs:
+  source_and_holdout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify prior-date and QB identity safeguards locally
+        run: |
+          python tests/collect-qb-blitz-holdout.test.py
+          node --test tests/qb-blitz-holdout.test.mjs
+      - name: Download historical sources only (no paid odds/API providers)
+        run: python engine/collect-qb-blitz-holdout.py research/nfl-qb-blitz-history.json
+      - name: Train, validate, calibrate then score untouched 2025
+        run: node engine/run-qb-blitz-holdout.mjs --input=research/nfl-qb-blitz-history.json --output=research/nfl-qb-blitz-holdout.json
+      - name: Summarize actual measured results without falsely promoting a model
+        if: always()
+        run: |
+          if test -f research/nfl-qb-blitz-holdout.json; then
+            node -e 'const r=require("./research/nfl-qb-blitz-holdout.json");console.log("Approved:",r.approved,"Brier:",r.metrics?.withQBBlitz?.brier,"Baseline:",r.metrics?.recentFormOnly?.brier,"CI:",r.metrics?.pairedBootstrap?.interval95)' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No verified result available. Live NFL model remains unchanged." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nfl-qb-blitz-2025-holdout
+          path: research/nfl-qb-blitz-holdout.json
+          if-no-files-found: ignore
+          retention-days: 14
