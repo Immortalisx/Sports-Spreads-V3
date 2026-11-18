@@ -1266,6 +1266,8 @@ function topbar(){
 }
 function leaguebar(){return `<div class="leaguebar" role="tablist" aria-label="League">${Object.entries(SPORTS).map(([id,s])=>`<button role="tab" aria-selected="${state.league===id}" class="league ${state.league===id?'active':''}" data-action="league" data-league="${id}"><span class="emoji">${s.emoji}</span> ${s.label}</button>`).join('')}</div>`;}
 function logo(team,league){const url=safeUrl(team.logo);return `<span class="team-logo" aria-hidden="true">${url?`<img alt="" src="${esc(url)}" loading="lazy" onerror="this.remove();this.parentElement.textContent='${esc(SPORTS[league]?.emoji||'●')}'">`:esc(SPORTS[league]?.emoji||'●')}</span>`;}
+
+
 function eligibleRecentSnapshot(g){
  if(!g||!['nfl','nhl'].includes(g.league)||g.demo||g.status!=='scheduled')return null;
  const source=state.forms?.[g.league];
