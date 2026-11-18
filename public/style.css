@@ -524,3 +524,29 @@ body:not(.big-screen-mode){
 .game-card-v2 .game-foot{margin-top:20px;padding-top:15px}
 .game-card-v2 .game-foot .drill{background:#283d50;border:1px solid #405c70;padding:9px 12px;border-radius:9px;color:#d5fca2}
 @media(max-width:640px){.game-card-v2{padding:15px 13px!important}.game-card-v2 .team-logo{width:64px;height:64px}.game-card-v2 .game-card-matchup-label{margin-bottom:14px}.game-card-v2 .team-col button{font-size:13px}.game-card-v2 .match-center{min-width:46px}.game-card-v2 .game-top{margin-bottom:12px}.game-card-v2 .game-foot .drill{font-size:11px;padding:8px}}
+
+/* V3: true two-row matchup cards, not the former centered logo tiles */
+.game-card-v3{padding:0!important;border-radius:17px!important;overflow:hidden;background:#142337!important;border:1px solid #354c63!important;box-shadow:0 9px 28px rgba(0,0,0,.16)}
+.game-card-v3 .match-v3-head{display:flex;align-items:center;justify-content:space-between;padding:13px 17px 8px;gap:8px}
+.game-card-v3 .match-v3-league{font-size:11px;letter-spacing:1.3px;color:#b6d0df;font-weight:800}
+.game-card-v3 .match-v3-league b{color:#7bbba9}
+.game-card-v3 .match-v3-time{display:flex;align-items:baseline;gap:8px;padding:0 17px 12px;color:#9db1c2;font-size:11px}
+.game-card-v3 .match-v3-time strong{color:#d9f6a4;font-size:13px}
+.game-card-v3 .match-v3-teams{display:grid;gap:1px;padding:0 11px}
+.game-card-v3 .match-team-row{display:flex;align-items:center;gap:13px;min-height:73px;padding:8px 10px;background:#1b2e42}
+.game-card-v3 .match-team-row:first-child{border-radius:12px 12px 3px 3px}
+.game-card-v3 .match-team-row:last-child{border-radius:3px 3px 12px 12px}
+.game-card-v3 .team-logo{position:relative;flex:none;isolation:isolate;width:47px;height:47px;border-radius:12px;background:#293f56;border:1px solid #3c556c;font-size:12px;overflow:hidden}
+.game-card-v3 .team-logo-initials{position:absolute;inset:0;display:grid;place-items:center;color:#dce9f4}
+.game-card-v3 .team-logo-initials[hidden],.game-card-v3 .team-logo img[hidden]{display:none}
+.game-card-v3 .team-logo img{position:relative;z-index:1;width:100%;height:100%;object-fit:contain}
+.game-card-v3 .match-team-name{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.game-card-v3 .match-team-name button{background:none;border:0;text-align:left;padding:0;color:#f2f7fc;font-weight:800;font-size:15px;line-height:1.2}
+.game-card-v3 .match-team-name button:hover{color:#d9f6a4}
+.game-card-v3 .match-team-name>span{color:#96aabc;font-size:11px}
+.game-card-v3 .match-team-side{color:#8499ad;font-size:10px;letter-spacing:1px;font-weight:800}
+.game-card-v3 .match-team-score{font-size:23px;color:#f1f8ff;font-family:'Space Grotesk',sans-serif}
+.game-card-v3 .match-v3-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 17px 14px}
+.game-card-v3 .match-v3-foot>span{color:#9fb3c4;font-size:11px}
+.game-card-v3 .match-v3-foot .drill{border:1px solid #4a7168;border-radius:9px;background:#213e3b;color:#d5fba7;font-size:12px;font-weight:800;padding:9px 11px}
+@media(max-width:640px){.game-card-v3 .match-v3-head{padding:12px 13px 6px}.game-card-v3 .match-v3-time{padding:0 13px 10px}.game-card-v3 .match-team-row{min-height:65px}.game-card-v3 .match-team-name button{font-size:14px}.game-card-v3 .match-v3-foot{padding:10px 13px 13px}.ticket-dock{bottom:calc(80px + env(safe-area-inset-bottom,0px))!important;left:12px;right:12px;min-width:0}.main,.content,main{padding-bottom:150px}}
