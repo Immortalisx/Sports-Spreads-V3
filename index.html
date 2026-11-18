@@ -611,13 +611,26 @@ body:not(.big-screen-mode){
  // The 2025 untouched holdout showed improvement for NFL, but its paired
  // bootstrap interval included zero. NHL rolling form did not beat record-only.
  // Caps are deliberately small, and asterisk/notes must always be displayed.
- function provisionalRecency(snapshot,league){
+ function provisionalRecency(snapshot,league,game){
   if(!['nfl','nhl'].includes(league)||!snapshot||
    snapshot.league!==league||snapshot.calibrated!==false||
    snapshot.appliedToForecast!==false||
    snapshot.evidence?.sourceStatus!=='adequate_research_samples'||
    !Number.isInteger(snapshot.home?.played)||!Number.isInteger(snapshot.away?.played)||
    snapshot.home.played<3||snapshot.away.played<3)return null;
+  // Defense in depth: an unmatched or future-looking snapshot must NEVER
+  // modify a forecast, even if another caller skips the UI cache checks.
+  const start=Date.parse(game?.start||'');
+  if(!game||game.demo||game.status!=='scheduled'||game.league!==league||
+   !game.id||!game.home?.id||!game.away?.id||
+   !Number.isFinite(start)||start<=Date.now())return null;
+  const gameDate=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',
+   year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(start));
+  if(snapshot.gameId!==String(game.id)||snapshot.date!==gameDate||
+   snapshot.homeTeamId!==String(game.home.id)||
+   snapshot.awayTeamId!==String(game.away.id)||
+   snapshot.evidence?.dateCutoff!=='strictly before game calendar date'||
+   !(snapshot.evidence.latestCompletedGame<gameDate))return null;
   const m=snapshot.matchup||{},bounded=(x,scale,max)=>{
    if(typeof x!=='number'||!Number.isFinite(x))return 0;
    return clamp(x/scale,-max,max);
@@ -649,7 +662,7 @@ body:not(.big-screen-mode){
      logit((away.effectiveWins+tuned.prior/2)/(away.total+tuned.prior))))):null;
   const recordOnly=tuned?clamp(learned,.02,.98):
     clamp(logistic(c.weight*(logit(h)-logit(a))+c.home),0.12,0.88);
-  const recent=provisionalRecency(options.currentForm,game.league);
+  const recent=provisionalRecency(options.currentForm,game.league,game);
   const homeBase=recent?clamp(recordOnly+recent.delta,.12,.88):recordOnly;
   // Small samples -> broader interval; this is an indicative sensitivity range,
   // not a validated 95% credible interval.
