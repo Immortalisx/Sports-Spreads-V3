@@ -56,6 +56,7 @@ async function run(){
   await desktop.locator('nav.nav [data-section="tickets"]').click();
   await desktop.locator('#auto-confidence').waitFor({timeout:5000});
   await desktop.locator('#auto-confidence').evaluate(el=>{el.value='65';el.dispatchEvent(new Event('input',{bubbles:true}));});
+  await desktop.waitForFunction(()=>document.querySelector('#auto-target')?.textContent?.trim()==='65%',null,{timeout:5000});
   assert.equal(await desktop.locator('#auto-target').innerText(),'65%');
   await desktop.locator('[data-action="generate-ticket"]').click();
   await desktop.locator('.ticket-item').first().waitFor({timeout:10000});
