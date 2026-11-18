@@ -33,7 +33,7 @@ test('published UI has a market-derived slider with no fake confidence claim',()
  assert.match(html,/id="auto-confidence"/);
  assert.match(html,/data-action="generate-ticket"/);
  assert.match(html,/sportsbook-odds/);
- assert.match(html,/target chance/i);
+ assert.match(html,/bookmaker-implied chance/i);
  assert.match(html,/quick pick/i);
  assert.match(html,/not model confidence/i);
  assert.doesNotMatch(html,/THE_ODDS_API_KEY|SPORTS_SPREADS_REFRESH_TOKEN|sb_secret_/);
