@@ -62,6 +62,16 @@ test('2025-26 outcomes cannot change the earlier frozen calibration or 2024-25 v
  assert.notEqual(replay.comparison.calibrated.brier,baseline.comparison.calibrated.brier);
 });
 
+test('2024-25 validation outcomes cannot leak backward into 2023-24 fit coefficients',()=>{
+ const changed=copy(recent),first=changed.rows.find(x=>x[1]===20242025);
+ [first[5],first[6]]=[first[6],first[5]];
+ const replay=runNhlCalibrationResearch({later:changed});
+ assert.equal(replay.status,'research_only');
+ assert.deepEqual(replay.calibration.fit,baseline.calibration.fit);
+ assert.notDeepEqual(replay.calibration.validationScores,baseline.calibration.validationScores);
+ assert.equal(replay.games.length,baseline.games.length);
+});
+
 test('editing a completed game has no effect on its own or same-date predicted probabilities',()=>{
  const altered=copy(recent),first=altered.rows.find(x=>x[1]===20252026);
  [first[5],first[6]]=[first[6],first[5]];
@@ -134,8 +144,8 @@ test('missing history, duplicate IDs and impossible results fail closed without 
 
 test('any fit containing post-fit labels or incomplete fit-season rows throws rather than fitting',()=>{
  const invalid=[{season:20252026,baseline:.5,y:1}];
- assert.throws(()=>fitFrozenPlatt(invalid),/complete 2024-25/);
+ assert.throws(()=>fitFrozenPlatt(invalid),/complete 2023-24/);
  const mixed=Array.from({length:1312},()=>({season:20232024,baseline:.5,y:1}));
  mixed[0].season=20242025;
- assert.throws(()=>fitFrozenPlatt(mixed),/complete 2024-25/);
+ assert.throws(()=>fitFrozenPlatt(mixed),/complete 2023-24/);
 });
