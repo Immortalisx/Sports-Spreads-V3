@@ -69,17 +69,15 @@ async function directSportsData(route){
  throw Error('No such data endpoint');
 }
 async function readSportsData(url){
- // Both standalone production and multi-file staging use the same relay-first
- // route. The public ESPN fallback is only used when the local API is absent
- // or unavailable, and directJson itself prefers the shared Supabase relay.
+ // Production, staging and the local server now share one fetch-first path.
+ // Static hosts fall back to the Supabase relay via directSportsData after a 404;
+ // the local Node server can still serve its own /api routes.
  try{
   const route=new URL(url,window.location.href);
-  if(route.origin===window.location.origin){
-   // A static host has no /api/* backend. Avoid an unnecessary HTML/404 fetch.
-   return directSportsData(route.pathname+route.search);
-  }
   const r=await fetch(route.href,{headers:{Accept:'application/json'}});
   if(!r.ok)throw Error('Sports feed returned '+r.status);
+  const contentType=r.headers?.get?.('content-type')||'';
+  if(!contentType.includes('application/json'))throw Error('Sports feed returned non-JSON');
   const v=await r.json();
   if(v?.error)throw Error(String(v.error));
   return v;
