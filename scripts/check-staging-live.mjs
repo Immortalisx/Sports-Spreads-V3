@@ -3,7 +3,7 @@ const site='https://sports-spreads-v4-staging.onrender.com';
 const api='https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1';
 const routes=[
  ['sports-feed?path=%2Fapis%2Fsite%2Fv2%2Fsports%2Ffootball%2Fnfl%2Fscoreboard',true],
- ['sportsbook-odds?league=nfl',false],
+ ['sportsbook-odds?league=nfl&mode=board',false],
  ['daily-tickets',false],
  ['season-form?league=nfl',false],
  ['nfl-availability',false],
