@@ -134,7 +134,7 @@ export function runIndependentAudit({earlier=old,later=recent}={}){
    disjointSplit:[20222023,20232024,20242025,20252026],
    futureProspective2026_27:'NOT_SCORED',
    previouslyInspected2025_26:true,
-   2024_25ValidationStrictlyLaterThanFit:true,
+   validation2024_25StrictlyLaterThanFit:true,
    noHyperparameterOptimizationInThisAudit:true,
    homeElo:28,kFactor:16,offseasonShrink:.65},
   caution:'Replicated fixed historic calculation only. 2025-26 has already been inspected. Small bins have wide sampling uncertainty; binned ECE alone does not validate pricing or betting confidence. Goalies/ARI->UTA continuity and actual pregame timestamps are not represented.'};
