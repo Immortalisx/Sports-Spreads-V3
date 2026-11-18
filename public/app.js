@@ -45,7 +45,7 @@ async function apiSportsBoard(league,date){
    const start=game.date?.start??game.date?.date??game.date??item.date?.start??item.date;
    const raw=String(game.status?.long??item.status?.long??item.status?.short??'Scheduled');
    const status=/final|finished|ended/i.test(raw)?'final':/live|progress|quarter|period|half/i.test(raw)?'live':'scheduled';
-   const team=(t,side)=>({id:String(t.id??''),name:t.name??'',abbr:t.code??'',shortName:t.name??'',logo:t.logo??null,score:item.scores?.[side]?.total??item.scores?.[side]?.points??null});
+   const team=(t,side)=>({id:String(t.id??''),name:t.name??'',abbr:t.code??'',shortName:t.name??'',logo:t.logo??null,score:item.scores?.[side]?.total??item.scores?.[side]?.points??(side==='away'?item.scores?.visitors?.points??item.scores?.visitors?.total:null)??null});
    return {id:String(game.id??item.id??''),league,home:team(home,'home'),away:team(away,'away'),start:typeof start==='string'?start:null,status,statusText:raw,venue:null,marketLine:null,model:null,demo:false};
   }).filter(g=>g.id&&g.home.id&&g.away.id&&g.start);
   return games.length?{source:'API-Sports daily cache',updatedAt:snapshot.fetched_at,cache:'shared-daily',league,date:date||today.replaceAll('-',''),games}:null;
@@ -485,24 +485,17 @@ function gameCard(game){
  const scored=(game.status==='final'||game.status==='live')&&game.away.score!==null&&game.home.score!==null;
  const time=game.start?formatTime(game.start):'TBD';
  const startName={nfl:'Kickoff',nba:'Tipoff',nhl:'Puck drop',mlb:'First pitch'}[game.league]||'Start time';
- const middle=scored?
-  '<span class="score">'+esc(game.away.score)+'–'+esc(game.home.score)+'</span>':
-  '<span class="versus">VS</span>';
- const when=game.demo?'<span class="game-date">SAMPLE MATCHUP</span>':
-  '<div class="game-when"><span class="game-date">'+esc(formatDay(game.start))+'</span>'+
-  '<span class="game-start-time" aria-label="'+esc(startName)+' at '+esc(time)+'">'+
-  '<small>'+esc(startName)+'</small><strong>'+esc(time)+'</strong></span></div>';
- return '<article class="game game-card-v2" data-league="'+esc(game.league)+'"><div class="game-top">'+when+
-  '<span class="tag '+(game.demo?'demo':game.status==='live'?'live':game.status==='final'?'final':'')+'">'+
-  esc(game.demo?'Demo':game.status)+'</span></div>'+
-  '<div class="game-card-matchup-label">'+esc(SPORTS[game.league]?.label||game.league)+' · '+esc(game.status==='scheduled'?'MATCHUP PREVIEW':game.status==='live'?'IN PROGRESS':'RESULT')+'</div><div class="teams"><div class="team-col">'+logo(game.away,game.league)+
-  '<button data-action="team" data-team="away" data-game="'+esc(game.id)+'" title="View '+esc(game.away.name)+' team report">'+
-  esc(game.away.name)+'</button><span class="record">'+esc(game.away.record||game.away.abbr||'')+'</span></div>'+
-  '<div class="match-center">'+middle+'<small>'+esc(game.status==='scheduled'?'AWAY  ·  HOME':'')+'</small></div><div class="team-col">'+logo(game.home,game.league)+
-  '<button data-action="team" data-team="home" data-game="'+esc(game.id)+'" title="View '+esc(game.home.name)+' team report">'+
-  esc(game.home.name)+'</button><span class="record">'+esc(game.home.record||game.home.abbr||'')+'</span></div></div>'+
-  '<div class="game-foot"><span>'+esc(game.status==='scheduled'?'Matchup overview':game.status==='live'?'Live game':'Game result')+'</span>'+
-  '<button class="drill" data-action="game" data-game="'+esc(game.id)+'">Game details ↗</button></div></article>';
+ const date=game.demo?'SAMPLE MATCHUP':formatDay(game.start);
+ const teamRow=(team,side)=>'<div class="match-team-row">'+logo(team,game.league)+
+  '<div class="match-team-name"><button data-action="team" data-team="'+side+'" data-game="'+esc(game.id)+'" title="View '+esc(team.name)+' team report">'+esc(team.name)+'</button><span>'+esc(team.record||team.abbr||'')+'</span></div>'+
+  (scored?'<strong class="match-team-score">'+esc(team.score)+'</strong>':'<span class="match-team-side">'+(side==='away'?'AWAY':'HOME')+'</span>')+'</div>';
+ return '<article class="game game-card-v3" data-league="'+esc(game.league)+'">'+
+  '<div class="match-v3-head"><span class="match-v3-league">'+esc((SPORTS[game.league]?.label||game.league).toUpperCase())+' <b>·</b> '+esc(date)+'</span>'+
+  '<span class="tag '+(game.status==='live'?'live':game.status==='final'?'final':'')+'">'+esc(game.demo?'Demo':game.status)+'</span></div>'+
+  '<div class="match-v3-time"><span>'+esc(startName)+'</span><strong>'+esc(time)+'</strong></div>'+
+  '<div class="match-v3-teams">'+teamRow(game.away,'away')+teamRow(game.home,'home')+'</div>'+
+  '<div class="match-v3-foot"><span>'+esc(scored?'Final score':game.status==='final'?'Final · score unavailable':game.status==='live'?'Live matchup':'Matchup preview')+'</span>'+
+  '<button class="drill" data-action="game" data-game="'+esc(game.id)+'">Explore matchup <span aria-hidden="true">↗</span></button></div></article>';
 }
 function filteredGames(){const games=state.feed?.games??[];const q=state.search.trim().toLowerCase();return q?games.filter(x=>(x.home.name+' '+x.away.name+' '+x.home.abbr+' '+x.away.abbr).toLowerCase().includes(q)):games;}
 /** Dedicated viewing mode: no sidebar or betting widgets, full-screen compatible. */
