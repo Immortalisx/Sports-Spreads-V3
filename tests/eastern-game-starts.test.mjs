@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const state=readFileSync(new URL('../src/app/10-state.js',import.meta.url),'utf8');
-const views=readFileSync(new URL('../src/app/20-views.js',import.meta.url),'utf8');
+const views=['20-views','21-game-detail'].map(name=>readFileSync(new URL(`../src/app/${name}.js`,import.meta.url),'utf8')).join('\n');
 const css=readFileSync(new URL('../public/style.css',import.meta.url),'utf8');
 const context={window:{location:{search:''}},localStorage:{getItem:()=>null},
  Date,Intl,URL,URLSearchParams,console,Math,Number,JSON,Object,Array,Map,Set};
