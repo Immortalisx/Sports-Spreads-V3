@@ -2,13 +2,13 @@
 const site='https://sports-spreads-v4-staging.onrender.com';
 const api='https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1';
 const routes=[
- ['sports-feed?path=football%2Fnfl',true],
+ ['sports-feed?path=%2Fapis%2Fsite%2Fv2%2Fsports%2Ffootball%2Fnfl%2Fscoreboard',true],
  ['sportsbook-odds?league=nfl',false],
  ['daily-tickets',false],
  ['season-form?league=nfl',false],
  ['nfl-availability',false],
  ['nhl-goalie-form',false],
- ['matchup-signals',false]
+ ['matchup-signals?league=mlb&date=2026-11-18&home=Boston%20Red%20Sox&away=New%20York%20Yankees',false]
 ];
 let failed=0;
 async function check(name,url,kind='json'){
