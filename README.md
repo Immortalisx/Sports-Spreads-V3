@@ -75,3 +75,10 @@ Review [historical model approval scope](docs/CALIBRATION_RELEASE_2026-11-17.md)
 ## NFL/NHL enhanced research (2026-11-17)
 
 Opponent-aware four-window modeling and official season-wide NHL schedule verification are now reproducible. Historical NFL/NHL Brier scores improved slightly, but **neither passed the predefined upgrade criteria**. The live NFL/NHL calibrated flag remains off; no source, bookmaker credit, or profitability claim is fabricated. See [NFL/NHL holdout audit](docs/NFL_NHL_ENHANCED_HOLDOUT_2026-11-17.md).
+
+
+## 2026-11-18 — source-gated scouting and prospective archive
+
+The game-detail view now has optional, source-backed NFL coach history, last-ten result glyphs, cross-sport last-five offense/defense comparisons and per-event market-consensus history. All new detailed panels are lazy or collapsed by default. The private NFL coaching import is refreshed by a seasonal, one-per-day Supabase cron; a separate Supabase job stores immutable no-vig bookmaker-consensus observations from the **already-fetched** twice-daily odds cache with no additional Odds API cost.
+
+These are descriptive research views, **not validated tactical advantages, model-adjusted confidence, or a proven sportsbook edge**. Archived prospective prices will need verified future outcomes and stable model predictions before validation is possible. Cloudflare real-device analytics requires a separate site token and is not silently activated. See [2026-11-18 source and performance rollout](docs/MATCHUP_INTELLIGENCE_2026-11-18.md).
