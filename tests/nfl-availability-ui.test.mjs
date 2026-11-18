@@ -1,0 +1,23 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const view=readFileSync(new URL('../src/app/20-views.js',import.meta.url),'utf8');
+const controller=readFileSync(new URL('../src/app/30-controller.js',import.meta.url),'utf8');
+const state=readFileSync(new URL('../src/app/10-state.js',import.meta.url),'utf8');
+test('NFL availability is displayed only for matching fixture and team IDs',()=>{
+ assert.match(view,/function nflAvailabilityPanel\(g\)/);
+ assert.match(view,/x\.gameId===g\.id/);
+ assert.match(view,/x\.homeTeamId===String\(g\.home\?\.id\)/);
+ assert.match(view,/x\.awayTeamId===String\(g\.away\?\.id\)/);
+ assert.match(view,/Date\.parse\(x\.asOf\|\|''\)<Date\.parse\(g\.start\|\|''\)/);
+ assert.match(view,/\$\{nflAvailabilityPanel\(g\)\}/);
+});
+test('UI refuses to call projected QB confirmed or change model percentage',()=>{
+ assert.match(view,/Depth-chart QB1 is projected, not a confirmed starter/);
+ assert.match(view,/No injury impact or starter certainty has been included in win probabilities/);
+ assert.match(view,/game\.home/);
+ assert.match(state,/nflAvailability:null/);
+ assert.match(controller,/async function loadNflAvailability\(\)/);
+ assert.match(controller,/void loadNflAvailability\(\)/);
+ assert.doesNotMatch(controller,/THE_ODDS_API_KEY/);
+});
