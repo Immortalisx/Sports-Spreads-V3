@@ -31,7 +31,7 @@ export function goalieFormFromGameLog({playerId,teamAbbrev,logs,gameDate}){
  const latest=starts[0]?.date||null;
  return {playerId:String(playerId),latestStart:latest,last3:metric(p3),last5:metric(sample),
   seasonStarts:starts.length,minimumSample:sample.length>=3&&sample.reduce((n,s)=>n+s.shotsAgainst,0)>=60,
-  source:'NHL Web public player game log',dataThrough:latest,estimatedStarter:false,
+  source:'NHL public game-level goalie history',dataThrough:latest,estimatedStarter:false,
   confirmedStarter:false,xGoalsSavedAboveExpected:null,xGoalsStatus:'not licensed or sourced'};
 }
 export function buildNhlGoalieSnapshot({games,teamGoalies,generatedAt}){
