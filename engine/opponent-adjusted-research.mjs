@@ -76,3 +76,54 @@ export function opponentAdjustedRows(games,league,{halfLife=HALF_LIFE[league]}={
  }
  return result;
 }
+
+/**
+ * Validation-season tuning only. Scores an untouched later-season holdout.
+ * Reconstructed prior-game scoreboard evidence is not an archived live feed.
+ */
+export function evaluateOpponentFactors(games,league){
+ if(!LEAGUES.has(league))throw Error('Unsupported league');
+ const supported=new Set(['official_public','community_public','official','licensed','independently_verified','attributed_public']);
+ const relevant=games.filter(r=>r.league===league);
+ const verified=relevant.length>0&&relevant.every(r=>supported.has(r.sourceTier)&&
+  /^https:\/\//.test(r.sourceUrl||'')&&r.simulated!==true);
+ const out={league,version:OPPONENT_VERSION,status:'research_only',promotionAllowed:false,
+  verifiedSourceMetadata:verified,notice:'Only reconstructed prior completed scoreboards; no archived pregame starters, defensive scheme, pace or goalie confirmation.'};
+ if(!verified)return {...out,status:'unverified_source_metadata'};
+ const seasons=[...new Set(relevant.map(r=>Number(r.season)))].sort((a,b)=>a-b);
+ if(seasons.length<4)return {...out,status:'insufficient_seasons',seasons};
+ const rows=opponentAdjustedRows(relevant,league);
+ const validationSeason=seasons.at(-2),holdoutSeason=seasons.at(-1);
+ const validation=rows.filter(r=>Number(r.season)===validationSeason);
+ const holdout=rows.filter(r=>Number(r.season)===holdoutSeason);
+ const min={nfl:125,nba:500,nhl:450}[league];
+ if(validation.length<min||holdout.length<min)return {...out,status:'insufficient_games',validationGames:validation.length,holdoutGames:holdout.length};
+ const candidates=[];
+ const probability=(r,feature,strength)=>{
+  const raw=r.opponentFactors[feature];
+  if(raw===null||strength===0)return r.baseline;
+  const p=bounded(r.baseline,.02,.98);
+  const z=Math.log(p/(1-p))+strength*raw;
+  return bounded(1/(1+Math.exp(-z)),.02,.98);
+ };
+ const measure=(set,feature,strength)=>{
+  const scored=set.map(r=>({p:probability(r,feature,strength),y:r.y}));
+  const brier=scored.reduce((s,r)=>s+(r.p-r.y)**2,0)/scored.length;
+  const logLoss=scored.reduce((s,r)=>s-r.y*Math.log(r.p)-(1-r.y)*Math.log(1-r.p),0)/scored.length;
+  return {n:scored.length,brier,logLoss,featureCoverage:set.filter(r=>r.opponentFactors[feature]!==null).length/set.length};
+ };
+ for(const feature of ['opponentAdjustedForm','opponentAdjustedMargin','scoringMatchup']){
+  for(const strength of [0,.1,.2,.35]){
+   const metrics=measure(validation,feature,strength);
+   candidates.push({feature,strength,validation:metrics});
+  }
+ }
+ candidates.sort((a,b)=>a.validation.brier-b.validation.brier||
+  a.validation.logLoss-b.validation.logLoss||a.strength-b.strength);
+ const selected=candidates[0];
+ const baseline=measure(holdout,selected.feature,0);
+ const candidate=measure(holdout,selected.feature,selected.strength);
+ return {...out,validationSeason,holdoutSeason,selected,holdout:{baseline,candidate,
+  brierGain:baseline.brier-candidate.brier},
+  reviewOnly:false,reason:'Historical evaluation only; paired uncertainty and prospective source equivalence still required.'};
+}
