@@ -14,6 +14,11 @@ on:
       - 'src/app/**'
       - 'public/**'
       - 'index.html'
+      - 'test/**'
+      - 'engine/**'
+      - 'supabase/migrations/**'
+      - 'scripts/**'
+      - 'package.json'
 permissions:
   contents: read
 jobs:
@@ -25,6 +30,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Run complete Node regression suite
+        run: npm test
       - name: Generate tested standalone site
         run: npm run build:onefile
       - name: Install temporary test-only Chromium
