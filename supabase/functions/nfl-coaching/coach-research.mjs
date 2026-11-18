@@ -8,8 +8,8 @@ export const RAW_SOURCE='https://raw.githubusercontent.com/nflverse/nfldata/mast
 export const COACH_VERSION='nfl-coaching-results-v1';
 const alias={WSH:'WAS',JAC:'JAX',LA:'LAR',STL:'LAR',SD:'LAC',OAK:'LV'};
 export function canonicalTeam(value){const key=String(value||'').trim().toUpperCase();return alias[key]||key;}
-const name=x=>String(x||'').trim().replace(/\\s+/g,' ').slice(0,90);
-const iso=x=>/^20\\d\\d-\\d\\d-\\d\\d$/.test(String(x||''))&&Number.isFinite(Date.parse(x+'T00:00:00Z'));
+const name=x=>String(x||'').trim().replace(/\s+/g,' ').slice(0,90);
+const iso=x=>/^20\d\d-\d\d-\d\d$/.test(String(x||''))&&Number.isFinite(Date.parse(x+'T00:00:00Z'));
 export function readCsv(csv){
  if(typeof csv!=='string'||csv.length>3_500_000)throw Error('Invalid coaching CSV size');
  const rows=[],cells=[];let cell='',quoted=false;
@@ -17,8 +17,8 @@ export function readCsv(csv){
   const c=csv[i];
   if(c==='"'){if(quoted&&csv[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}
   else if(c===','&&!quoted){cells.push(cell);cell='';}
-  else if((c==='\\r'||c==='\\n')&&!quoted){
-   if(c==='\\r'&&csv[i+1]==='\\n')i++;
+  else if((c==='\r'||c==='\n')&&!quoted){
+   if(c==='\r'&&csv[i+1]==='\n')i++;
    cells.push(cell);cell='';if(cells.some(x=>x))rows.push([...cells]);cells.length=0;
   }else cell+=c;
  }
@@ -38,9 +38,9 @@ export function buildCoachingSnapshot(raw,asOfDay){
  const seasonYear=month>=8?year:year-1;
  const selected=readCsv(raw).filter(r=>{
   if(r.game_type!=='REG'||!iso(r.gameday)||r.gameday>=asOfDay||
-   !/^20\\d\\d$/.test(r.season)||Number(r.season)<2016||
+   !/^20\d\d$/.test(r.season)||Number(r.season)<2016||
    !name(r.home_coach)||!name(r.away_coach))return false;
-  return [r.home_score,r.away_score].every(s=>/^\\d{1,3}$/.test(s));
+  return [r.home_score,r.away_score].every(s=>/^\d{1,3}$/.test(s));
  }).sort((a,b)=>a.gameday.localeCompare(b.gameday));
  if(selected.length<10)throw Error('Not enough verified NFL results');
  const teams={},histories={},pair={},recent={};let sourceThrough='';
