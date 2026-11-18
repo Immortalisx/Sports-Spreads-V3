@@ -14,9 +14,11 @@ test('two complete prior seasons are required for NHL Elo calibration',()=>{
  assert.equal(v.priorGamesPerTeam,164);
  assert.equal(baseline.status,'research_only');
  assert.equal(baseline.promotionAllowed,false);
- assert.deepEqual(baseline.splits.eloHistoricalTrainingSeasons,[20222023,20232024]);
- assert.equal(baseline.splits.eloHistoricalTrainingGames,2624);
- assert.equal(baseline.splits.calibrationFitSeason,20242025);
+ assert.deepEqual(baseline.splits.eloHistoricalTrainingSeasons,[20222023]);
+ assert.equal(baseline.splits.eloHistoricalTrainingGames,1312);
+ assert.equal(baseline.splits.calibrationFitSeason,20232024);
+ assert.equal(baseline.splits.validationSeason,20242025);
+ assert.equal(baseline.splits.validationGames,1312);
  assert.equal(baseline.splits.calibrationFitGames,1312);
  assert.equal(baseline.splits.exploratoryEvaluationSeason,20252026);
  assert.equal(baseline.splits.exploratoryEvaluationGames,1312);
@@ -30,8 +32,11 @@ test('two complete prior seasons are required for NHL Elo calibration',()=>{
 test('fully predetermined fixed Platt hyperparameters and time-separated fitting',()=>{
  const fit=baseline.calibration.fit;
  assert.equal(fit.method,'predeclared_regularized_platt');
- assert.equal(fit.fitSeason,20242025);
- assert.equal(fit.fitLastDate,'2025-04-17');
+ assert.equal(fit.fitSeason,20232024);
+ assert.equal(fit.validationSeason,20242025);
+ assert.equal(fit.fitLastDate,'2024-04-18');
+ assert.ok(fit.fitLastDate<baseline.splits.validationStartsOn);
+ assert.ok(baseline.splits.validationEndsOn<baseline.games[0].date);
  assert.ok(fit.fitLastDate<baseline.games[0].date);
  assert.equal(fit.fitGames,1312);
  assert.equal(fit.iterationCount,CALIBRATION_RULES.iterationCount);
@@ -45,7 +50,7 @@ test('fully predetermined fixed Platt hyperparameters and time-separated fitting
  assert.equal(baseline.splits.trulyUntouchedFutureHoldout.startsNoEarlierThan,'2026-11-19');
 });
 
-test('holdout outcomes cannot change the already-frozen calibrator',()=>{
+test('2025-26 outcomes cannot change the earlier frozen calibration or 2024-25 validation',()=>{
  const altered=copy(recent);
  for(const row of altered.rows)if(row[1]===20252026)[row[5],row[6]]=[row[6],row[5]];
  const replay=runNhlCalibrationResearch({later:altered});
@@ -127,10 +132,10 @@ test('missing history, duplicate IDs and impossible results fail closed without 
  }
 });
 
-test('any fit containing holdout labels or incomplete validation throws rather than fitting',()=>{
+test('any fit containing post-fit labels or incomplete fit-season rows throws rather than fitting',()=>{
  const invalid=[{season:20252026,baseline:.5,y:1}];
  assert.throws(()=>fitFrozenPlatt(invalid),/complete 2024-25/);
- const mixed=Array.from({length:1312},()=>({season:20242025,baseline:.5,y:1}));
- mixed[0].season=20252026;
+ const mixed=Array.from({length:1312},()=>({season:20232024,baseline:.5,y:1}));
+ mixed[0].season=20242025;
  assert.throws(()=>fitFrozenPlatt(mixed),/complete 2024-25/);
 });
