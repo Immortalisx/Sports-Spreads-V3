@@ -67,7 +67,7 @@ test('models never auto-promote even after a long positive paired record',()=>{
   const previous=new Date(Date.UTC(2025,11,31+i)).toISOString();
   const earlier=new Date(Date.UTC(2025,11,31+i)-30*60000).toISOString();
   return game(i,{game_date:at.slice(0,10),game_start:at,model_as_of:previous,market_as_of:earlier,
-   model_home_probability:.8,market_home_probability:.5,actual_home_win:1});
+   model_home_probability:.8,market_home_probability:.5,actual_home_win:i%5===0?0:1});
  });
  const r=prospectiveScorecard(rows,'nba',{minPairs:10,minSpanDays:90,minCoverage:.7});
  assert.equal(r.status,'manual_review_candidate');
