@@ -17,13 +17,13 @@ function gameCard(game){
   '<div class="game-when"><span class="game-date">'+esc(formatDay(game.start))+'</span>'+
   '<span class="game-start-time" aria-label="'+esc(startName)+' at '+esc(time)+'">'+
   '<small>'+esc(startName)+'</small><strong>'+esc(time)+'</strong></span></div>';
- return '<article class="game"><div class="game-top">'+when+
+ return '<article class="game game-card-v2" data-league="'+esc(game.league)+'"><div class="game-top">'+when+
   '<span class="tag '+(game.demo?'demo':game.status==='live'?'live':game.status==='final'?'final':'')+'">'+
   esc(game.demo?'Demo':game.status)+'</span></div>'+
-  '<div class="teams"><div class="team-col">'+logo(game.away,game.league)+
+  '<div class="game-card-matchup-label">'+esc(SPORTS[game.league]?.label||game.league)+' · '+esc(game.status==='scheduled'?'MATCHUP PREVIEW':game.status==='live'?'IN PROGRESS':'RESULT')+'</div><div class="teams"><div class="team-col">'+logo(game.away,game.league)+
   '<button data-action="team" data-team="away" data-game="'+esc(game.id)+'" title="View '+esc(game.away.name)+' team report">'+
   esc(game.away.name)+'</button><span class="record">'+esc(game.away.record||game.away.abbr||'')+'</span></div>'+
-  '<div class="match-center">'+middle+'</div><div class="team-col">'+logo(game.home,game.league)+
+  '<div class="match-center">'+middle+'<small>'+esc(game.status==='scheduled'?'AWAY  ·  HOME':'')+'</small></div><div class="team-col">'+logo(game.home,game.league)+
   '<button data-action="team" data-team="home" data-game="'+esc(game.id)+'" title="View '+esc(game.home.name)+' team report">'+
   esc(game.home.name)+'</button><span class="record">'+esc(game.home.record||game.home.abbr||'')+'</span></div></div>'+
   '<div class="game-foot"><span>'+esc(game.status==='scheduled'?'Matchup overview':game.status==='live'?'Live game':'Game result')+'</span>'+
