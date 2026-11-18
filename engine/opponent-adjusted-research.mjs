@@ -45,8 +45,8 @@ export function opponentAdjustedRows(games,league,{halfLife=HALF_LIFE[league]}={
     opponentAdjustedForm:minGames>=3?bounded((hWin.mean-aWin.mean)*2,-2,2):null,
     // Per-game score margin relative to opponents' pregame win shares.
     opponentAdjustedMargin:minGames>=5?bounded(hMargin.mean-aMargin.mean,-2,2):null,
-    // Offense against the opposing team's earlier defensive scoreboard trend;
-    // descriptive only, not NBA possessions or NHL xG.
+    // Descriptive score-differential proxy (not an independent matchup signal);
+    // do not use as a separate validation candidate.
     scoringMatchup:minGames>=5?bounded(hScoring.mean-aScoring.mean,-2,2):null
    },opponentCoverage:coverage,opponentProvenance:{
     method:'prior completed game outcomes and scoreboard margins only',
@@ -112,7 +112,9 @@ export function evaluateOpponentFactors(games,league){
   const logLoss=scored.reduce((s,r)=>s-r.y*Math.log(r.p)-(1-r.y)*Math.log(1-r.p),0)/scored.length;
   return {n:scored.length,brier,logLoss,featureCoverage:set.filter(r=>r.opponentFactors[feature]!==null).length/set.length};
  };
- for(const feature of ['opponentAdjustedForm','opponentAdjustedMargin','scoringMatchup']){
+ // scoringMatchup is a linear rescaling of opponentAdjustedMargin from the same
+ // final-score differential, not independent offense/defense evidence.
+ for(const feature of ['opponentAdjustedForm','opponentAdjustedMargin']){
   for(const strength of [0,.1,.2,.35]){
    const metrics=measure(validation,feature,strength);
    candidates.push({feature,strength,validation:metrics});
