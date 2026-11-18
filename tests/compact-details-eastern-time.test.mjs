@@ -21,7 +21,7 @@ test('cards show game time once prominently; game details show the same Eastern 
  assert.ok(card.includes('class="game-start-time"'));
  assert.match(card,/esc\(time\)/);
  assert.ok(!card.includes('class="game-center-time"'));
- const drawer=views.slice(views.indexOf('function gameDrawer(){'),views.indexOf('function playerDrawer(){'));
+ const drawer=views.slice(views.indexOf('function gameDrawer(){'));
  assert.match(drawer,/Scheduled start \(Eastern Time\)/);
  assert.match(drawer,/formatTime\(g\.start\)/);
 });
