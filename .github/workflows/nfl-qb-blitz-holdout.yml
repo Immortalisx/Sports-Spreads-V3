@@ -25,7 +25,7 @@ jobs:
           python-version: '3.12'
       - name: Verify prior-date and QB identity safeguards locally
         run: |
-          python -m unittest discover -s tests -p collect-qb-blitz-holdout.test.py
+          python tests/collect-qb-blitz-holdout.test.py
           node --test tests/qb-blitz-holdout.test.mjs
       - name: Download historical sources only (no paid odds/API providers)
         run: python engine/collect-qb-blitz-holdout.py research/nfl-qb-blitz-history.json
