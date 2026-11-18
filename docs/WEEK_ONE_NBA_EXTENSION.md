@@ -4,6 +4,6 @@ Research-only update. NBA source: [piblop/nba-history-explorer data/nba_games.cs
 
 The existing `buildPregameRows` Elo engine forecasts the 2026-10-20 Detroit–Boston fixture using only prior-dated scores, and its 2026-27 game result is withheld until evaluation. The committed test verifies that changing the final result cannot change the forecast. This is a retrospective baseline, not an archived historical prediction or calibrated market edge.
 
-**NHL remains blocked**: a complete, deduplicated and independently verified 2025-26 regular-season score history has not been pinned. Official NHL free schedule API and a 2024-25 community dataset were located, but neither alone establishes a verified 2024-25 **plus 2025-26** training history. No fabricated or stale-only probability will be reported.
+**NHL is now verified:** 2,624 completed official 2024–25 and 2025–26 regular-season games have been pinned and audited (1,312 per season, all 32 teams at 82 games per season). See `docs/WEEK_ONE_NHL_EXTENSION.md`.
 
-Run `node --test tests/week-one-elo-replay.test.mjs`; CI prints `WEEK_ONE_ELO_REPLAY_REPORT` with NFL and NBA exact probabilities, outcomes and Brier scores. No production, API or hosting changes.
+Run `node --test tests/week-one-elo-replay.test.mjs`; CI prints `WEEK_ONE_ELO_REPLAY_REPORT` with NFL, NHL and NBA exact probabilities, outcomes and Brier scores. No production, API or hosting changes.
