@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       league:
-        description: 'Select a single historical league; both runs only when explicitly selected'
+        description: 'Select historical league; both only when explicitly selected'
         required: true
         type: choice
         options:
@@ -14,25 +14,36 @@ on:
 permissions:
   contents: read
 jobs:
+  select:
+    name: Select historical replay leagues
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      matrix: ${{ steps.selection.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact requested league matrix (no provider calls)
+        id: selection
+        env:
+          SELECTED_LEAGUE: ${{ inputs.league }}
+        run: node engine/replay-league-matrix.mjs "$SELECTED_LEAGUE" >> "$GITHUB_OUTPUT"
   replay:
     name: ${{ matrix.league }} real-scoreboard replay
+    needs: select
     runs-on: ubuntu-latest
     timeout-minutes: 22
     strategy:
       fail-fast: false
-      matrix:
-        league: [nfl, nhl]
-    if: github.event_name == 'workflow_dispatch'
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Replay historical finals against baseline (no paid API)
-        if: inputs.league == 'both' || inputs.league == matrix.league
         run: node engine/collect-opponent-replay.mjs ${{ matrix.league }}
       - uses: actions/upload-artifact@v4
-        if: (inputs.league == 'both' || inputs.league == matrix.league) && always()
+        if: always()
         with:
           name: opponent-replay-${{ matrix.league }}
           path: research/${{ matrix.league }}-opponent-replay.json
