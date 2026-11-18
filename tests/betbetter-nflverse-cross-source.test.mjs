@@ -35,8 +35,8 @@ test('offline cross-source fixture has unique, scored NFL matches and preserves 
 });
 
 test('source identifiers and integrity hashes are pinned', () => {
-  assert.match(fixture.sources.teachingSha256, /^[a-f0-9]{64}$/);
-  assert.match(fixture.sources.nflverseSha256, /^[a-f0-9]{64}$/);
+  assert.equal(fixture.sources.teachingSha256, 'bf8fb58dfd31d32d506625095e77715204ea61e0926fc6ad609f1ab998e5ca59');
+  assert.equal(fixture.sources.nflverseSha256, '3d0703c3a40470351ef2a28257734f30fce5164e876f9a492a4d416c9f525723');
   assert.equal(fixture.sources.nflverseBlobSha, '77580b1ff3255acb477153f993954f6e1c60a5c8');
 });
 
