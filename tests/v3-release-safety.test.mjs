@@ -25,3 +25,10 @@ test('game cards retain image fallback and lightweight markup',()=>{
  assert.match(card,/game-card-v3/);
  assert.doesNotMatch(card,/marketCardLabel\(game\)/);
 });
+
+test('standalone release stays within conservative transfer-size guardrails',()=>{
+ const html=read('index.html'),bundle=read('public/app.js'),css=read('public/style.css');
+ assert.ok(Buffer.byteLength(html,'utf8')<300_000,'standalone HTML exceeded 300 KB raw budget');
+ assert.ok(Buffer.byteLength(bundle,'utf8')<170_000,'JS bundle exceeded 170 KB raw budget');
+ assert.ok(Buffer.byteLength(css,'utf8')<90_000,'CSS exceeded 90 KB raw budget');
+});
