@@ -64,3 +64,57 @@ test('browser modules contain no secret provider or service role token',()=>{
  assert.doesNotMatch(combined,/THE_ODDS_API_KEY|SUPABASE_SERVICE_ROLE_KEY|sb_secret_/);
  assert.doesNotMatch(bundle,/THE_ODDS_API_KEY|SUPABASE_SERVICE_ROLE_KEY|sb_secret_/);
 });
+
+test('cached research loaders are GET-only and have bounded timeouts',()=>{
+ const src=read('src/app/26-cached-research.js');
+ assert.match(src,/controller\.abort\(\),12000/);
+ assert.match(src,/ctrl\.abort\(\),12000/);
+ assert.match(src,/controller\.abort\(\),10000/);
+ assert.match(src,/headers:\{accept:'application\/json'\}/);
+ assert.doesNotMatch(src,/authorization|apikey|x-api-key/i);
+});
+test('NFL research rejects forecast-applied or calibrated records',()=>{
+ const src=read('src/app/26-cached-research.js');
+ assert.match(src,/data\.games\.every\(x=>x\.league==='nfl'&&x\.appliedToForecast===false&&x\.calibrated===false/);
+});
+test('NHL research does not invent confirmed starting goalies',()=>{
+ const src=read('src/app/26-cached-research.js');
+ assert.match(src,/x\.home\?\.confirmedStarter===false&&x\.away\?\.confirmedStarter===false/);
+});
+test('current season form does not feed back into model probability',()=>{
+ const src=read('src/app/26-cached-research.js');
+ assert.match(src,/source\.snapshots\.every\(x=>x\?\.league===league&&x\.appliedToForecast===false/);
+ assert.doesNotMatch(src,/state\.prediction|state\.model|winProbability\s*=/);
+});
+test('scoreboard loading avoids stale response overwrites',()=>{
+ const src=read('src/app/27-board-team-loaders.js');
+ assert.ok((src.match(/state\.league!==league\|\|state\.date!==date/g)||[]).length>=2);
+ assert.match(src,/state\.feed=\{games:\[\],demo:true,updatedAt:null\}/);
+});
+test('team detail loading uses cache and blocks duplicate inflight loads',()=>{
+ const src=read('src/app/27-board-team-loaders.js');
+ assert.match(src,/state\.teamCache\[key\]&&!force/);
+ assert.match(src,/if\(state\.teamLoading\[key\]\)return/);
+});
+test('sportsbook quote never submits wagers or auto-places tickets',()=>{
+ const src=read('src/app/28-odds-signals.js');
+ assert.match(src,/state\.section='tickets'/);
+ assert.match(src,/Recheck the live price before placing any wager/);
+ assert.doesNotMatch(src,/placeBet\(|submitWager\(|fetch\([^\n]*\/bets\b/);
+});
+test('automatic ticket generator filters completed and demo games',()=>{
+ const src=read('src/app/29-ticket-autocomplete-generator.js');
+ assert.match(src,/!g\.demo&&g\.status==='scheduled'&&Date\.parse\(g\.start\)>Date\.now\(\)/);
+});
+test('ticket suggestions require valid unexpired single-book moneylines',()=>{
+ const src=read('src/app/30-controller.js');
+ assert.match(src,/l\.bookmakerKey===book&&l\.market==='Moneyline'/);
+ assert.match(src,/now-Date\.parse\(l\.oddsAsOf\)<=8\*3600_000/);
+ assert.match(src,/!games\.has\(l\.gameId\)/);
+ assert.match(src,/market-implied, not validated parlay confidence/);
+});
+test('release build has no forbidden legacy production model promotion',()=>{
+ const script=read('scripts/build-app.mjs');
+ assert.doesNotMatch(script,/prediction-model\.js|season-form-preview/);
+ assert.match(read('engine/backtest.mjs'),/allowPromotion:false/);
+});
