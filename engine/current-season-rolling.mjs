@@ -44,6 +44,8 @@ function asOf(team,day,league){
   lastGame:team?.lastGame||null,restDays:team?.lastGame?
    Math.max(0,Math.round((Date.parse(day+'T00:00:00Z')-Date.parse(team.lastGame+'T00:00:00Z'))/86400000)):null,
   last3:three,last5:five,last10:ten,
+  recentGames:hist.slice(-10).map(x=>({date:x.date,gameId:x.gameId,win:x.win,
+   margin:x.margin,opponentElo:Math.round(x.oppElo)})),
   momentum:three.games>=3&&ten.games>=5?clamp(three.winRate-ten.winRate,-1,1):null,
   formCoverage:five.games>=3?'adequate_for_research':'not_enough_prior_games',
   dataThrough:team?.lastGame||null};
