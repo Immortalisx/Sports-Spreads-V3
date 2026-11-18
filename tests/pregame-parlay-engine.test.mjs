@@ -5,7 +5,7 @@ const now=new Date('2026-11-18T20:00:00Z');
 const game={id:'nfl-123',league:'nfl',start:'2026-11-18T20:45:00Z'};
 const offer=(id,market,price,bookmakerKey='book1')=>({id,gameId:game.id,market,price,bookmakerKey,selection:id,playerId:market.startsWith('player_')?'player-1':undefined,asOf:'2026-11-18T19:58:00Z'});
 const legs=[offer('ml','h2h',-110),offer('yards','player_pass_yds',120)];
-const model={calibrated:true,prospectiveValidated:true,gameId:game.id,asOf:'2026-11-18T19:59:00Z',version:'holdout-v1',tickets:[{legIds:['ml','yards'],jointProbability:.40}]};
+const model={calibrated:true,prospectiveValidated:true,gameId:game.id,asOf:'2026-11-18T19:59:00Z',version:'holdout-v1',tickets:[{legIds:['ml','yards'],jointProbability:.40,combinedPrice:220,bookmakerKey:'book1',quoteAsOf:'2026-11-18T19:59:00Z'}]};
 test('pregame refuses outside 60-minute window',()=>{
  assert.equal(evaluatePregameParlay({...game,start:'2026-11-18T21:01:00Z'},legs,{now,model}).reason,'outside_final_hour');
  assert.equal(evaluatePregameParlay({...game,start:'2026-11-18T19:59:00Z'},legs,{now,model}).reason,'outside_final_hour');
@@ -27,6 +27,13 @@ test('pregame selects only positive edge supported by calibrated joint model',()
  assert.equal(result.bookmakerKey,'book1');
 });
 test('pregame refuses low or negative edge and unsupported markets',()=>{
- assert.equal(evaluatePregameParlay(game,legs,{now,model:{...model,tickets:[{legIds:['ml','yards'],jointProbability:.20}]}}).status,'PASS');
+ assert.equal(evaluatePregameParlay(game,legs,{now,model:{...model,tickets:[{legIds:['ml','yards'],jointProbability:.20,combinedPrice:220,bookmakerKey:'book1',quoteAsOf:'2026-11-18T19:59:00Z'}]}}).status,'PASS');
  assert.equal(evaluatePregameParlay(game,[legs[0],{...legs[1],market:'unverified_prop'}],{now,model}).status,'PASS');
+});
+
+test('SGP never uses multiplied standalone prices without a combined sportsbook quote',()=>{
+ const withoutQuote={...model,tickets:[{legIds:['ml','yards'],jointProbability:.40}]};
+ assert.equal(evaluatePregameParlay(game,legs,{now,model:withoutQuote}).status,'PASS');
+ assert.equal(evaluatePregameParlay(game,legs,{now,model:{...model,tickets:[{...model.tickets[0],quoteAsOf:'2026-11-18T19:40:00Z'}]}}).status,'PASS');
+ assert.equal(evaluatePregameParlay(game,legs,{now,model:{...model,tickets:[{...model.tickets[0],bookmakerKey:'other'}]}}).status,'PASS');
 });
