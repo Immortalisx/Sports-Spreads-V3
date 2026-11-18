@@ -119,3 +119,18 @@ test('release build has no forbidden legacy production model promotion',()=>{
  assert.match(script,/modelSource!==modelPublished/);
  assert.match(read('engine/backtest.mjs'),/allowPromotion:false/);
 });
+
+test('pregame game cards only expose final-hour sourced research and fail closed',()=>{
+ const src=read('src/app/19-ticket-builder.js');
+ assert.match(src,/const inPregameWindow=until<=60&&until>0/);
+ assert.match(src,/best&&fresh&&inPregameWindow/);
+ assert.match(src,/PASS · no fresh verified line/);
+ assert.match(src,/Player props unpriced/);
+ assert.doesNotMatch(src,/modelValidated:true/);
+});
+test('ticket dashboard refreshes only shared cached odds, never upstream provider',()=>{
+ const src=read('src/app/30-controller.js');
+ assert.match(src,/SportsOdds\.getBoard\(state\.league\)/);
+ assert.match(src,/5\*60\*1000/);
+ assert.doesNotMatch(src,/THE_ODDS_API_KEY|SUPABASE_SERVICE_ROLE_KEY/);
+});
