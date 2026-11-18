@@ -27,7 +27,8 @@ test('official complete seasons pass training gate and all 1,312 2025-26 games a
  assert.ok(walk.games.every(g=>g.date>='2025-10-07'&&g.date<='2026-04-16'));
  assert.ok(walk.games.every(g=>g.previousTeamGameThrough===null||g.previousTeamGameThrough<g.date));
  assert.ok(walk.games.every(g=>g.homeWinProbability>0&&g.homeWinProbability<1));
- console.log('NHL_WALKFORWARD_REPORT '+JSON.stringify(({games,...report})=>report)(walk));
+ const {games,...report}=walk;
+ console.log('NHL_WALKFORWARD_REPORT '+JSON.stringify(report));
 });
 
 test('reported Brier, accuracy, log loss and calibration have correct definitions',()=>{
