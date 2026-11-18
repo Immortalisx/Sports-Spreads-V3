@@ -73,7 +73,8 @@ export function walkForward(data,league,features,options={}){
  // window. Never random-shuffle time-ordered sports events.
  const cut=Math.floor(n*.70);
  const cutAt=days(eligible[cut].gameAt);
- const train=eligible.filter(r=>days(r.gameAt)<cutAt);
+ const train=eligible.filter(r=>days(r.gameAt)<cutAt&&days(r.resultKnownAt)<cutAt);
+ const excludedLateResults=eligible.filter(r=>days(r.gameAt)<cutAt&&days(r.resultKnownAt)>=cutAt).length;
  const holdout=eligible.filter(r=>days(r.gameAt)>=cutAt);
  if(holdout.length<min||!train.length)return {...meta,status:'insufficient_holdout',requiredHoldout:min,holdout:holdout.length};
  // Disjoint unique game IDs; duplicate records could inflate scores.
@@ -85,7 +86,7 @@ export function walkForward(data,league,features,options={}){
  // Transparent strict gate. Improvement may simply be sampling noise, so
  // production should later include repeated annual holdouts and confidence intervals.
  const validated=holdout.length>=min&&bm<bb-.002&&ece<=.045&&meta.spanDays>=360&&options.allowPromotion===true;
- return {...meta,status:validated?'validated':'research_only',weights,metrics,
+ return {...meta,excludedLateResults,trainingRows:train.length,status:validated?'validated':'research_only',weights,metrics,
   trainedThrough:train.at(-1).gameAt,validatedFrom:holdout[0].gameAt,validatedThrough:holdout.at(-1).gameAt,
   reason:validated?'Meets preliminary promotion criteria; still requires human review.':'Insufficient calibration gain, sample reliability, or promotion not approved.',
   version:`multifactor-${league}-candidate-v0.2`};
