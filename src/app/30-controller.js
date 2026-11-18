@@ -43,7 +43,7 @@ async function loadDailySuggestions(force=false){
  finally{
   clearTimeout(timer);d.loading=false;
   // Read shared cache only. No upstream odds credits or per-visitor refresh.
-  if(!state.odds[state.league])try{state.odds[state.league]=await SportsOdds.getBoard(state.league);}catch{}
+  if(!state.odds[state.league]||Date.now()-Date.parse(state.odds[state.league].asOf||'')>5*60*1000)try{state.odds[state.league]=await SportsOdds.getBoard(state.league);}catch{}
   render();
  }
 }
