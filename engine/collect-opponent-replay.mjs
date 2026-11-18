@@ -23,6 +23,9 @@ if(league==='nfl'){
   games.push(...rows);
  }
 }
+const counts=Object.fromEntries(seasons.map(s=>[s,games.filter(g=>g.season===s).length]));
+const minima=league==='nfl'?125:800;
+if(seasons.some(s=>counts[s]<minima))throw Error('Incomplete '+league+' historical coverage: '+JSON.stringify(counts)+'. Reject partial replay instead of reporting success.');
 const report={league,source:league==='nfl'?'nflverse community CSV':'official NHL club schedules',
  fetchedAt:new Date().toISOString(),games:games.length,bySeason:Object.fromEntries(seasons.map(s=>[s,games.filter(g=>g.season===s).length])),
  opponent:evaluateOpponentFactors(games,league),recency:validateRecency(games,league),
