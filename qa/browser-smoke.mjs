@@ -48,7 +48,7 @@ async function run(){
   const desktop=await browser.newPage({viewport:{width:1440,height:900}});
   const errors=[];desktop.on('pageerror',e=>errors.push(String(e)));
   await desktop.route('**/*',router);await desktop.goto(url,{waitUntil:'domcontentloaded'});
-  await desktop.locator('.game').first().waitFor({timeout:15000});
+  try{await desktop.locator('.game').first().waitFor({timeout:15000});}catch(e){console.error('Desktop startup diagnostics:',{errors,body:(await desktop.locator('body').innerText()).slice(0,2000),url:desktop.url()});throw e;}
   assert.match(await desktop.locator('#app').innerText(),/Test Home Team/);
   assert.equal(await desktop.locator('meta[property="og:url"]').getAttribute('content'),'https://sports-spreads.onrender.com/');
   assert.equal(errors.length,0,'Desktop exceptions: '+errors.join('; '));
