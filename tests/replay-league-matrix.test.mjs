@@ -26,7 +26,9 @@ test('workflow uses generated dynamic matrix and never schedules unselected leag
   assert.match(workflow,/matrix: \$\{\{ fromJSON\(needs\.select\.outputs\.matrix\) \}\}/);
   assert.match(workflow,/node engine\/replay-league-matrix\.mjs "\$SELECTED_LEAGUE" >> "\$GITHUB_OUTPUT"/);
   assert.doesNotMatch(workflow,/league: \[nfl, nhl\]/);
-  assert.doesNotMatch(workflow,/schedule:|push:|pull_request:/);
+  assert.doesNotMatch(workflow,/schedule:|push:/);
+  assert.match(workflow,/pull_request:\\n    paths:/);
+  assert.match(workflow,/github.event_name == 'pull_request' && 'both' \\|\\| inputs.league/);
 });
 test('research replay is read-only and does not deploy or promote',()=>{
   assert.match(workflow,/permissions:\s*\n  contents: read/);
