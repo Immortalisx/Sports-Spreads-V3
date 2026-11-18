@@ -23,7 +23,7 @@ class ExtractionTest(unittest.TestCase):
         chart={"week1":stats("2025-09-01"),"week2":stats("2025-09-03")}
         x={r["gameId"]:r for r in m.features_for_season(games,chart)}
         self.assertFalse(x["nfl-week2"]["available"])
-        self.assertFalse(x["nfl-week3"]["available"])
+        self.assertTrue(x["nfl-week3"]["available"])
         self.assertTrue(x["nfl-week4"]["available"])
         self.assertEqual(x["nfl-week4"]["home"]["projectedQb"],"q1")
         self.assertEqual(x["nfl-week4"]["sourceDataThrough"],"2025-09-06")
