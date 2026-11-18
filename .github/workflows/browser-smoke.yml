@@ -10,6 +10,7 @@ on:
     paths:
       - '.github/workflows/browser-smoke.yml'
       - 'qa/browser-smoke.mjs'
+      - 'qa/performance-benchmark.mjs'
       - 'src/app/**'
       - 'public/**'
       - 'index.html'
@@ -32,6 +33,9 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Run desktop, mobile and TV browser interaction checks
         run: node qa/browser-smoke.mjs
+      - name: Benchmark emulated mobile and desktop (no provider credits)
+        if: always()
+        run: node qa/performance-benchmark.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -39,3 +43,11 @@ jobs:
           path: qa/screenshots/*.png
           if-no-files-found: ignore
           retention-days: 3
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sports-spreads-performance-lab
+          path: qa/reports/performance-lab.json
+          if-no-files-found: ignore
+          retention-days: 14

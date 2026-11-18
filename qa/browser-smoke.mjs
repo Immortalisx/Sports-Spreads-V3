@@ -13,6 +13,7 @@ const event={events:[{id:'401999123',date:gameStart,status:{type:{state:'pre',sh
  {homeAway:'home',team:{id:'1',displayName:'Test Home Team',shortDisplayName:'Home Team',abbreviation:'HOM'},records:[{type:'total',summary:'8-2'}]},
  {homeAway:'away',team:{id:'2',displayName:'Test Away Team',shortDisplayName:'Away Team',abbreviation:'AWY'},records:[{type:'total',summary:'4-6'}]}
  ],venue:{fullName:'Test Arena',indoor:true,address:{city:'Test City',state:'MD',country:'USA'}}}]}]};
+const scoreboard={league:'nba',updatedAt:new Date().toISOString(),games:[{id:'401999123',league:'nba',home:{id:'1',name:'Test Home Team',abbr:'HOM',record:'8-2'},away:{id:'2',name:'Test Away Team',abbr:'AWY',record:'4-6'},start:gameStart,status:'scheduled',statusText:'Scheduled',venue:'Test Arena',venueIndoor:true,demo:false}]};
 async function run(){
  await ready();await mkdir('qa/screenshots',{recursive:true});
  const browser=await chromium.launch({headless:true});
@@ -20,7 +21,7 @@ async function run(){
   const router=async route=>{
    const requestUrl=route.request().url();
    if(requestUrl.includes('/functions/v1/sports-feed')||requestUrl.includes('/api/scoreboard'))
-    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(event)});
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(scoreboard)});
    if(requestUrl.includes('/functions/v1/daily-tickets'))
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
       status:'ready',generatedAt:new Date().toISOString(),
@@ -48,7 +49,7 @@ async function run(){
   const desktop=await browser.newPage({viewport:{width:1440,height:900}});
   const errors=[];desktop.on('pageerror',e=>errors.push(String(e)));
   await desktop.route('**/*',router);await desktop.goto(url,{waitUntil:'domcontentloaded'});
-  await desktop.locator('.game').first().waitFor({timeout:15000});
+  try{await desktop.locator('.game').first().waitFor({timeout:15000});}catch(e){console.error('Desktop startup diagnostics:',{errors,body:(await desktop.locator('body').innerText()).slice(0,2000),url:desktop.url()});throw e;}
   assert.match(await desktop.locator('#app').innerText(),/Test Home Team/);
   assert.equal(await desktop.locator('meta[property="og:url"]').getAttribute('content'),'https://sports-spreads.onrender.com/');
   assert.equal(errors.length,0,'Desktop exceptions: '+errors.join('; '));

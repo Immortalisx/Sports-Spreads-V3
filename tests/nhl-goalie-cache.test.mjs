@@ -39,7 +39,7 @@ test('only matched upcoming NHL games show published recent goalie research',()=
  assert.match(view,/upcoming starting goalies are NOT confirmed/);
  assert.match(view,/\$\{nhlGoaliePanel\(g\)\}/);
  assert.match(ctrl,/loadNhlGoalies\(force=false\)/);
- assert.match(ctrl,/if\(league==='nhl'&&first\)void loadNhlGoalies\(\)/);
+ assert.match(ctrl,/if\(game.league==='nhl'\)void loadNhlGoalies\(\)/);
  assert.match(ctrl,/retry-nhl-goalies/);
  assert.match(state,/nhlGoalies:null/);
 });
