@@ -37,7 +37,7 @@ async function loadDailySuggestions(force=false){
   if(!res.ok)throw Error('Daily suggestions unavailable');
   const json=await res.json();
   if(!json||!Array.isArray(json.cards))throw Error('Invalid daily suggestion snapshot');
-  d.cards=json.cards;d.generatedAt=json.generatedAt||'';
+  d.cards=json.cards;d.pregame=json.pregame&&Array.isArray(json.pregame.games)?json.pregame:null;d.generatedAt=json.generatedAt||'';
   d.status=json.status||'pending';d.loaded=true;
  }catch(e){d.error=e?.message||'Daily suggestions unavailable';d.cards=[];}
  finally{
@@ -106,6 +106,8 @@ async function refreshPregameDashboard(){
  try{
   const snapshot=await SportsOdds.getBoard(state.league);
   if(['ok','cached'].includes(snapshot?.status))state.odds[state.league]=snapshot;
+  // Reload server-side per-game eligibility using the same shared cache.
+  await loadDailySuggestions(true);
  }catch(e){state.oddsError[state.league]=e?.message||'Shared odds cache unavailable';}
  if(state.section==='tickets')render();
 }
