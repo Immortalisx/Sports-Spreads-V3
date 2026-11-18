@@ -36,7 +36,7 @@ test('only matched upcoming NHL games show published recent goalie research',()=
  assert.match(view,/x\.awayAbbrev===away/);
  assert.match(view,/Math\.abs\(Date\.parse\(x\.start/);
  assert.match(view,/Starter unconfirmed/);
- assert.match(view,/not a confirmed upcoming starter/);
+ assert.match(view,/upcoming starting goalies are NOT confirmed/);
  assert.match(view,/\$\{nhlGoaliePanel\(g\)\}/);
  assert.match(ctrl,/loadNhlGoalies\(force=false\)/);
  assert.match(ctrl,/if\(league==='nhl'&&first\)void loadNhlGoalies\(\)/);
