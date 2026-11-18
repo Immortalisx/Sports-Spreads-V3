@@ -454,3 +454,19 @@ body:not(.big-screen-mode){
 .daily-suggestions{margin-bottom:14px}
 .daily-section-head .block-label:empty{display:none}
 @media(max-width:620px){.ticket-ticker-compact{padding:13px 15px}.ticket-ticker-compact .ticker-values{gap:8px}.ticket-ticker-compact .ticker-name{font-size:11px}.ticket-ticker-compact .ticker-stat strong{font-size:21px}.auto-ticket-card{padding:16px!important}.auto-ticket-card .auto-ticket-top{margin-bottom:8px}.auto-ticket-card .auto-ticket-bottom p{font-size:11px}.daily-suggestions .daily-section-head{margin-bottom:10px}}
+
+/* Provenance-first NFL coaching matchup and real last-ten result glyphs. */
+.coaching-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:13px}
+.coaching-heading .block-label{margin:0}
+.coach-grid{gap:10px;margin-bottom:12px}
+.coach-card{display:flex;flex-direction:column;gap:6px;min-width:0;border:1px solid var(--stroke);border-radius:11px;background:var(--panel2);padding:13px}
+.coach-card strong{font-size:14px;overflow-wrap:anywhere}
+.coach-stat{font-family:'Space Grotesk',sans-serif;color:var(--accent);font-weight:700}
+.coach-h2h{padding:10px 0;border-top:1px solid var(--stroke);display:flex;flex-direction:column;gap:5px}
+.coaching-panel>.muted-sm{line-height:1.55}
+.form-sparkline{height:21px;display:flex;align-items:flex-end;gap:4px;margin:8px 0 3px}
+.form-sparkline span{display:block;flex:1;max-width:19px;border-radius:3px 3px 1px 1px}
+.form-sparkline .trend-win{height:19px;background:var(--accent)}
+.form-sparkline .trend-loss{height:8px;background:#60778a}
+.trend-label{display:block;color:var(--muted);font-size:10px;margin-bottom:8px}
+@media(max-width:460px){.coach-grid{grid-template-columns:minmax(0,1fr)}}
