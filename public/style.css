@@ -470,3 +470,10 @@ body:not(.big-screen-mode){
 .form-sparkline .trend-loss{height:8px;background:#60778a}
 .trend-label{display:block;color:var(--muted);font-size:10px;margin-bottom:8px}
 @media(max-width:460px){.coach-grid{grid-template-columns:minmax(0,1fr)}}
+
+.scouting-panel summary{cursor:pointer;font-weight:700;color:var(--text)}
+.scouting-panel>p{margin:11px 0}
+.scouting-row{display:grid;grid-template-columns:minmax(76px,1fr) 1fr 1fr;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--stroke)}
+.scouting-row span{display:grid;gap:3px}
+.scouting-row b{font-size:17px;color:var(--text)}
+.scouting-row small{color:var(--muted);font-size:10px;line-height:1.35}
