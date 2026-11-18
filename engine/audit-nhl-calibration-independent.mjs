@@ -105,7 +105,7 @@ function metrics(rows,key){
   actualHomeWinRate:mean(rows.map(r=>r.y)),
   bins};
 }
-export function runIndependentAudit({earlier=old,later=recent}={}){
+export function runIndependentAudit({earlier=old,later=recent,includeRows=false}={}){
  const rows=[...earlier.rows,...later.rows];
  const integrity=verifyFixture(rows);
  const sorted=rows.slice().sort((a,b)=>a[2].localeCompare(b[2])||String(a[0]).localeCompare(String(b[0])));
@@ -130,6 +130,12 @@ export function runIndependentAudit({earlier=old,later=recent}={}){
  return {status:'research_only_independent_audit',promotionAllowed:false,
   fixtureIntegrity:integrity,fit,validation:exportWindow(validation),
   exploratory:exportWindow(exploratory),
+  // Optional research-only observation feed; default report output stays unchanged.
+  // Raw and calibrated forecasts are computed by this same untouched audit.
+  ...(includeRows?{rowSets:{
+   validation:validation.gameRows.map(({id,season,date,home,away,y,p,cal})=>({id,season,date,home,away,y,p,cal})),
+   diagnostic:exploratory.gameRows.map(({id,season,date,home,away,y,p,cal})=>({id,season,date,home,away,y,p,cal}))
+  }}:{}),
   checks:{noFutureHoldoutLoaded:seasons.every(s=>s<=20252026),
    disjointSplit:[20222023,20232024,20242025,20252026],
    futureProspective2026_27:'NOT_SCORED',
