@@ -61,3 +61,36 @@ test('ambiguous QB depth chart and post-kickoff fixtures are not invented',()=>{
  assert.throws(()=>buildPregameAvailability({fixtures:[...games,...games],
   injuries:new Map(),depthCharts:new Map(),observedAt:now}),/Repeated game/);
 });
+
+test('accepts current 2026 ESPN injury-group IDs and verified athlete player links',()=>{
+ const data={injuries:[{id:'22',displayName:'Arizona Cardinals',injuries:[
+  {status:'Injured Reserve',date:'2026-11-14T18:00:00Z',
+   athlete:{displayName:'Sample Safety',team:{id:'22'},position:{abbreviation:'S'},
+    links:[{href:'https://www.espn.com/nfl/player/_/id/3918331/sample-safety'}]}},
+  {status:'Questionable',athlete:{displayName:'Other Club',team:{id:'34'},
+   position:{abbreviation:'QB'},links:[{href:'https://www.espn.com/nfl/player/_/id/3917792/other'}]}}
+ ]}]};
+ const got=parseLeagueInjuries(data,{observedAt:now});
+ assert.equal(got.get('22').length,1);
+ assert.equal(got.get('22')[0].playerId,'3918331');
+ assert.equal(got.get('22')[0].status,'injured_reserve');
+ assert.equal(got.get('22')[0].observedAt,now);
+});
+test('current singular depthchart format uses ordered QB entries as projections, NOT confirmations',()=>{
+ const payload={depthchart:[{name:'3WR 1TE',positions:{
+ qb:{position:{abbreviation:'QB'},athletes:[
+  {id:'4432577',displayName:'First QB'},
+  {id:'4242546',displayName:'Backup QB'}]}}}]};
+ const r=parseQbDepth(payload,{observedAt:now});
+ assert.equal(r.status,'projected');
+ assert.equal(r.qb1.id,'4432577');
+ assert.equal(r.qb2.id,'4242546');
+ assert.match(r.reason,/never a confirmed kickoff starter/);
+});
+test('multiple conflicting 2026 offensive depth charts do not invent a starter',()=>{
+ const payload={depthchart:[
+ {name:'Offense A',positions:{qb:{athletes:[{id:'11',displayName:'A'}]}}},
+ {name:'Offense B',positions:{qb:{athletes:[{id:'12',displayName:'B'}]}}}
+ ]};
+ assert.equal(parseQbDepth(payload,{observedAt:now}).status,'unknown');
+});
