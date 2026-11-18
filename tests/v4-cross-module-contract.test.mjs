@@ -141,3 +141,19 @@ test('ticket dashboard refreshes only shared cached odds, never upstream provide
  assert.match(src,/5\*60\*1000/);
  assert.doesNotMatch(src,/THE_ODDS_API_KEY|SUPABASE_SERVICE_ROLE_KEY/);
 });
+
+test('pregame endpoint consumes only shared cached events and returns explicit model status',()=>{
+ const src=read('supabase/functions/daily-tickets/index.ts');
+ assert.match(src,/sports_odds_cache\?select=league,snapshot,fetched_at/);
+ assert.match(src,/evaluatePregameParlay\(game,\[\],\{now\}\)/);
+ assert.match(src,/modelStatus:'not_validated'/);
+ assert.doesNotMatch(src,/THE_ODDS_API_KEY/);
+});
+test('automatic tickets load server pregame snapshots without generating phantom bets',()=>{
+ const src=read('src/app/30-controller.js');
+ assert.match(src,/d\.pregame=json\.pregame/);
+ assert.match(src,/await loadDailySuggestions\(true\)/);
+ const ui=read('src/app/19-ticket-builder.js');
+ assert.match(ui,/Server checked/);
+ assert.match(ui,/PASS · no validated edge/);
+});
