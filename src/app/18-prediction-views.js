@@ -160,7 +160,17 @@ function currentSeasonPanel(g){
  }
  const pct=x=>Number.isFinite(x)?Math.round(x*100)+'%':'—';
  const fmt=x=>Number.isFinite(x)?x.toFixed(2):'—';
- const card=(name,t)=>'<div class="current-form-team"><strong>'+esc(name)+'</strong>'+
+  const trend=t=>{
+  const games=Array.isArray(t?.recentGames)?t.recentGames.filter(x=>
+   x&&typeof x.win==='boolean'&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)).slice(-10):[];
+  if(!games.length)return '';
+  const results=games.map(x=>x.win?'W':'L').join(' ');
+  return '<div class="form-sparkline" role="img" aria-label="'+esc('Recent games: '+results)+'">'+
+   games.map(x=>'<span class="'+(x.win?'trend-win':'trend-loss')+'" title="'+
+    esc(x.date+' · '+(x.win?'Win':'Loss')+' · '+(x.margin>=0?'+':'')+x.margin)+'"></span>').join('')+
+   '</div><small class="trend-label">Last '+games.length+' results · oldest → newest</small>';
+ };
+const card=(name,t)=>'<div class="current-form-team"><strong>'+esc(name)+'</strong>'+trend(t)+
    '<span><b>'+pct(t.last5.winRate)+'</b><small>Last 5 win rate</small></span>'+
    '<span><b>'+pct(t.last10.winRate)+'</b><small>Last 10 win rate</small></span>'+
    '<span><b>'+fmt(t.last5.opponentAdjustedMargin)+'</b><small>Opponent-adjusted form index</small></span>'+
