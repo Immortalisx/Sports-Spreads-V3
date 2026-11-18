@@ -19,7 +19,7 @@ const load=url=>JSON.parse(readFileSync(new URL(url,import.meta.url),'utf8'));
 const oldDefault=load('../tests/fixtures/nhl-2022-2024-regular-results.json');
 const newDefault=load('../tests/fixtures/nhl-2024-2026-regular-results.json');
 const expected={
-  20222023:['2022-10-07','2023-04-13'],
+  20222023:['2022-10-07','2023-04-14'],
   20232024:['2023-10-10','2024-04-18']
 };
 const ARIZONA_ERA_TEAMS='ANA,ARI,BOS,BUF,CAR,CBJ,CGY,CHI,COL,DAL,DET,EDM,FLA,LAK,MIN,MTL,NJD,NSH,NYI,NYR,OTT,PHI,PIT,SEA,SJS,STL,TBL,TOR,VAN,VGK,WPG,WSH'.split(',');
