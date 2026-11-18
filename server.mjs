@@ -21,7 +21,7 @@ async function providerSnapshot(league){
 }
 function apiSportsGame(item,league){
  const game=item.game??item;
- const home=item.teams?.home??{},away=item.teams?.away??{};
+ const home=item.teams?.home??{},away=item.teams?.away??item.teams?.visitors??{};
  const start=game.date?.start??game.date?.date??game.date??item.date?.start??item.date??null;
  const date=typeof start==='string'?start:null;
  const rawStatus=game.status?.short??game.status?.long??item.status?.short??item.status?.long??'';
