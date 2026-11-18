@@ -1,0 +1,28 @@
+name: Rebuild V4 generated artifacts
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v4-postrelease-architecture-audit-2026-11-18
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run build:static
+      - run: npm run verify:release
+      - run: npm test
+      - name: Commit generated artifacts
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/app.js release/index.html index.html public/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Regenerate production standalone and modular app artifacts'
+            git push origin HEAD:v4-postrelease-architecture-audit-2026-11-18
+          fi
