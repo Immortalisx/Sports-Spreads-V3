@@ -502,8 +502,23 @@ body:not(.big-screen-mode){
 .odds-history-caption strong{font-family:'Space Grotesk',sans-serif;font-size:20px}
 .odds-history-caption small{font-size:10px;color:var(--muted);line-height:1.4}
 
+/* Feature-card polish: prominent, readable and responsive without added assets. */
+.big-one-hero{position:relative;overflow:hidden;grid-column:1/-1;padding:22px!important;border:1px solid #c69b60!important;background:radial-gradient(circle at 85% 0%,rgba(246,187,94,.20),transparent 48%),linear-gradient(135deg,#302a32,#102738 76%)!important;box-shadow:0 0 0 1px rgba(255,214,145,.10),0 16px 36px rgba(0,0,0,.24)!important}
+.big-one-hero:before{content:'✦';position:absolute;right:16px;top:35px;font-size:94px;line-height:1;color:rgba(247,196,113,.12);pointer-events:none}
+.big-one-hero .daily-card-title strong{font-size:clamp(19px,4vw,27px);letter-spacing:.04em;color:#ffe0a3}
+.big-one-hero .daily-card-sub{font-size:13px;color:#d9c7ae}
+.big-one-status{display:inline-block;margin-top:12px;padding:8px 11px;border-radius:999px;border:1px solid #80684c;color:#f3d4a3;font-size:11px;font-weight:700}
+.team-logo img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(0,0,0,.22))}
+@media(max-width:640px){.big-one-hero{padding:18px!important}.big-one-hero:before{font-size:70px}}
 
-.big-one-hero{position:relative;overflow:hidden;grid-column:1/-1;padding:22px!important;border:1px solid #c69b60!important;background:radial-gradient(circle at 85% 0%,rgba(246,187,94,.20),transparent 48%),linear-gradient(135deg,#302a32,#102738 76%)!important;box-shadow:0 0 0 1px rgba(255,214,145,.10),0 16px 36px rgba(0,0,0,.24)!important}.big-one-hero:before{content:'✦';position:absolute;right:16px;top:35px;font-size:94px;line-height:1;color:rgba(247,196,113,.12);pointer-events:none}.big-one-hero .daily-card-title strong{font-size:clamp(19px,4vw,27px);letter-spacing:.04em;color:#ffe0a3}.big-one-hero .daily-card-sub{font-size:13px;color:#d9c7ae}.big-one-status{display:inline-block;margin-top:12px;padding:8px 11px;border-radius:999px;border:1px solid #80684c;color:#f3d4a3;font-size:11px;font-weight:700}.team-logo img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(0,0,0,.22))}@media(max-width:640px){.big-one-hero{padding:18px!important}.big-one-hero:before{font-size:70px}}
+/* Compact matchups and clear market provenance */
+.game-grid .game{position:relative;overflow:hidden;background:linear-gradient(145deg,#182a3a,#101d2b);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.game-grid .game:hover{transform:translateY(-2px);border-color:rgba(98,225,188,.4);box-shadow:0 10px 28px rgba(0,0,0,.16)}
+.game-grid .game .team-logo{filter:drop-shadow(0 5px 10px rgba(0,0,0,.18))}
+.game-grid .game .game-foot{gap:10px;align-items:center}
+.game-grid .game .game-foot>span{font-size:12px;line-height:1.4;max-width:70%;overflow-wrap:anywhere}
+@media(max-width:640px){.game-grid .game{padding:15px!important}.game-grid .game .teams{gap:7px}.game-grid .game .team-col button{font-size:14px;line-height:1.3}.game-grid .game .game-foot{margin-top:13px;padding-top:12px}.game-grid .game .team-logo{width:58px;height:58px}}
+
 </style>
   <script>window.SS_CLOUD_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co',publishableKey:'sb_publishable_BX7-wUhJWAp7d3fa3I7Uew_VZc4JHE6'};</script>
   <script>window.SS_FEED_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/sports-feed'};</script>
