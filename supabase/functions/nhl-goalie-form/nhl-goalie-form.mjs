@@ -59,6 +59,6 @@ export function buildNhlGoalieSnapshot({games,teamGoalies,generatedAt}){
    confidenceAdjustment:null});
  }
  return {version:NHL_GOALIE_VERSION,status:'cached',generatedAt,league:'nhl',
-  games:out,source:'NHL public Web API · team goalie game logs',xGoalsStatus:'not sourced',
+  games:out,source:'NHL public game-level goalie statistics',xGoalsStatus:'not sourced',
   caution:'Most recent starter is not a confirmed upcoming starter; no expected-goals or bookmaker-confidence assumptions'};
 }
