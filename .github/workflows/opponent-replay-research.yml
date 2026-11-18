@@ -40,12 +40,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Replay historical finals against baseline (no paid API)
+      - name: Replay attributed historical finals (free public sources only)
+        timeout-minutes: 12
         run: node engine/collect-opponent-replay.mjs ${{ matrix.league }}
+      - name: Validate calibration metrics, intervals and no-promotion gate
+        timeout-minutes: 2
+        run: node engine/verify-opponent-replay.mjs ${{ matrix.league }} research/${{ matrix.league }}-opponent-replay.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: opponent-replay-${{ matrix.league }}
           path: research/${{ matrix.league }}-opponent-replay.json
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 7
