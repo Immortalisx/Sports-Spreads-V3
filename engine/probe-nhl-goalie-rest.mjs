@@ -9,7 +9,7 @@ const raw=await r.text();if(raw.length>3000000)throw Error('bulk goalie rows too
 const d=JSON.parse(raw);
 console.log('GOALIE_BULK_SCHEMA='+JSON.stringify({keys:Object.keys(d),total:d.total,
  rows:d.data?.length,first:d.data?.slice(0,2).map(x=>({keys:Object.keys(x),
- gameId:x.gameId,gameDate:x.gameDate,playerId:x.playerId,
+ gameId:x.gameId,gameDate:x.gameDate,playerId:x.playerId,goalieFullName:x.goalieFullName,
  teamAbbrev:x.teamAbbrev,teamId:x.teamId,shotsAgainst:x.shotsAgainst,
  saves:x.saves,goalsAgainst:x.goalsAgainst,savePct:x.savePct,goalieStarted:x.gamesStarted,
  wins:x.wins,losses:x.losses}))}));
