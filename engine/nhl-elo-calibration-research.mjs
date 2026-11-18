@@ -76,7 +76,7 @@ export function validateEarlierNhlHistory(source){
  return {ok:true,priorTrainingGames:2624,seasons:[20222023,20232024],priorGamesPerTeam:164};
 }
 
-/** Frozen Platt fit on validation season ONLY; intercept/slope priors 0 and 1. */
+/** Frozen Platt fit on dedicated 2023-24 fit season ONLY; intercept/slope priors 0 and 1. */
 export function fitFrozenPlatt(validationRows){
  if(!Array.isArray(validationRows)||validationRows.length!==CALIBRATION_RULES.minimumFitGames
    ||validationRows.some(r=>r.season!==20232024||!(r.baseline>0&&r.baseline<1)
@@ -169,11 +169,11 @@ export function runNhlCalibrationResearch({earlier=oldDefault,later=newDefault}=
    priorEvidenceThrough:r.evidence.through};
  });
  const baseline=metrics(rows,'rawHomeProbability'),candidate=metrics(rows,'calibratedHomeProbability');
- const fitValidation=validationRows.map(r=>({homeWin:r.y,rawHomeProbability:r.baseline,
+ const validationGames=validationRows.map(r=>({homeWin:r.y,rawHomeProbability:r.baseline,
   calibratedHomeProbability:applyFrozenPlatt(r.baseline,fit)}));
  const validationScores={
-  baseline:metrics(fitValidation,'rawHomeProbability'),
-  calibrated:metrics(fitValidation,'calibratedHomeProbability')
+  baseline:metrics(validationGames,'rawHomeProbability'),
+  calibrated:metrics(validationGames,'calibratedHomeProbability')
  };
  const improvement=baseline.brier-candidate.brier;
  const ci=dayBootstrap(rows);
