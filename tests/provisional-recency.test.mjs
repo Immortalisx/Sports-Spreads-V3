@@ -84,3 +84,43 @@ test('betting-related daily cards visibly mark unvalidated joint chances but ret
  assert.match(s,/not validated wagering confidence/);
  assert.match(s,/Bookmaker-implied /);
 });
+
+test('prediction engine itself rejects mismatched, same-day and future-looking recency snapshots',()=>{
+ const c=context(),g=game('nfl'),s=snapshot('nfl');
+ const baseline=c.SportsPrediction.project(g);
+ assert.equal(c.SportsPrediction.project(g,{currentForm:s}).recencyUsed,true,
+  'verified exact-match evidence should still work');
+ const rejected=[
+  ['other game',{...s,gameId:'other'}],
+  ['other league',{...s,league:'nhl'}],
+  ['home swap',{...s,homeTeamId:'902'}],
+  ['away swap',{...s,awayTeamId:'901'}],
+  ['wrong date',{...s,date:'2026-11-01'}],
+  ['missing evidence cutoff',{...s,evidence:{...s.evidence,dateCutoff:'unknown'}}],
+  ['same-day outcome',{...s,evidence:{...s.evidence,latestCompletedGame:etDate}}],
+  ['future outcome',{...s,evidence:{...s.evidence,latestCompletedGame:'2099-01-01'}}],
+  ['not enough games',{...s,home:{...s.home,played:2}}]
+ ];
+ for(const [label,unsafe] of rejected){
+  const result=c.SportsPrediction.project(g,{currentForm:unsafe});
+  assert.equal(result.recencyUsed,false,label);
+  assert.equal(result.homeProbability,baseline.homeProbability,label);
+ }
+ for(const [label,badGame] of [
+  ['unknown home ID',{...g,home:{...g.home,id:null}}],
+  ['missing schedule start',{...g,start:null}],
+  ['past schedule start',{...g,start:'2020-01-01T00:00:00Z'}]
+ ]){
+  const result=c.SportsPrediction.project(badGame,{currentForm:s});
+  assert.equal(result.recencyUsed,false,label);
+ }
+});
+test('direct NHL projection preserves the verified cap and blocks cross-game evidence',()=>{
+ const c=context(),g=game('nhl'),s=snapshot('nhl');
+ const baseline=c.SportsPrediction.project(g);
+ const valid=c.SportsPrediction.project(g,{currentForm:s});
+ assert.equal(valid.recencyUsed,true);
+ assert.ok(valid.homeProbability-baseline.homeProbability<=.02000001);
+ assert.equal(c.SportsPrediction.project(g,{currentForm:{...s,gameId:'unrelated'}}).homeProbability,
+  baseline.homeProbability);
+});
