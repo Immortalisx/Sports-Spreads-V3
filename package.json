@@ -14,7 +14,8 @@
     "research:collect": "node engine/collect-research.mjs",
     "research:backtest": "node engine/run-retrospective.mjs",
     "research:study": "node engine/research-study.mjs",
-    "verify:release": "node scripts/verify-release.mjs"
+    "verify:release": "node scripts/verify-release.mjs",
+    "postinstall": "npm test"
   },
   "engines": {
     "node": ">=20"
