@@ -48,7 +48,7 @@ test('suggestions are genuinely separate: no manual form or hidden duplicate wid
 });
 test('manual builder preserves accessible selection, props and ticket review without automatic slate',()=>{
  const {ui}=renderLab();
- ui.state.ticketMode='manual';ui.state.draft={league:'nfl',market:'Player yards',selection:'Test Runner'};
+ ui.state.ticketMode='manual';ui.state.draft={league:'nfl',market:'Player yards',selection:'Test Runner'};ui.state.ticket=[{id:'leg',selection:'Test Runner',league:'nfl',market:'Player yards',odds:110}];
  const html=ui.ticketView();
  assert.match(html,/id="leg-form"/);
  assert.match(html,/role="combobox"/);
