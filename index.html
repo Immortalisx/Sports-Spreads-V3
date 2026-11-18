@@ -1769,9 +1769,9 @@ function gameCard(game){
  return '<article class="game game-card-v3" data-league="'+esc(game.league)+'">'+
   '<div class="match-v3-head"><span class="match-v3-league">'+esc((SPORTS[game.league]?.label||game.league).toUpperCase())+' <b>·</b> '+esc(date)+'</span>'+
   '<span class="tag '+(game.status==='live'?'live':game.status==='final'?'final':'')+'">'+esc(game.demo?'Demo':game.status)+'</span></div>'+
-  '<div class="match-v3-time"><span>'+esc(startName)+'</span><strong>'+esc(time)+'</strong></div>'+
+  '<div class="match-v3-time game-start-time"><span>'+esc(startName)+'</span><strong>'+esc(time)+'</strong></div>'+
   '<div class="match-v3-teams">'+teamRow(game.away,'away')+teamRow(game.home,'home')+'</div>'+
-  '<div class="match-v3-foot"><span>'+esc(scored?'Final score':game.status==='final'?'Final · score unavailable':game.status==='live'?'Live matchup':'Matchup preview')+'</span>'+
+  '<div class="match-v3-foot"><span>'+esc(scored?'Final score':game.status==='final'?'Final · score unavailable':game.status==='live'?'Live matchup':'Matchup overview')+'</span>'+
   '<button class="drill" data-action="game" data-game="'+esc(game.id)+'">Explore matchup <span aria-hidden="true">↗</span></button></div></article>';
 }
 function filteredGames(){const games=state.feed?.games??[];const q=state.search.trim().toLowerCase();return q?games.filter(x=>(x.home.name+' '+x.away.name+' '+x.home.abbr+' '+x.away.abbr).toLowerCase().includes(q)):games;}
