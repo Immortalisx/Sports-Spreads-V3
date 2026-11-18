@@ -2205,7 +2205,12 @@ async function loadDailySuggestions(force=false){
   d.cards=json.cards;d.generatedAt=json.generatedAt||'';
   d.status=json.status||'pending';d.loaded=true;
  }catch(e){d.error=e?.message||'Daily suggestions unavailable';d.cards=[];}
- finally{clearTimeout(timer);d.loading=false;render();}
+ finally{
+  clearTimeout(timer);d.loading=false;
+  // Read shared cache only. No upstream odds credits or per-visitor refresh.
+  if(!state.odds[state.league])try{state.odds[state.league]=await SportsOdds.getBoard(state.league);}catch{}
+  render();
+ }
 }
 function loadSuggestedTicket(id){
  const card=state.daily?.cards?.find(c=>c.id===id&&c.available===true);
