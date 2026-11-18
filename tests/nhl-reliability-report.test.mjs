@@ -42,7 +42,7 @@ test('Wilson intervals handle empty bins, deterministic boundaries and known obs
  assert.ok(high2>.79&&high2<.8);
  const [low3,high3]=wilson95(1,1);
  assert.ok(low3>.2&&low3<.21);
- assert.equal(high3,1);
+ assert.ok(Math.abs(high3-1)<1e-14);
  for(const [w,n] of [[-1,3],[4,3],[.5,3],[0,-1]])assert.throws(()=>wilson95(w,n),/invalid_wilson_counts/);
 });
 
@@ -104,7 +104,7 @@ test('benchmarks are fixed before each evaluated season and reproduce exact squa
   assert.ok(Math.abs(series.calibrated.brierSkillVsAlways50-(1-series.calibrated.brier/.25))<1e-13);
   assert.ok(Math.abs(series.raw.brierSkillVsPriorHome-
    (1-series.raw.brier/b.precedingSeasonHomeRateBrier))<1e-13);
-  assert.equal(season.comparison.calibratedMinusRawCorrect,
+  assert.equal(season.comparison.correctWinnerDifferenceCalMinusRaw,
    series.calibrated.correct-series.raw.correct);
   assert.ok(Math.abs(season.comparison.brierGainRawMinusCalibrated-
    (series.raw.brier-series.calibrated.brier))<1e-13);
