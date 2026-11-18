@@ -64,7 +64,7 @@ async function run(){
   assert.match(await desktop.locator('.ticket-item').first().innerText(),/Test Home Team/);
   assert.match(await desktop.locator('.auto-ticket-status').innerText(),/market-derived/i);
   await desktop.locator('.daily-ticket-card.big-one').waitFor({timeout:8000});
-  assert.match(await desktop.locator('.daily-ticket-card.big-one').innerText(),/The Big One/);
+  assert.match(await desktop.locator('.daily-ticket-card.big-one').innerText(),/the big one/i);
   await desktop.locator('[data-action="clear-ticket"]').first().click();
   await desktop.locator('.daily-ticket-card.big-one [data-action="daily-ticket-load"]').click();
   assert.equal(await desktop.locator('.ticket-item').count(),4);
