@@ -9,7 +9,7 @@ This is a read-only assessment. **No production deployment, paid-provider refres
 - Seven active Edge Functions: sports-feed, nfl-availability, nhl-goalie-form, sportsbook-odds, season-form, daily-tickets, matchup-signals.
 - Database read-only inspection confirmed JSON cache rows for NFL availability, NHL goalie form, NFL/NBA/NHL season form, and NFL/NBA/NHL/MLB odds.
 - Latest odds-cache rows for all four leagues were fetched 2026-11-17 21:54–21:55 UTC. The only daily-ticket row was for 2026-11-17, generated 22:28 UTC.
-- November 2026 odds budget row: **4 reserved credits**. The configured cap in `supabase/functions/sportsbook-odds/index.ts` is 400 per UTC month.
+- All five relevant Supabase cron jobs are active: odds at 17:00/23:00 UTC, daily tickets 17:15 UTC, season form 17:25 UTC, NHL goalies 17:35 UTC, NFL availability 17:45 UTC. The inspection occurred before the November 18 17:00 UTC refresh, so November 17 cache dates do **not** by themselves prove a failed refresh.\n- November 2026 odds budget row: **4 reserved credits**. The configured cap in `supabase/functions/sportsbook-odds/index.ts` is 400 per UTC month.
 - Supabase security advisors returned only INFO notices: seven service-only RLS-enabled tables with no public policies. These should remain inaccessible to public clients; their Edge Functions use server-side access. Performance advisor reported one unused index on `user_tickets` (too early to justify removal).
 
 ## Still required before production sign-off
