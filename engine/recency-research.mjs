@@ -102,6 +102,28 @@ export function validateRecency(games,league){
  candidates.sort((a,b)=>a.validation.brier-b.validation.brier||
   a.validation.logLoss-b.validation.logLoss||a.strength-b.strength);
  const chosen=candidates[0];
+ // Additional rolling-origin diagnostic: each eligible season is predicted
+ // using a choice tuned only on its immediately preceding season.
+ const rolling=[];
+ for(let k=2;k<seasons.length;k++){
+  const selectionSeason=seasons[k-1],evaluationSeason=seasons[k];
+  const priorCandidates=[];
+  for(const halfLife of HALFLIVES[league])for(const shrink of SHRINK)for(const strength of [0,.1,.2,.35,.5]){
+   const tune=all.get(halfLife).filter(r=>Number(r.season)===selectionSeason);
+   if(tune.length<minimum)continue;
+   const m=metric(scored(tune,{shrink,strength}));
+   priorCandidates.push({halfLife,shrink,strength,brier:m.brier,loss:m.logLoss});
+  }
+  priorCandidates.sort((a,b)=>a.brier-b.brier||a.loss-b.loss||a.strength-b.strength);
+  if(!priorCandidates.length)continue;
+  const pick=priorCandidates[0];
+  const evaluatedFold=scored(all.get(pick.halfLife).filter(r=>Number(r.season)===evaluationSeason),pick);
+  if(evaluatedFold.length<minimum)continue;
+  rolling.push({selectedOn:selectionSeason,evaluatedOn:evaluationSeason,n:evaluatedFold.length,
+   halfLifeGames:pick.halfLife,priorEquivalentGames:pick.shrink,logOddsStrength:pick.strength,
+   baseline:metric(evaluatedFold.map(r=>({p:r.base,y:r.y}))),
+   candidate:metric(evaluatedFold)});
+ }
  const holdout=all.get(chosen.halfLife).filter(r=>Number(r.season)===holdoutSeason);
  const evaluated=scored(holdout,chosen);
  const baseline=metric(evaluated.map(r=>({p:r.base,y:r.y})));
@@ -109,7 +131,7 @@ export function validateRecency(games,league){
  const ci=blockBootstrap(evaluated);
  const gain=baseline.brier-candidate.brier;
  return {...report,status:'research_only',validationSeason,holdoutSeason,
-  counts:{validation:valid.length,holdout:test.length},chosen:{
+  counts:{validation:valid.length,holdout:test.length},rolling,chosen:{
    halfLifeGames:chosen.halfLife,priorEquivalentGames:chosen.shrink,logOddsStrength:chosen.strength,
    validation:chosen.validation},holdout:{baseline,candidate,brierGain:gain,gameDateBlockBootstrap95:ci},
   reviewOnly:gain>=.002&&ci[0]>0&&candidate.ece<=.05&&candidate.logLoss<baseline.logLoss,
