@@ -1,0 +1,35 @@
+name: Extended V4 compatibility and safety audit
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cross-node:
+    name: Node ${{ matrix.node }} full regression and release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Check syntax of every browser module and model engine
+        run: |
+          find src/app engine -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+      - name: Generate and test all unit and integration contracts
+        run: npm test
+      - name: Build static site and verify standalone release
+        run: |
+          npm run build:static
+          npm run verify:release
+      - name: Verify research backtest never promotes without historical data
+        run: |
+          node engine/backtest.mjs > /tmp/sports-backtest.json
+          node -e "const r=require('/tmp/sports-backtest.json');if(r.status!=='no_historical_data')process.exit(1)"
+      - name: Check generated artifacts unchanged
+        run: git diff --exit-code -- public/app.js index.html
