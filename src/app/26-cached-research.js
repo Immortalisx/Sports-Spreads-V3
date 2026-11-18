@@ -52,3 +52,26 @@ async function loadCurrentSeasonForm(league){
  }catch(e){state.formErrors[league]=e?.message||'Form history unavailable';}
  finally{clearTimeout(timeout);state.formLoading[league]=false;render();}
 }
+
+
+/** One cached, game-scoped GET; no visitor-triggered nflverse imports. */
+async function loadNflCoaching(game,force=false){
+ if(game?.league!=='nfl'||game.demo||game.status!=='scheduled'||!game.start)return;
+ const id=String(game.id),day=new Intl.DateTimeFormat('sv-SE',
+  {timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(game.start));
+ if(state.coachingLoading[id]||(!force&&state.coaching[id]))return;
+ state.coachingLoading[id]=true;delete state.coachingErrors[id];render();
+ const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),10000);
+ try{
+  const params=new URLSearchParams({home:game.home?.abbr||'',away:game.away?.abbr||'',date:day});
+  const r=await fetch('https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/nfl-coaching?'+params,
+   {headers:{accept:'application/json'},signal:ctrl.signal});
+  if(!r.ok)throw Error('Cached NFL coaching history unavailable');
+  const data=await r.json();
+  if(data?.status==='cached'&&data.league==='nfl'&&data.calibrated===false&&
+   data.appliedToForecast===false&&data.home?.coach&&data.away?.coach&&
+   data.asOf<day)state.coaching[id]=data;
+  else state.coachingErrors[id]='No eligible pregame coach history is available for this matchup.';
+ }catch(e){state.coachingErrors[id]=e?.message||'NFL coaching history unavailable';}
+ finally{clearTimeout(timer);state.coachingLoading[id]=false;render();}
+}
