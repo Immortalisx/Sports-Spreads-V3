@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {runWeekOneElo} from '../engine/run-week-one-elo-replay.mjs';
 test('real historical NFL Elo scores and missing NBA NHL histories fail closed',()=>{
  const r=runWeekOneElo();
+ console.log('WEEK_ONE_ELO_REPLAY_REPORT '+JSON.stringify(r));
  assert.equal(r.results.length,3);
  assert.equal(r.summary.scored,1);
  assert.equal(r.results[0].status,'retrospective_scored');
