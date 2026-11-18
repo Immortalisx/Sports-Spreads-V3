@@ -21,7 +21,7 @@ test('live ticker math follows American-odds payout, not fabricated model confid
  assert.match(html,/\+377/);
  assert.match(html,/21\.0%/);
  assert.match(html,/\$47\.73/);
- assert.match(html,/Model confidence<\/span><strong><span class="ticker-fixed">—/);
+ assert.match(html,/Model confidence: Not verified/);
 });
 test('after removing a leg compact summary updates without fabricated confidence',()=>{
  const legs=[{odds:150},{odds:-110}];
