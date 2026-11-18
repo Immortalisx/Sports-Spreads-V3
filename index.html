@@ -1796,7 +1796,9 @@ async function loadBoard(){
  render();
  try{const json=await readSportsData(`/api/scoreboard?league=${league}&date=${date.replaceAll('-','')}`);if(state.league!==league||state.date!==date)return;state.feed=json;state.error='';}
  catch(e){if(state.league!==league||state.date!==date)return;state.error=e.message||'Provider unavailable';state.feed={games:[],demo:true,updatedAt:null};}
- finally{if(state.league===league&&state.date===date){state.loading=false;render();const first=state.feed?.games?.find(g=>!g.demo&&g.status==='scheduled');if(first&&!state.odds[league])void loadSportsbookOdds(first);if(first)void loadCurrentSeasonForm(league);if(league==='nfl'&&first)void loadNflAvailability();if(league==='nhl'&&first)void loadNhlGoalies();}}
+ finally{if(state.league===league&&state.date===date){state.loading=false;render();// Detail-only feeds (odds, form, injuries, goalies) are intentionally fetched
+ // only when a user opens a matchup. This keeps the schedule lightweight.
+}}
 }
 async function loadTeams(force=false){
  const league=state.league;if(state.directory[league]&&!force){render();return;}state.directoryLoading[league]=true;render();
