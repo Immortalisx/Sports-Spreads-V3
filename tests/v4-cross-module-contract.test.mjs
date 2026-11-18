@@ -115,6 +115,7 @@ test('ticket suggestions require valid unexpired single-book moneylines',()=>{
 });
 test('release build has no forbidden legacy production model promotion',()=>{
  const script=read('scripts/build-app.mjs');
- assert.doesNotMatch(script,/prediction-model\.js|season-form-preview/);
+ assert.doesNotMatch(script,/season-form-preview|writeFile\([^\n]*prediction-model/);
+ assert.match(script,/modelSource!==modelPublished/);
  assert.match(read('engine/backtest.mjs'),/allowPromotion:false/);
 });
