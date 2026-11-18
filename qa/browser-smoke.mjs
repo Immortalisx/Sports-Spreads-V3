@@ -51,6 +51,18 @@ async function run(){
   await desktop.route('**/*',router);await desktop.goto(url,{waitUntil:'domcontentloaded'});
   try{await desktop.locator('.game').first().waitFor({timeout:15000});}catch(e){console.error('Desktop startup diagnostics:',{errors,body:(await desktop.locator('body').innerText()).slice(0,2000),url:desktop.url()});throw e;}
   assert.match(await desktop.locator('#app').innerText(),/Test Home Team/);
+  const premiumCard=desktop.locator('.game-card-v3').first();
+  assert.equal(await premiumCard.getAttribute('data-status'),'upcoming');
+  assert.equal(await premiumCard.locator('.match-status.upcoming').count(),1);
+  assert.equal(await premiumCard.locator('.match-team-row .team-logo').count(),2);
+  assert.equal(await premiumCard.locator('.match-v3-foot [data-action="game"]').count(),1);
+  assert.equal(await premiumCard.evaluate(el=>getComputedStyle(el).borderTopStyle),'solid');
+  assert.equal(await premiumCard.locator('.match-v3-foot .drill').evaluate(el=>getComputedStyle(el).transitionDuration!=='0s'),true,'Desktop hover transition expected');
+  const reduced=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+  await reduced.route('**/*',router);await reduced.goto(url,{waitUntil:'domcontentloaded'});
+  await reduced.locator('.game-card-v3').first().waitFor({timeout:15000});
+  assert.equal(await reduced.locator('.game-card-v3').first().evaluate(el=>getComputedStyle(el).transitionDuration),'0s','Reduced motion should disable card transitions');
+  await reduced.close();
   assert.equal(await desktop.locator('meta[property="og:url"]').getAttribute('content'),'https://sports-spreads.onrender.com/');
   assert.equal(errors.length,0,'Desktop exceptions: '+errors.join('; '));
   await desktop.screenshot({path:'qa/screenshots/desktop.png'});
@@ -86,6 +98,8 @@ async function run(){
   await mobile.route('**/*',router);await mobile.goto(url,{waitUntil:'domcontentloaded'});
   await mobile.locator('.game').first().waitFor({timeout:15000});
   assert.equal(await mobile.evaluate('document.documentElement.scrollWidth>window.innerWidth'),false,'Mobile overflow');
+  assert.equal(await mobile.locator('.game-card-v3 .match-status.upcoming').count()>0,true);
+  assert.equal(await mobile.locator('.game-card-v3').first().evaluate(el=>getComputedStyle(el).transform),'none','Mobile cards should not have hover transforms');
   const mobileNav=mobile.locator('.sidebar .nav');
   assert.equal(await mobileNav.evaluate(el=>getComputedStyle(el).position),'fixed','Mobile bottom nav must remain in place');
   assert.equal(await mobileNav.locator('button').count(),4);
@@ -112,6 +126,7 @@ async function run(){
   const tv=await browser.newPage({viewport:{width:1920,height:1080}});
   await tv.route('**/*',router);await tv.goto(url+'/?display=tv',{waitUntil:'domcontentloaded'});
   await tv.locator('.tv-game-grid .game').first().waitFor({timeout:15000});
+  assert.equal(await tv.locator('.tv-game-grid .game').first().locator('.team-logo').count(),2,'TV must retain two team logos');
   await tv.screenshot({path:'qa/screenshots/tv.png'});
   const tv4k=await browser.newPage({viewport:{width:3840,height:2160}});
   await tv4k.route('**/*',router);await tv4k.goto(url+'/?display=tv',{waitUntil:'domcontentloaded'});
@@ -119,7 +134,7 @@ async function run(){
   const cols=await tv4k.locator('.tv-game-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
   assert.ok(cols>=4,'4K TV should retain a four-column grid');
   await tv4k.close();
-  console.log('PASS: desktop, separated builder, hero ticket, mobile/tablet bottom navigation, matchup detail, TV/4K, no overflow');
+  console.log('PASS: premium card status/logo hierarchy, reduced motion, desktop, mobile/tablet, TV/4K, no overflow');
  }finally{await browser.close();}
 }
 try{await run();}finally{server.kill('SIGTERM');}
