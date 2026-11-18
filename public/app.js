@@ -389,6 +389,7 @@ function pregameGameTickets(){
  const games=(state.feed?.games||[]).filter(g=>!g.demo&&g.status==='scheduled'&&Date.parse(g.start)>Date.now());
  if(!games.length)return '<section class="daily-suggestions"><h3>Game tickets</h3><p class="muted-sm">No upcoming games on this selected date.</p></section>';
  const odds=state.odds[state.league];
+ const serverGames=(state.daily?.pregame?.games||[]).filter(g=>g.league===state.league);
  const cards=games.map(g=>{
   const until=Math.ceil((Date.parse(g.start)-Date.now())/60000);
   const eligible=until<=60&&until>0;
@@ -403,9 +404,10 @@ function pregameGameTickets(){
   const quoteAge=best?Date.now()-Date.parse(best.quote.asOf||''):NaN;
   const fresh=Number.isFinite(quoteAge)&&quoteAge>=0&&quoteAge<=8*3600000;
   // Market favorite alone cannot establish positive expected value or an optimal wager.
-  const status=!eligible?'T−60m pending':!best||!fresh?'PASS · no verified line':'PASS · no validated edge';
+  const server=serverGames.find(x=>x.gameId===String(g.id));
+  const status=!eligible?'T−60m pending':server?.status==='READY'?'MODEL RESULT PENDING REVIEW':!best||!fresh?'PASS · no verified line':'PASS · no validated edge';
   const favorite=eligible&&best&&fresh?'<div class="daily-card-sub">Market favorite: '+esc(g[best.side].name)+' · '+Math.round(best.probability*100)+'% implied*</div>':'';
-  return '<article class="daily-ticket-card"><div class="daily-card-title"><strong>'+esc(g.away.name)+' @ '+esc(g.home.name)+'</strong><span>'+ (until<=90?until+'m to start':'Upcoming')+'</span></div><div class="daily-picks"><strong>'+status+'</strong></div>'+favorite+'<div class="daily-card-sub">Team + player SGP: no verified prop prices or joint model</div></article>';
+  return '<article class="daily-ticket-card"><div class="daily-card-title"><strong>'+esc(g.away.name)+' @ '+esc(g.home.name)+'</strong><span>'+ (until<=90?until+'m to start':'Upcoming')+'</span></div><div class="daily-picks"><strong>'+status+'</strong></div>'+favorite+'<div class="daily-card-sub">'+(server?'Server checked · ':'')+'Team + player SGP: no verified prop prices or joint model</div></article>';
  }).join('');
  return '<section class="daily-suggestions" aria-label="Per-game pregame tickets"><div class="daily-section-head"><h3>Every game</h3><small>Automatic · research only</small></div><div class="daily-ticket-grid">'+cards+'</div><details class="daily-disclaimer"><summary>Why PASS?</summary><p>* Market favorite probability is not an edge or validated model confidence. An optimal parlay needs independently calibrated probabilities, current player prices and a correlation-aware joint model. Unavailable data means PASS.</p></details></section>';
 }
@@ -994,7 +996,7 @@ async function loadDailySuggestions(force=false){
   if(!res.ok)throw Error('Daily suggestions unavailable');
   const json=await res.json();
   if(!json||!Array.isArray(json.cards))throw Error('Invalid daily suggestion snapshot');
-  d.cards=json.cards;d.generatedAt=json.generatedAt||'';
+  d.cards=json.cards;d.pregame=json.pregame&&Array.isArray(json.pregame.games)?json.pregame:null;d.generatedAt=json.generatedAt||'';
   d.status=json.status||'pending';d.loaded=true;
  }catch(e){d.error=e?.message||'Daily suggestions unavailable';d.cards=[];}
  finally{
@@ -1063,6 +1065,8 @@ async function refreshPregameDashboard(){
  try{
   const snapshot=await SportsOdds.getBoard(state.league);
   if(['ok','cached'].includes(snapshot?.status))state.odds[state.league]=snapshot;
+  // Reload server-side per-game eligibility using the same shared cache.
+  await loadDailySuggestions(true);
  }catch(e){state.oddsError[state.league]=e?.message||'Shared odds cache unavailable';}
  if(state.section==='tickets')render();
 }
