@@ -1,6 +1,6 @@
 // Sports Spreads limited MLB pregame probable-starter source. No invented pitcher matchups.
 // Purely descriptive. No player-level projection or win-probability coefficient.
-const ORIGINS=new Set(['https://sports-spreads.onrender.com','https://sports-spreads-v3.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
+const ORIGINS=new Set(['https://sports-spreads.onrender.com','https://sports-spreads-v3.onrender.com','https://sports-spreads-v4-staging.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
 const cache=new Map<string,{expires:number,data:any}>();
 function cors(r:Request){const x=r.headers.get('origin')||'';return {'access-control-allow-origin':ORIGINS.has(x)?x:'https://sports-spreads.onrender.com','access-control-allow-methods':'GET,OPTIONS','access-control-allow-headers':'content-type, authorization, apikey','vary':'Origin'};}
 function json(r:Request,code:number,data:unknown){return new Response(JSON.stringify(data),{status:code,headers:{...cors(r),'content-type':'application/json','cache-control':'public,max-age=300','x-content-type-options':'nosniff'}});}
