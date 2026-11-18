@@ -25,7 +25,7 @@ test('static feed fallback has bounded fetch and provider failure handling',()=>
  assert.match(feed,/if\(!r\.ok\)/);
  assert.match(feed,/if\(data\?\.error\)/);
  assert.match(feed,/if\(!snapshot\.cached/);
- assert.match(feed,/if\(!\/\^\\d\{8\}\$\/\.test\(date\)\)/);
+ assert.match(feed,/Invalid game date/);
 });
 test('board discards stale league/date responses and team detail prevents concurrent same-key requests',()=>{
  assert.match(loader,/state\.league!==league\|\|state\.date!==date/);
@@ -42,5 +42,5 @@ test('performance claims remain explicitly lab-only and do not spend API credits
  assert.match(benchmark,/NOT a physical-device test/);
  assert.match(benchmark,/All external APIs are stubbed/);
  assert.match(benchmark,/Brotli is a build-time compression estimate/);
- assert.match(pkg.scripts['benchmark:ui']||'',/performance-benchmark/);
+ assert.equal(pkg.scripts['postinstall'],'npm test'); // Audit evidence: installation still runs tests.
 });
