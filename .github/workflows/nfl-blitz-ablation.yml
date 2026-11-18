@@ -1,0 +1,44 @@
+name: NFL QB-versus-blitz opponent matchup out-of-time ablation
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/nfl-qb-blitz-pregame-extract.py'
+      - 'engine/evaluate-nfl-blitz-ablation.mjs'
+      - 'engine/run-nfl-blitz-ablation.mjs'
+      - 'tests/nfl-blitz-ablation.test.mjs'
+      - '.github/workflows/nfl-blitz-ablation.yml'
+permissions:
+  contents: read
+jobs:
+  holdout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Check time-safe QB proxy and charting delay
+        run: python engine/nfl-qb-blitz-pregame-extract.py --test
+      - name: Join actual 2022–2025 FTN/PBP charted passing plays to completed regular-season games
+        run: python engine/nfl-qb-blitz-pregame-extract.py
+      - name: Train 2022, check 2023, calibrate 2024, untouched 2025 holdout
+        run: node engine/run-nfl-blitz-ablation.mjs
+      - name: Publish summary evidence but not licensed raw source data
+        if: always()
+        run: |
+          if test -f research/nfl-blitz-ablation-report.json; then
+            node -e 'const r=require("./research/nfl-blitz-ablation-report.json");console.log("Study:",r.status,"approved:",r.approved,"blitz coverage:",r.holdout?.availableCoverage,"Brier:",r.holdout?.augmented?.brier,"reference:",r.holdout?.baseline?.brier)'
+            echo 'No new live NFL model coefficients activated by this research.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Source unavailable or study failed; no NFL model is promoted.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nfl-qb-blitz-rolling-form-ablation
+          path: research/nfl-blitz-ablation-report.json
+          if-no-files-found: ignore
+          retention-days: 14
