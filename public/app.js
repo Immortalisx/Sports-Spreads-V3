@@ -8,7 +8,7 @@ function directBase(league){if(!ESPN_SPORT[league])throw Error('Unsupported spor
 async function directJson(url){
  const relay=globalThis.SS_FEED_CONFIG?.url;
  const origins=[];
- if(typeof relay==='string'&&/^https:\\/\\/[-a-z0-9.]+\\.supabase\\.co\\/functions\\/v1\\/sports-feed$/i.test(relay)){
+ if(typeof relay==='string'&&/^https:\/\/[-a-z0-9.]+\.supabase\.co\/functions\/v1\/sports-feed$/i.test(relay)){
   const parsed=new URL(url);
   if(parsed.hostname==='site.api.espn.com')origins.push(relay+'?path='+encodeURIComponent(parsed.pathname+parsed.search));
  }
