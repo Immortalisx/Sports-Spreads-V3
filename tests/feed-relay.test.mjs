@@ -37,3 +37,45 @@ test('grouped NBA injury feed maps team-specific injuries',async()=>{
  assert.equal(report.injuries.length,1);
  assert.equal(report.injuries[0].name,'Example Player');
 });
+
+test('static hosting bypasses the missing same-origin scoreboard endpoint',async()=>{
+ const calls=[];
+ const scope=env(async url=>{
+  const address=String(url);calls.push(address);
+  if(address.startsWith('https://sports-spreads.onrender.com/api/'))return {ok:false,status:404};
+  return {ok:true,json:async()=>({events:[event]})};
+ });
+ // A real static production origin must not be probed before the read-only relay.
+ scope.window.location={href:'https://sports-spreads.onrender.com/'};
+ const board=await scope.read('/api/scoreboard?league=nfl&date=20261117');
+ assert.equal(board.games.length,1);
+ assert.equal(calls.length,1);
+ assert.match(calls[0],/^https:\/\/[-a-z0-9.]+\.supabase\.co\/functions\/v1\/sports-feed\?/);
+});
+test('Node hosting prefers its functional same-origin JSON scoreboard',async()=>{
+ const calls=[],payload={source:'node test',games:[{id:'local-fixture'}]};
+ const scope=env(async url=>{
+  calls.push(String(url));
+  return {ok:true,headers:{get:()=> 'application/json; charset=utf-8'},json:async()=>payload};
+ });
+ scope.window.__STANDALONE_PREVIEW__=false;
+ scope.window.location={href:'https://sports-spreads.example/'};
+ const board=await scope.read('/api/scoreboard?league=nfl&date=20261117');
+ assert.equal(board,payload);
+ assert.deepEqual(calls,['https://sports-spreads.example/api/scoreboard?league=nfl&date=20261117']);
+});
+test('Node hosting still falls back safely on a mocked API 404',async()=>{
+ const calls=[];
+ const scope=env(async url=>{
+  const address=String(url);calls.push(address);
+  if(address.startsWith('https://sports-spreads.example/api/'))return {ok:false,status:404,headers:{get:()=> 'text/plain'}};
+  return {ok:true,json:async()=>({events:[event]})};
+ });
+ scope.window.__STANDALONE_PREVIEW__=false;
+ scope.window.location={href:'https://sports-spreads.example/'};
+ const board=await scope.read('/api/scoreboard?league=nfl&date=20261117');
+ assert.equal(board.games.length,1);
+ assert.equal(calls.length,2);
+ assert.match(calls[0],/^https:\/\/sports-spreads\.example\/api\/scoreboard\?/);
+ assert.match(calls[1],/\.supabase\.co\/functions\/v1\/sports-feed\?/);
+});
