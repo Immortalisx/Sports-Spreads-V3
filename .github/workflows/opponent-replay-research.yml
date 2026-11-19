@@ -1,0 +1,59 @@
+name: Offline opponent calibration replay (research only)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/opponent-replay-research.yml'
+      - 'engine/verify-opponent-replay.mjs'
+  workflow_dispatch:
+    inputs:
+      league:
+        description: 'Select historical league; both only when explicitly selected'
+        required: true
+        type: choice
+        options:
+          - nfl
+          - nhl
+          - both
+        default: nfl
+permissions:
+  contents: read
+jobs:
+  select:
+    name: Select historical replay leagues
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      matrix: ${{ steps.selection.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact requested league matrix (no provider calls)
+        id: selection
+        env:
+          SELECTED_LEAGUE: ${{ github.event_name == 'pull_request' && 'both' || inputs.league }}
+        run: node engine/replay-league-matrix.mjs "$SELECTED_LEAGUE" >> "$GITHUB_OUTPUT"
+  replay:
+    name: ${{ matrix.league }} real-scoreboard replay
+    needs: select
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Replay attributed historical finals (free public sources only)
+        timeout-minutes: 12
+        run: node engine/collect-opponent-replay.mjs ${{ matrix.league }}
+      - name: Validate calibration metrics, intervals and no-promotion gate
+        timeout-minutes: 2
+        run: node engine/verify-opponent-replay.mjs ${{ matrix.league }} research/${{ matrix.league }}-opponent-replay.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opponent-replay-${{ matrix.league }}
+          path: research/${{ matrix.league }}-opponent-replay.json
+          if-no-files-found: error
+          retention-days: 7

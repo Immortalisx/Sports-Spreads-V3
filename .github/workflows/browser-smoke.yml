@@ -34,10 +34,20 @@ jobs:
         run: npm test
       - name: Generate tested standalone site
         run: npm run build:onefile
-      - name: Install temporary test-only Chromium
+      - name: Install temporary test-only Playwright
+        timeout-minutes: 3
         run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
+          # Do not rerun root postinstall tests or audit during the QA-only install.
+          npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          npx playwright --version
+      - name: Install headless Chromium shell without apt
+        timeout-minutes: 4
+        run: |
+          # GitHub's Ubuntu runner already includes browser runtime libraries.
+          # Avoid --with-deps, which invokes apt and can block without useful logs.
+          npx playwright install --only-shell chromium
+          test -x "$HOME/.cache/ms-playwright/chromium_headless_shell-"*/chrome-linux/headless_shell || test -d "$HOME/.cache/ms-playwright"
+          echo "Headless Chromium downloaded"
       - name: Run desktop, mobile and TV browser interaction checks
         run: node qa/browser-smoke.mjs
       - name: Benchmark emulated mobile and desktop (no provider credits)

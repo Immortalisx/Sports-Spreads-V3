@@ -1,0 +1,381 @@
+{
+  "sources": {
+    "teaching": "betbetter-teaching-dataset-2026.csv",
+    "teachingSha256": "bf8fb58dfd31d32d506625095e77715204ea61e0926fc6ad609f1ab998e5ca59",
+    "nflverse": "nflverse/nfldata data/games.csv",
+    "nflverseBlobSha": "77580b1ff3255acb477153f993954f6e1c60a5c8",
+    "nflverseSha256": "3d0703c3a40470351ef2a28257734f30fce5164e876f9a492a4d416c9f525723"
+  },
+  "scope": {
+    "teachingNFLRows": 95,
+    "matched": 45,
+    "excluded": 50,
+    "excludedPreseason": 49,
+    "excludedProBowl": 1,
+    "exactDate": 37,
+    "oneDayLater": 8,
+    "scoreConflicts": 0
+  },
+  "matchedGames": [
+    {
+      "nflverseDate": "2026-01-03",
+      "teachingDate": "2026-01-03",
+      "home": "TB",
+      "away": "CAR",
+      "homeScore": 16,
+      "awayScore": 14
+    },
+    {
+      "nflverseDate": "2026-01-03",
+      "teachingDate": "2026-01-04",
+      "home": "SF",
+      "away": "SEA",
+      "homeScore": 3,
+      "awayScore": 13
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "ATL",
+      "away": "NO",
+      "homeScore": 19,
+      "awayScore": 17
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "CIN",
+      "away": "CLE",
+      "homeScore": 18,
+      "awayScore": 20
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "HOU",
+      "away": "IND",
+      "homeScore": 38,
+      "awayScore": 30
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "JAX",
+      "away": "TEN",
+      "homeScore": 41,
+      "awayScore": 7
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "MIN",
+      "away": "GB",
+      "homeScore": 16,
+      "awayScore": 3
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "NYG",
+      "away": "DAL",
+      "homeScore": 34,
+      "awayScore": 17
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "BUF",
+      "away": "NYJ",
+      "homeScore": 35,
+      "awayScore": 8
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "CHI",
+      "away": "DET",
+      "homeScore": 16,
+      "awayScore": 19
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "DEN",
+      "away": "LAC",
+      "homeScore": 19,
+      "awayScore": 3
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "LA",
+      "away": "ARI",
+      "homeScore": 37,
+      "awayScore": 20
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "LV",
+      "away": "KC",
+      "homeScore": 14,
+      "awayScore": 12
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "NE",
+      "away": "MIA",
+      "homeScore": 38,
+      "awayScore": 10
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-04",
+      "home": "PHI",
+      "away": "WAS",
+      "homeScore": 17,
+      "awayScore": 24
+    },
+    {
+      "nflverseDate": "2026-01-04",
+      "teachingDate": "2026-01-05",
+      "home": "PIT",
+      "away": "BAL",
+      "homeScore": 26,
+      "awayScore": 24
+    },
+    {
+      "nflverseDate": "2026-01-10",
+      "teachingDate": "2026-01-10",
+      "home": "CAR",
+      "away": "LA",
+      "homeScore": 31,
+      "awayScore": 34
+    },
+    {
+      "nflverseDate": "2026-01-10",
+      "teachingDate": "2026-01-10",
+      "home": "CHI",
+      "away": "GB",
+      "homeScore": 31,
+      "awayScore": 27
+    },
+    {
+      "nflverseDate": "2026-01-11",
+      "teachingDate": "2026-01-11",
+      "home": "JAX",
+      "away": "BUF",
+      "homeScore": 24,
+      "awayScore": 27
+    },
+    {
+      "nflverseDate": "2026-01-11",
+      "teachingDate": "2026-01-11",
+      "home": "PHI",
+      "away": "SF",
+      "homeScore": 19,
+      "awayScore": 23
+    },
+    {
+      "nflverseDate": "2026-01-11",
+      "teachingDate": "2026-01-12",
+      "home": "NE",
+      "away": "LAC",
+      "homeScore": 16,
+      "awayScore": 3
+    },
+    {
+      "nflverseDate": "2026-01-12",
+      "teachingDate": "2026-01-13",
+      "home": "PIT",
+      "away": "HOU",
+      "homeScore": 6,
+      "awayScore": 30
+    },
+    {
+      "nflverseDate": "2026-01-17",
+      "teachingDate": "2026-01-17",
+      "home": "DEN",
+      "away": "BUF",
+      "homeScore": 33,
+      "awayScore": 30
+    },
+    {
+      "nflverseDate": "2026-01-17",
+      "teachingDate": "2026-01-17",
+      "home": "SEA",
+      "away": "SF",
+      "homeScore": 41,
+      "awayScore": 6
+    },
+    {
+      "nflverseDate": "2026-01-18",
+      "teachingDate": "2026-01-18",
+      "home": "NE",
+      "away": "HOU",
+      "homeScore": 28,
+      "awayScore": 16
+    },
+    {
+      "nflverseDate": "2026-01-18",
+      "teachingDate": "2026-01-18",
+      "home": "CHI",
+      "away": "LA",
+      "homeScore": 17,
+      "awayScore": 20
+    },
+    {
+      "nflverseDate": "2026-01-25",
+      "teachingDate": "2026-01-25",
+      "home": "DEN",
+      "away": "NE",
+      "homeScore": 7,
+      "awayScore": 10
+    },
+    {
+      "nflverseDate": "2026-01-25",
+      "teachingDate": "2026-01-25",
+      "home": "SEA",
+      "away": "LA",
+      "homeScore": 31,
+      "awayScore": 27
+    },
+    {
+      "nflverseDate": "2026-02-08",
+      "teachingDate": "2026-02-08",
+      "home": "NE",
+      "away": "SEA",
+      "homeScore": 13,
+      "awayScore": 29
+    },
+    {
+      "nflverseDate": "2026-09-09",
+      "teachingDate": "2026-09-10",
+      "home": "SEA",
+      "away": "NE",
+      "homeScore": 13,
+      "awayScore": 10
+    },
+    {
+      "nflverseDate": "2026-09-10",
+      "teachingDate": "2026-09-11",
+      "home": "LA",
+      "away": "SF",
+      "homeScore": 7,
+      "awayScore": 27
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "CAR",
+      "away": "CHI",
+      "homeScore": 37,
+      "awayScore": 59
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "CIN",
+      "away": "TB",
+      "homeScore": 33,
+      "awayScore": 27
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "DET",
+      "away": "NO",
+      "homeScore": 31,
+      "awayScore": 30
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "HOU",
+      "away": "BUF",
+      "homeScore": 31,
+      "awayScore": 36
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "IND",
+      "away": "BAL",
+      "homeScore": 23,
+      "awayScore": 41
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "JAX",
+      "away": "CLE",
+      "homeScore": 34,
+      "awayScore": 10
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "PIT",
+      "away": "ATL",
+      "homeScore": 20,
+      "awayScore": 13
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "TEN",
+      "away": "NYJ",
+      "homeScore": 10,
+      "awayScore": 23
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "LAC",
+      "away": "ARI",
+      "homeScore": 14,
+      "awayScore": 26
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "LV",
+      "away": "MIA",
+      "homeScore": 27,
+      "awayScore": 13
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "MIN",
+      "away": "GB",
+      "homeScore": 39,
+      "awayScore": 22
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-13",
+      "home": "PHI",
+      "away": "WAS",
+      "homeScore": 24,
+      "awayScore": 22
+    },
+    {
+      "nflverseDate": "2026-09-13",
+      "teachingDate": "2026-09-14",
+      "home": "NYG",
+      "away": "DAL",
+      "homeScore": 28,
+      "awayScore": 20
+    },
+    {
+      "nflverseDate": "2026-09-14",
+      "teachingDate": "2026-09-15",
+      "home": "KC",
+      "away": "DEN",
+      "homeScore": 31,
+      "awayScore": 10
+    }
+  ]
+}
