@@ -30,7 +30,9 @@ test('static feed fallback has bounded fetch and provider failure handling',()=>
 test('board discards stale league/date responses and team detail prevents concurrent same-key requests',()=>{
  assert.match(loader,/state\.league!==league\|\|state\.date!==date/);
  assert.match(loader,/if\(state\.teamLoading\[key\]\)return/);
- assert.match(loader,/finally\{state\.teamLoading\[key\]=false;render\(\)/);
+ assert.match(loader,/finally\{state\.teamLoading\[key\]=false/);
+ assert.match(loader,/isActiveTeamDetail/);
+ assert.match(loader,/version!==boardRequestVersion/);
 });
 test('cloud browser uses user session storage, not server secrets',()=>{
  assert.match(cloud,/sessionStorage/);
