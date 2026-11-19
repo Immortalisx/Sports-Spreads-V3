@@ -91,9 +91,9 @@ async function directSportsData(route){
  throw Error('No such data endpoint');
 }
 async function readSportsData(url){
- // Production, staging and the local server now share one fetch-first path.
- // Static hosts fall back to the Supabase relay via directSportsData after a 404;
- // the local Node server can still serve its own /api routes.
+ // Static hosts cannot serve /api/*; avoid a guaranteed 404 and its console noise.
+ // Node-hosted deployments still use their local API, with the existing read-only fallback.
+ if(window.__STANDALONE_PREVIEW__===true)return directSportsData(url);
  try{
   const route=new URL(url,window.location.href);
   const r=await fetch(route.href,{headers:{Accept:'application/json'}});
