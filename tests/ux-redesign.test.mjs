@@ -95,3 +95,23 @@ test('responsive navigation exposes text labels and safe-area space; TV remains 
  assert.ok(Buffer.byteLength(appSource,'utf8')<170000);
  assert.doesNotMatch(source,/positive guaranteed return|guaranteed profit/i);
 });
+
+for (const mode of ['automatic', 'manual']) {
+ test(`empty ${mode} builder starts with mode choices and restores them after the last removal`,()=>{
+  const {ui}=renderLab();
+  ui.state.ticketMode=mode;
+  const empty=ui.ticketView();
+  assert.ok(empty.startsWith('<div class="ticket-tabs"'));
+  assert.doesNotMatch(empty,/aria-label="Ticket summary"|<h3>My ticket|Nothing added yet|<h2>Build a ticket/);
+  assert.match(empty,mode==='manual'?/id="leg-form"/:/big-one-hero/);
+
+  ui.state.ticket.push({league:'nfl',market:'Moneyline',selection:'Test team',odds:150});
+  const filled=ui.ticketView();
+  assert.match(filled,/aria-label="Ticket summary"/);
+  assert.match(filled,/data-action="remove-leg"/);
+  assert.match(filled,/Potential return/);
+  assert.match(filled,/\+150/);
+  ui.state.ticket.pop();
+  assert.equal(ui.ticketView(),empty);
+ });
+}

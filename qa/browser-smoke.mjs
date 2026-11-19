@@ -131,7 +131,7 @@ async function run(){
   await desktop.locator('.tv-shell').waitFor({timeout:5000});
   await desktop.locator('[aria-label="Exit Big Screen Mode"]').click();
   assert.equal(await desktop.locator('.tv-shell').count(),0);
-  const mobile=await browser.newPage({viewport:{width:390,height:844}});
+  const mobile=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
   await mobile.route('**/*',router);await mobile.goto(url,{waitUntil:'domcontentloaded'});
   await mobile.locator('.game').first().waitFor({timeout:15000});
   assert.equal(await mobile.evaluate('document.documentElement.scrollWidth>window.innerWidth'),false,'Mobile overflow');
@@ -148,6 +148,24 @@ async function run(){
   await mobile.locator('[data-action="ticket-mode"][data-mode="manual"]').click();
   await mobile.locator('#leg-form').waitFor({timeout:5000});
   assert.equal(await mobile.locator('#auto-confidence').count(),0);
+  const mobileSummary=mobile.getByRole('region',{name:'Ticket summary'});
+  const noBuilderOverflow=async()=>assert.equal(await mobile.evaluate(
+   ()=>document.documentElement.scrollWidth>window.innerWidth),false,'Mobile builder overflow');
+  assert.equal(await mobileSummary.count(),0);
+  await noBuilderOverflow();
+  await mobile.locator('#leg-selection').fill('NY');
+  await mobile.locator('#leg-odds').fill('+150');
+  await mobile.locator('#leg-form button[type="submit"]').tap();
+  await mobileSummary.waitFor({state:'visible'});
+  assert.match(await mobileSummary.innerText(),/\$25(?:\.00)?\b/);
+  assert.match(await mobileSummary.innerText(),/\+150/);
+  await noBuilderOverflow();
+  await mobile.getByRole('button',{name:'Remove NY',exact:true}).tap();
+  await mobileSummary.waitFor({state:'detached'});
+  assert.equal(await mobile.locator('.ticket-item').count(),0);
+  assert.equal(await mobile.locator('#leg-form').isVisible(),true);
+  await noBuilderOverflow();
+  console.log('PASS: 390x844 empty ticket, one +150 leg with $25 payout, last leg removed; no builder overflow');
   await mobileNav.locator('[data-section="games"]').click();
   await mobile.locator('.game [data-action="game"]').first().click();
   await mobile.locator('.drawer').waitFor({timeout:5000});
