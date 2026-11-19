@@ -34,15 +34,29 @@ jobs:
         run: npm test
       - name: Generate tested standalone site
         run: npm run build:onefile
-      - name: Install temporary test-only Chromium
+      # The package has a "postinstall": "npm test" hook. Suppress it here:
+      # npm test already ran above; running it again during Playwright setup is wasteful.
+      # Headless tests use Playwright's Chromium headless shell, not the headed browser.
+      - name: Install test-only Chromium headless shell (timed)
         run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
-      - name: Run desktop, mobile and TV browser interaction checks
-        run: node qa/browser-smoke.mjs
-      - name: Benchmark emulated mobile and desktop (no provider credits)
+          start=$SECONDS
+          npm install --ignore-scripts --no-save --no-package-lock playwright@1.56.1
+          echo "Playwright package install: $((SECONDS-start))s" | tee -a "$GITHUB_STEP_SUMMARY"
+          browser_start=$SECONDS
+          npx playwright install --with-deps --only-shell chromium
+          echo "Chromium headless-shell + OS dependencies: $((SECONDS-browser_start))s" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Total browser setup: $((SECONDS-start))s" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Run desktop, mobile, tablet and TV browser interaction checks (timed)
+        run: |
+          start=$SECONDS
+          node qa/browser-smoke.mjs
+          echo "Browser smoke duration: $((SECONDS-start))s" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Benchmark emulated mobile and desktop (no provider credits, timed)
         if: always()
-        run: node qa/performance-benchmark.mjs
+        run: |
+          start=$SECONDS
+          node qa/performance-benchmark.mjs
+          echo "Performance benchmark duration: $((SECONDS-start))s" | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
