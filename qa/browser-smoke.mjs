@@ -14,10 +14,47 @@ const event={events:[{id:'401999123',date:gameStart,status:{type:{state:'pre',sh
  {homeAway:'away',team:{id:'2',displayName:'Test Away Team',shortDisplayName:'Away Team',abbreviation:'AWY'},records:[{type:'total',summary:'4-6'}]}
  ],venue:{fullName:'Test Arena',indoor:true,address:{city:'Test City',state:'MD',country:'USA'}}}]}]};
 const scoreboard={league:'nba',updatedAt:new Date().toISOString(),games:[{id:'401999123',league:'nba',home:{id:'1',name:'Test Home Team',abbr:'HOM',record:'8-2'},away:{id:'2',name:'Test Away Team',abbr:'AWY',record:'4-6'},start:gameStart,status:'scheduled',statusText:'Scheduled',venue:'Test Arena',venueIndoor:true,demo:false}]};
+async function checkScoreboardRecovery(browser, bigScreen) {
+ const page = await browser.newPage({viewport: bigScreen ? {width:1920,height:1080} : {width:390,height:844}});
+ const nflRequests = [];
+ let recovered = false;
+ try {
+  await page.route('**/*', async route => {
+   const request = new URL(route.request().url());
+   if (request.origin === url && request.pathname === '/api/scoreboard') {
+    const league = request.searchParams.get('league');
+    if (league === 'nfl') {
+     nflRequests.push(request.href);
+     if (!recovered) return route.fulfill({status:502, json:{error:'Fixture outage'}});
+    }
+    return route.fulfill({json:{league, updatedAt:gameStart, games:[]}});
+   }
+   if (request.origin !== url) return route.fulfill({status:502, json:{error:'Offline fixture'}});
+   return route.continue();
+  });
+  await page.goto(bigScreen ? url+'/?display=tv' : url);
+  await page.locator('[data-action="league"][data-league="nfl"]').click();
+  const outage = page.getByRole('status').filter({hasText:'Scoreboard unavailable'});
+  await outage.waitFor({state:'visible', timeout:10000});
+  const empty = page.getByText(bigScreen ? 'No scheduled NFL games on this date.' : 'No games listed', {exact:true});
+  assert.equal(await empty.count(), 0, 'A failed feed must not report an empty schedule');
+  assert.equal(nflRequests.length, 1);
+  recovered = true;
+  await page.locator('[data-action="refresh"]:visible').click();
+  await empty.waitFor({state:'visible', timeout:10000});
+  assert.equal(await outage.count(), 0, 'Refresh should clear the outage message');
+  assert.deepEqual(nflRequests, [nflRequests[0], nflRequests[0]], 'Refresh should retry the same league and date');
+ } finally {
+  await page.close();
+ }
+}
 async function run(){
  await ready();await mkdir('qa/screenshots',{recursive:true});
  const browser=await chromium.launch({headless:true});
  try{
+  await checkScoreboardRecovery(browser, false);
+  await checkScoreboardRecovery(browser, true);
+  console.log('PASS: Games and Big Screen recover from an NFL scoreboard 502 after Refresh');
   const router=async route=>{
    const requestUrl=route.request().url();
    if(requestUrl.includes('/functions/v1/sports-feed')||requestUrl.includes('/api/scoreboard'))
