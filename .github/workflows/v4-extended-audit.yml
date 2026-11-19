@@ -6,7 +6,7 @@ permissions:
   contents: read
 jobs:
   cross-node:
-    name: Node ${{ matrix.node }} full regression and release
+    name: Node ${{ matrix.node }} compatibility and release
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -21,7 +21,11 @@ jobs:
       - name: Check syntax of every browser module and model engine
         run: |
           find src/app engine -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+      # Node 22 runs the complete regression suite in the Verify Sports Spreads workflow.
+      # Keep the Node 22 syntax, release, backtest and artifact checks here;
+      # Node 20 and 24 still run their own complete regression suites.
       - name: Generate and test all unit and integration contracts
+        if: matrix.node != '22'
         run: npm test
       - name: Build static site and verify standalone release
         run: |

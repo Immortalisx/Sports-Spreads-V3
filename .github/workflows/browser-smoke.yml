@@ -30,22 +30,37 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run complete Node regression suite
-        run: npm test
-      - name: Generate tested standalone site
+      # The Verify Sports Spreads workflow runs the full Node 22 regression suite
+      # on every PR and main push; this job owns independent browser coverage.
+      - name: Generate standalone site for browser checks
         run: npm run build:onefile
       # The package has a "postinstall": "npm test" hook. Suppress it here:
-      # npm test already ran above; running it again during Playwright setup is wasteful.
+      # regression tests are run by the separate Verify Sports Spreads workflow.
       # Headless tests use Playwright's Chromium headless shell, not the headed browser.
-      - name: Install test-only Chromium headless shell (timed)
+      - name: Install Playwright npm package (timed, bounded)
+        timeout-minutes: 3
         run: |
           start=$SECONDS
-          npm install --ignore-scripts --no-save --no-package-lock playwright@1.56.1
+          echo "Node: $(node --version); npm: $(npm --version)"
+          echo "Installing pinned Playwright 1.56.1 without lifecycle scripts"
+          npm install --ignore-scripts --no-save --no-package-lock --no-audit --no-fund --fetch-retries=2 --fetch-timeout=60000 playwright@1.56.1
           echo "Playwright package install: $((SECONDS-start))s" | tee -a "$GITHUB_STEP_SUMMARY"
-          browser_start=$SECONDS
-          npx playwright install --with-deps --only-shell chromium
-          echo "Chromium headless-shell + OS dependencies: $((SECONDS-browser_start))s" | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "Total browser setup: $((SECONDS-start))s" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Install Chromium Linux dependencies (timed, bounded)
+        timeout-minutes: 5
+        run: |
+          start=$SECONDS
+          echo "Installing Linux libraries for Playwright Chromium headless shell"
+          npx --no-install playwright install-deps chromium
+          echo "Chromium Linux dependencies: $((SECONDS-start))s" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Download Chromium headless shell (timed, bounded)
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT: '60000'
+        run: |
+          start=$SECONDS
+          echo "Downloading Chromium headless shell and required Playwright runtime assets"
+          npx --no-install playwright install --only-shell chromium
+          echo "Chromium headless shell download: $((SECONDS-start))s" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Run desktop, mobile, tablet and TV browser interaction checks (timed)
         run: |
           start=$SECONDS
