@@ -30,12 +30,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run complete Node regression suite
-        run: npm test
-      - name: Generate tested standalone site
+      # The Verify Sports Spreads workflow runs the full Node 22 regression suite
+      # on every PR and main push; this job owns independent browser coverage.
+      - name: Generate standalone site for browser checks
         run: npm run build:onefile
       # The package has a "postinstall": "npm test" hook. Suppress it here:
-      # npm test already ran above; running it again during Playwright setup is wasteful.
+      # regression tests are run by the separate Verify Sports Spreads workflow.
       # Headless tests use Playwright's Chromium headless shell, not the headed browser.
       - name: Install test-only Chromium headless shell (timed)
         run: |
