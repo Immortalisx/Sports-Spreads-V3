@@ -50,3 +50,24 @@ test('team response does not redraw another team or inactive tab',async()=>{
  h.state.drawer={type:'team',league:'nba',team:{id:'8',name:'Another'}};h.state.teamTab='roster';
  h.requests[0].resolve({injuries:[]});await a;assert.equal(h.renders.length,count);
 });
+
+test('older same-date scoreboard response cannot replace newer refresh',async()=>{
+ const h=harness(),a=h.ctx.loadBoard(),b=h.ctx.loadBoard();
+ assert.equal(h.requests.length,2);
+ h.requests[1].resolve({games:[{id:'new'}]});await b;
+ h.requests[0].resolve({games:[{id:'old'}]});await a;
+ assert.equal(h.state.feed.games[0].id,'new');assert.equal(h.state.loading,false);
+});
+test('older same-date scoreboard failure cannot blank newer successful refresh',async()=>{
+ const h=harness(),a=h.ctx.loadBoard(),b=h.ctx.loadBoard();
+ h.requests[1].resolve({games:[{id:'new'}]});await b;
+ h.requests[0].reject(new Error('stale outage'));await a;
+ assert.equal(h.state.feed.games[0].id,'new');assert.equal(h.state.error,'');
+});
+test('old scoreboard response cannot clear loading indicator of a newer request',async()=>{
+ const h=harness(),a=h.ctx.loadBoard(),b=h.ctx.loadBoard();
+ h.requests[0].resolve({games:[{id:'old'}]});await a;
+ assert.equal(h.state.loading,true);
+ h.requests[1].resolve({games:[{id:'new'}]});await b;
+ assert.equal(h.state.loading,false);assert.equal(h.state.feed.games[0].id,'new');
+});
