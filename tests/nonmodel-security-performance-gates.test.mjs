@@ -42,8 +42,9 @@ test('performance results distinguish mocked emulation from real devices and bou
  assert.match(benchmark,/medianBuilderNavMs/);
  assert.match(benchmark,/medianMatchupOpenMs/);
 });
-test('feed fallback uses one shared timeout; documented limitation for subsequent repair',()=>{
- assert.match(feed,/timer=setTimeout\(\(\)=>ctrl\.abort\(\),12000\)/);
- assert.match(feed,/for\(const address of origins\)/);
+test('feed fallback reserves a bounded window after a slow relay',()=>{
+ assert.match(feed,/totalDeadline=Date\.now\(\)\+12000/);
+ assert.match(feed,/i<origins\.length-1\?6500:remaining/);
+ assert.match(feed,/for\(let i=0;i<origins\.length;i\+\+\)/);
  assert.match(feed,/finally\{clearTimeout\(timer\);\}/);
 });
