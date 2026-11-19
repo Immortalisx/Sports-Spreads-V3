@@ -1,10 +1,13 @@
+// Guard same-league/date overlapping requests, not just navigation to a different date.
+let boardRequestVersion=0;
 async function loadBoard(){
+ const version=++boardRequestVersion;
  const league=state.league,date=state.date;
  state.loading=true;state.error='';state.feed=null;
  render();
- try{const json=await readSportsData(`/api/scoreboard?league=${league}&date=${date.replaceAll('-','')}`);if(state.league!==league||state.date!==date)return;state.feed=json;state.error='';}
- catch(e){if(state.league!==league||state.date!==date)return;state.error=e.message||'Provider unavailable';state.feed={games:[],demo:true,updatedAt:null};}
- finally{if(state.league===league&&state.date===date){state.loading=false;render();// Detail-only feeds (odds, form, injuries, goalies) are intentionally fetched
+ try{const json=await readSportsData(`/api/scoreboard?league=${league}&date=${date.replaceAll('-','')}`);if(version!==boardRequestVersion||state.league!==league||state.date!==date)return;state.feed=json;state.error='';}
+ catch(e){if(version!==boardRequestVersion||state.league!==league||state.date!==date)return;state.error=e.message||'Provider unavailable';state.feed={games:[],demo:true,updatedAt:null};}
+ finally{if(version===boardRequestVersion&&state.league===league&&state.date===date){state.loading=false;render();// Detail-only feeds (odds, form, injuries, goalies) are intentionally fetched
  // only when a user opens a matchup. This keeps the schedule lightweight.
 }}
 }
