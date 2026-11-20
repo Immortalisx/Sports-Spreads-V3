@@ -105,8 +105,8 @@ document.addEventListener('change',e=>{if(e.target.id==='date'){state.date=e.tar
 document.addEventListener('input',e=>{if(e.target.id==='auto-confidence'){
  const target=Number(e.target.value);state.autoTicket.target=target;state.autoTicket.status='';
  e.target.style.setProperty('--slider-progress',((target-50)/45*100).toFixed(1)+'%');
- const out=document.getElementById('auto-target'),grade=document.getElementById('auto-grade');
- if(out)out.textContent=target+'%';if(grade)grade.textContent=globalThis.SportsAutoTicket.grade(target);
+ const out=document.getElementById('auto-target');
+ if(out)out.textContent=target+'%';
  return;
  }if(['leg-selection','leg-odds','prop-line'].includes(e.target.id)){clearPropQuote(e.target.id==='leg-odds');updateLegPreview();}if(e.target.id==='leg-selection'){lookupTyping(e.target.value);return;}if(e.target.id==='prop-line'){const market=e.target.dataset.market;const text=propNote(market,Number(e.target.value));document.getElementById('prop-line-value').textContent=text;document.getElementById('leg-notes').value=text;}else if(e.target.id==='search'||e.target.id==='team-search'){const inputId=e.target.id;const caret=e.target.selectionStart;state.search=e.target.value;render();const replacement=document.getElementById(inputId);if(replacement){replacement.focus();replacement.setSelectionRange(caret,caret);}}});
 document.addEventListener('submit',e=>{if(e.target.id==='cloud-login'){e.preventDefault();sendLogin(document.getElementById('cloud-email').value.trim());return;}if(e.target.id!=='leg-form')return;e.preventDefault();const selection=document.getElementById('leg-selection').value.trim();const odds=document.getElementById('leg-odds').value.trim();const number=parseAmerican(odds);const err=document.getElementById('form-error');if(!selection||number===null){err.textContent='Enter a selection and valid American odds (at least +100 or -100).';return;}if(state.ticket.length>=20){err.textContent='Prototype limit: 20 legs per ticket.';return;}const quote=document.getElementById('prop-quotes')?.applied;
