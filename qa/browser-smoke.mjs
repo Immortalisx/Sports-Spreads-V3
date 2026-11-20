@@ -73,6 +73,9 @@ async function run(){
         bookmaker:'Fixture Same Book',bookmakerKey:'fixture',marketProbability:.61,odds:-150,
         oddsAsOf:new Date().toISOString(),start:gameStart}))}]
     })});
+   if(requestUrl.includes('/functions/v1/sportsbook-odds')&&new URL(requestUrl).searchParams.get('league')==='nfl')
+    return route.fulfill({json:{status:'cached',events:[{id:'fixture-nfl',sport_key:'americanfootball_nfl',home_team:'Fixture Ravens',away_team:'Fixture Visitors',commence_time:gameStart,
+     bookmakers:[{key:'draftkings',title:'Fixture Book',markets:[{key:'player_reception_yds',last_update:new Date().toISOString(),outcomes:[{name:'Over',description:'Fixture Receiver',point:72.5,price:125}]}]}]}]}});
    if(requestUrl.includes('/functions/v1/sportsbook-odds'))
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
       status:'cached',asOf:new Date().toISOString(),ageMinutes:0,events:[{
@@ -177,11 +180,13 @@ async function run(){
   await mobile.getByRole('option',{name:/Fixture Receiver/}).tap();
   await mobile.locator('#leg-market').selectOption('Receiving yards');
   await mobile.locator('#prop-line').evaluate(el=>{el.value='73';el.dispatchEvent(new Event('input',{bubbles:true}));});
-  await mobile.locator('#leg-odds').fill('+125');
+  await mobile.getByRole('button',{name:'Check saved prices'}).tap();
+  await mobile.getByRole('button',{name:/Fixture Book \+125/}).tap();
   assert.equal(await mobile.locator('#leg-preview').innerText(),'Fixture Receiver · 73+ receiving yards · +125');
   await mobile.locator('#leg-form button[type="submit"]').tap();
   const savedLeg=mobile.locator('.ticket-item');
   assert.match(await savedLeg.innerText(),/Fixture Receiver/);
+  assert.match(await savedLeg.innerText(),/Fixture Book quote/);
   assert.match(await savedLeg.innerText(),/73\+ receiving yards/);
   assert.match(await savedLeg.innerText(),/\+125/);
   await mobile.getByRole('button',{name:'Remove Fixture Receiver'}).tap();

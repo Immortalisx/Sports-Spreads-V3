@@ -17,3 +17,14 @@ test('match-specific book odds retain timestamp and are never a validated confid
 test('unsupported or absent provider configuration never invents sportsbook odds',async()=>{
  assert.equal((await o.get('nba',game)).status,'not_configured');await assert.rejects(o.get('bad',game),/Invalid matchup|Unsupported/);
 });
+test('NFL props require the exact line, player, upcoming game and recent book price',()=>{
+ const now=Date.now(),pick={team:'Baltimore Ravens',player:'Test Player',market:'Receiving yards',target:73};
+ const m={key:'player_reception_yds',last_update:new Date(now).toISOString(),outcomes:[{description:pick.player,name:'Over',point:72.5,price:125}]};
+ const event={id:'nfl-1',sport_key:'americanfootball_nfl',commence_time:new Date(now+3600000).toISOString(),home_team:pick.team,away_team:'Test Opponent',bookmakers:[{key:'draftkings',title:'DraftKings',markets:[m]}]};
+ const snapshot={status:'cached',events:[event]};
+ assert.equal(o.propQuotes(snapshot,pick,now)[0].price,125);
+ for(const change of [{target:72},{target:0},{player:'Other Player'},{market:'Rushing yards'},{team:'Other Team'}])assert.equal(o.propQuotes(snapshot,{...pick,...change},now).length,0);
+ assert.equal(o.propQuotes(snapshot,pick,now+900001).length,0);
+ assert.equal(o.propQuotes({...snapshot,events:[event,event]},pick,now).length,0);
+ m.outcomes[0].name='Under';assert.equal(o.propQuotes(snapshot,pick,now).length,0);
+});

@@ -96,5 +96,32 @@ function marketConsensus(game,snapshot){
   bestHome,bestAway,asOf:snapshot.asOf,status:snapshot.status,source:'Bookmaker no-vig consensus'};
 }
 
-root.SportsOdds=Object.freeze({VERSION,canonical,validPrice,implied,fairHomePrice,matchGame,booksForGame,marketConsensus,get,getBoard});
+function propQuotes(snapshot, pick, now=Date.now()){
+ const markets={'Passing yards':'player_pass_yds','Receiving yards':'player_reception_yds','Rushing yards':'player_rush_yds','Touchdowns scored':'player_tds_over'};
+ const key=markets[pick.market],td=pick.market==='Touchdowns scored',target=pick.target;
+ if(!key||!pick.team||!pick.player||!Number.isInteger(target)||target<0||target>(td?5:200)||(!td&&!target))return [];
+ if(!['cached','ok'].includes(snapshot?.status)||!Array.isArray(snapshot.events))return [];
+ const events=snapshot.events.filter(e=>e?.sport_key==='americanfootball_nfl'&&e.id&&Date.parse(e.commence_time)>now&&
+  [e.home_team,e.away_team].some(t=>canonical(t)===canonical(pick.team)));
+ if(events.length!==1)return [];
+ const event=events[0],quotes=[];
+ for(const book of event.bookmakers||[]){
+  if(!SUPPORTED_BOOKS.has(book.key))continue;
+  const matches=[];
+  for(const m of book.markets||[]){
+   if(m.key!==key&&m.key!==key+'_alternate')continue;
+   const stamp=Date.parse(m.last_update||book.last_update);
+   if(!Number.isFinite(stamp)||stamp>now||now-stamp>900000)continue;
+   for(const outcome of m.outcomes||[]){
+    if(outcome.name!==(target===0?'Under':'Over')||outcome.point!==(target===0?0.5:target-0.5))continue;
+    if(outcome.description?.trim().toLowerCase()!==pick.player.trim().toLowerCase()||!validPrice(outcome.price))continue;
+    matches.push({bookmaker:book.title||book.key,price:outcome.price,asOf:new Date(stamp).toISOString(),gameId:String(event.id),
+     matchup:event.away_team+' at '+event.home_team,start:event.commence_time});
+   }
+  }
+  if(matches.length===1)quotes.push(matches[0]);
+ }
+ return quotes;
+}
+root.SportsOdds=Object.freeze({VERSION,canonical,validPrice,implied,fairHomePrice,matchGame,booksForGame,marketConsensus,get,getBoard,propQuotes});
 })(globalThis);
