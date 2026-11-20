@@ -83,7 +83,7 @@ test('responsive navigation exposes text labels and safe-area space; TV remains 
  assert.match(css,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
  assert.match(css,/\.sidebar \.nav button span\{display:block/);
  assert.match(css,/env\(safe-area-inset-bottom,0px\)/);
- assert.match(css,/\.ticket-dock\{bottom:calc\(86px/);
+ assert.match(css,/\.ticket-dock\{bottom:calc\(65px \+ env\(safe-area-inset-bottom/);
  assert.match(css,/\.ticket-layout\.auto-only\{grid-template-columns:minmax\(0,1fr\)/);
  assert.match(root,/big-one big-one-hero/);
  assert.match(root,/Bookmaker-implied chance/);

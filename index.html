@@ -84,16 +84,16 @@ body{background:radial-gradient(circle at 88% 0,rgba(40,120,106,.16),transparent
 .game .drill{color:var(--accent)}
 .tag.live{background:rgba(46,174,120,.07);border-color:#4e8975}
 .team-col button,.person-name{min-height:33px}
-.ticket-dock{position:fixed;right:20px;bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:24px;z-index:11;min-width:245px;border:1px solid #398675;padding:13px 18px;background:linear-gradient(125deg,#17342f,#172b34);border-radius:15px;box-shadow:0 18px 40px rgba(0,0,0,.3);color:#dffef2;text-align:left;backdrop-filter:blur(10px)}
+.ticket-dock{position:fixed;right:20px;bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:24px;z-index:11;min-width:245px;border:1px solid #398675;padding:13px 18px;background:linear-gradient(125deg,rgba(13,37,32,.76),rgba(12,29,38,.72));border-radius:15px;box-shadow:0 18px 40px rgba(0,0,0,.3);color:#dffef2;text-align:left;backdrop-filter:blur(10px)}
 .ticket-dock strong{font-family:'Space Grotesk',sans-serif;font-size:16px;color:var(--accent)}
 .dock-label{font-size:10px;font-weight:800;letter-spacing:.9px;display:grid;gap:4px}
 .dock-dot{display:none}.dock-count{font-size:11px;color:#a6bdb6;letter-spacing:0}
-.ticket-dock:hover{background:#1a3c37;border-color:#78edc7}
+.ticket-dock:hover{background:rgba(16,45,39,.82);border-color:#78edc7}
 .ticket-ticker{border-color:#398675;background:rgba(17,41,44,.97)}
 .ticker-indicator{background:var(--accent)}
 .ticker-old{animation-duration:260ms}.ticker-new{animation-duration:260ms}
 button,summary{touch-action:manipulation}
-@media(max-width:830px){.site{padding-bottom:130px}.sidebar{position:sticky;top:0;z-index:10;background:rgba(11,21,32,.97);backdrop-filter:blur(14px)}.ticket-dock{bottom:16px}}
+@media(max-width:830px){.site{padding-bottom:130px}.sidebar{position:sticky;top:0;z-index:10;background:rgba(11,21,32,.97);backdrop-filter:blur(14px)}.ticket-dock{bottom:8px}}
 @media(max-width:620px){.site{padding:22px 16px 125px}.hero p{font-size:12px}.hero h1{font-size:29px;margin:6px 0}.eyebrow{font-size:9px}.leaguebar{margin-top:18px}.league{flex:1;justify-content:center;padding:11px 5px}.league .emoji{font-size:16px}.quick-status{padding:11px 12px;margin:14px 0 21px}.quick-status strong{font-size:11px}.quick-status .muted-sm{font-size:9px}.game-grid{gap:12px}.game{padding:17px}.game-top{margin-bottom:15px}.game-foot{margin-top:14px}.ticket-dock{left:12px;right:12px;bottom:11px;max-width:none;min-width:0;border-radius:14px}.top-actions{gap:7px}.top-actions .icon-button{height:36px;min-width:36px}.compact-refresh{font-size:0;padding:10px 13px}.compact-refresh svg{width:18px}.sidebar .brand span{font-size:16px}.nav button{padding:10px}.nav button svg{width:17px}}
 @media(prefers-reduced-motion:reduce){.game:hover{transform:none}.ticker-old{display:none}.ticker-new{animation:none!important}.btn:active,.neutral-button:active,.nav button:active,.league:active{transform:none}}
 
@@ -612,7 +612,9 @@ body:not(.big-screen-mode){
  .sidebar .nav button.active{box-shadow:inset 0 2px var(--accent);color:var(--accent);background:#1b3430}
  .sidebar{position:relative;z-index:10}
  main.site{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
- .ticket-dock{bottom:calc(86px + env(safe-area-inset-bottom,0px))!important}
+ .ticket-dock{bottom:calc(65px + env(safe-area-inset-bottom,0px))!important;min-height:44px;padding:8px 13px}
+ .sidebar .nav{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+ .sidebar .nav button{min-height:48px;padding:4px}
 }
 @media(max-width:620px){
  .top-actions [data-action="share"],.top-actions .big-screen-launch{display:none}
