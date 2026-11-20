@@ -193,6 +193,12 @@ async function run(){
   await mobileNav.locator('[data-section="games"]').click();
   await mobile.locator('.game [data-action="game"]').first().click();
   await mobile.locator('.drawer').waitFor({timeout:5000});
+  const research=mobile.locator('.drawer details[data-matchup-research]');
+  assert.equal(await research.getAttribute('open'),null);
+  assert.ok(await mobile.locator('.drawer-start-time').isVisible());
+  assert.ok(await mobile.locator('.drawer [data-action="load-odds"]').isVisible());
+  await research.locator('summary').first().tap();
+  assert.notEqual(await research.getAttribute('open'),null);
   await mobile.locator('[data-action="close"]').last().click();
   assert.equal(await mobile.locator('.drawer').count(),0);
   await mobile.screenshot({path:'qa/screenshots/mobile.png'});

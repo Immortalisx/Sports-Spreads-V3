@@ -44,17 +44,17 @@ function nflAvailabilityPanel(g){
   Math.abs(Date.parse(x.start||'')-Date.parse(g.start||''))<3600000&&
   Date.parse(x.asOf||'')<Date.parse(g.start||'')):null;
  const fresh=snapshot?.generatedAt?formatFresh(snapshot.generatedAt):'Not yet verified';
- const heading='<div class="availability-heading"><div><span class="block-label">NFL · STARTING QB & INJURIES</span>'+
+ const heading='<div class="availability-heading"><div><span class="block-label">QB & injuries</span>'+
   '<div class="availability-timestamp">Source check: '+esc(fresh)+'</div></div>'+
   '<button class="neutral-button availability-retry" data-action="retry-nfl-availability" aria-label="Check cached NFL availability again">'+
   (state.nflAvailabilityLoading?'Checking…':'Check updates')+'</button></div>';
  if(!game){
-  const message=state.nflAvailabilityLoading?'Checking the shared NFL availability snapshot…':
-   state.nflAvailabilityError||'No verified source snapshot for this upcoming matchup yet. Player availability is unknown.';
+  const message=state.nflAvailabilityLoading?'Checking injury reports…':
+   state.nflAvailabilityError||'No matched report for this game.';
   return '<section class="panel availability-panel">'+heading+
    '<div class="availability-empty"><span aria-hidden="true">?</span><div><strong>Availability not verified</strong>'+
    '<p>'+esc(message)+'</p></div></div>'+
-   '<p class="availability-disclaimer">Data is published only after its game and team identifiers match this matchup. No guessed starters or injury confidence are used.</p></section>';
+   '</section>';
  }
  const statusName=x=>String(x||'unknown').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
  const overview=(result)=>{
@@ -84,8 +84,8 @@ function nflAvailabilityPanel(g){
    '<span class="availability-badge availability-badge--'+starter+'">'+tag+'</span></div>'+
    '<div class="availability-qb">'+qbLabel+'</div>'+
    '<div class="availability-qb-note">'+esc(reportLine)+'</div>'+
-   counts+listing+
-   '<p class="availability-team-note">'+esc(result?.note||'No confirmed game-day starter')+'</p>'+
+   counts+'<details><summary>Injury report</summary>'+listing+
+   '<p class="availability-team-note">'+esc(result?.note||'No confirmed game-day starter')+'</p></details>'+
    '</article>';
  };
  const sourceState=snapshot.injurySourceStatus==='retrieved'?

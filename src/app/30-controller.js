@@ -11,6 +11,10 @@ function render(){
  document.body.classList?.toggle?.('big-screen-mode',Boolean(state.bigScreen));
  document.body.style.overflow=state.drawer?'hidden':'';
 }
+document.addEventListener('toggle',event=>{
+ const panel=event.target,drawer=state.drawer;
+ if(panel.isConnected&&drawer?.game&&panel.dataset?.matchupResearch===String(drawer.game.id))drawer.researchOpen=panel.open;
+},true);
 function changeBigScreen(){
  if(state.bigScreen){
   state.bigScreen=false;state.section=state.bigScreenReturnSection||'games';
