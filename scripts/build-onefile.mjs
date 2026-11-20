@@ -16,7 +16,7 @@ html=html.replace('<title>Sports Spreads — Live games, teams & ticket builder<
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Sports Spreads" />
   <meta property="og:title" content="Sports Spreads" />
-  <meta property="og:description" content="NFL • NBA • NHL • MLB. Games, team reports, weather context and a clean parlay builder." />
+  <meta property="og:description" content="NFL • NBA • MLB. Games, team reports, weather context and a clean parlay builder." />
   <meta property="og:url" content="https://sports-spreads.onrender.com/" />
   <meta name="twitter:card" content="summary" />`);
 await mkdir(join(root,'release'),{recursive:true});const dst=join(root,'release','index.html');await writeFile(dst,html);console.log('Built '+dst+' ('+html.length+' chars)');

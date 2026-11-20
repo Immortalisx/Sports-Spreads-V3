@@ -30,16 +30,8 @@ test('latest game log has no predicted/confirmed starter or unsourced xGoals',()
  assert.match(root,/gameDate>=gameDate/);
  assert.match(root,/gamesStarted!==true/);
 });
-test('only matched upcoming NHL games show published recent goalie research',()=>{
- assert.match(view,/function nhlGoaliePanel\(g\)/);
- assert.match(view,/x\.homeAbbrev===home/);
- assert.match(view,/x\.awayAbbrev===away/);
- assert.match(view,/Math\.abs\(Date\.parse\(x\.start/);
- assert.match(view,/Starter unconfirmed/);
- assert.match(view,/upcoming starting goalies are NOT confirmed/);
- assert.match(view,/\$\{nhlGoaliePanel\(g\)\}/);
- assert.match(ctrl,/loadNhlGoalies\(force=false\)/);
- assert.match(ctrl,/if\(game.league==='nhl'\)void loadNhlGoalies\(\)/);
- assert.match(ctrl,/retry-nhl-goalies/);
- assert.match(state,/nhlGoalies:null/);
+test('active dashboard omits hockey research and goalie fetches',()=>{
+ assert.doesNotMatch(view,/nhlGoaliePanel/);
+ assert.doesNotMatch(ctrl,/loadNhlGoalies|nhl-goalie-form/);
+ assert.doesNotMatch(state,/nhlGoalies/);
 });

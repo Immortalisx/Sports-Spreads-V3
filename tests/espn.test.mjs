@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeEvent,normalizeRoster,normalizeInjuries,normalizeNews,americanToDecimal,ticketEstimate,leagueConfig,UpstreamError} from '../lib/espn.mjs';
-test('only supported leagues are accepted',()=>{assert.equal(leagueConfig('nhl').sport,'hockey');assert.throws(()=>leagueConfig('soccer'),UpstreamError);});
+test('only supported leagues are accepted',()=>{assert.throws(()=>leagueConfig('nhl'),UpstreamError);assert.throws(()=>leagueConfig('soccer'),UpstreamError);});
 test('normalizes scheduled game without inventing scores or forecasts',()=>{
  const evt=normalizeEvent({id:'123',date:'2026-11-18T00:30:00Z',competitions:[{competitors:[{homeAway:'home',team:{id:'28',displayName:'Toronto Raptors',abbreviation:'TOR'}},{homeAway:'away',team:{id:'18',displayName:'New York Knicks',abbreviation:'NY'}}]}],status:{type:{state:'pre',shortDetail:'7:30 PM EST'}}},'nba');
  assert.equal(evt.home.name,'Toronto Raptors');assert.equal(evt.away.name,'New York Knicks');assert.equal(evt.home.score,null);assert.equal(evt.model,null);assert.equal(evt.status,'scheduled');
