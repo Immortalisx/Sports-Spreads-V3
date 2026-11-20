@@ -76,11 +76,27 @@ function openTeam(game,side){if(!game)return;const team=game[side];if(!team?.id)
 function openDirectoryTeam(id){const team=state.directory[state.league]?.teams?.find(t=>t.id===id);if(team){state.drawer={type:'team',league:state.league,team};state.teamTab='injuries';render();loadTeam('injuries');}}
 function getRosterPlayer(id){const key=`${state.drawer.league}-${state.drawer.team.id}-roster`;return state.teamCache[key]?.roster?.find(p=>p.id===id);}
 function saveTicket(){try{localStorage.setItem('ss-v2-ticket',JSON.stringify(state.ticket));}catch{notify('Browser storage is not available.');}}
-document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='check-prop-quote'){void lookupPropQuote();return;}if(action==='nfl-player-prop'){
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='check-prop-quote'){void lookupPropQuote();return;}if(action==='prop-next'||action==='prop-back'){
+ const form=el.closest('form'),step=form.dataset.propStep;
+ if(action==='prop-next'){
+  if(step==='player'&&document.getElementById('leg-selection').value.trim().length<2)return;
+  setPropStep(step==='player'?'target':'price');
+ }else if(step==='player'){
+  delete form.dataset.propStep;form.querySelector('[type="submit"]').disabled=false;
+  document.getElementById('leg-odds').required=true;
+  document.getElementById('leg-league').dispatchEvent(new Event('change',{bubbles:true}));
+  document.getElementById('leg-league').focus();
+ }else{
+  clearPropQuote();document.getElementById('leg-odds').value='';updateLegPreview();
+  setPropStep(step==='price'?'target':'player');
+ }
+ return;
+}if(action==='nfl-player-prop'){
  const league=document.getElementById('leg-league'),market=document.getElementById('leg-market');
  league.value='nfl';league.dispatchEvent(new Event('change',{bubbles:true}));
  market.value='Passing yards';market.dispatchEvent(new Event('change',{bubbles:true}));
- document.getElementById('leg-selection').focus();return;
+ market.replaceChildren(...Array.from(market.options).filter(option=>isNflPlayerMarket(option.value)));
+ setPropStep('player');return;
 }if(action==='retry-nfl-availability'){void loadNflAvailability(true);return;}if(action==='retry-nfl-coaching'){void loadNflCoaching(getGame(el.dataset.game),true);return;}if(action==='load-market-history'){void loadMarketHistory(getGame(el.dataset.game),true);return;}if(action==='generate-ticket'){await generateAutomaticTicket();return;}if(action==='ticket-mode'){state.ticketMode=el.dataset.mode==='manual'?'manual':'automatic';render();if(state.ticketMode==='automatic')void loadDailySuggestions();return;}if(action==='daily-ticket-load'){loadSuggestedTicket(el.dataset.id);return;}if(action==='autocomplete-select'){await acceptLookup(Number(el.dataset.index));return;}if(action==='big-screen'){changeBigScreen();return;}if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='submit-feedback'){
  const type=document.getElementById('feedback-kind')?.value||'';
  const note=(document.getElementById('feedback-note')?.value||'').trim();
@@ -112,8 +128,8 @@ document.addEventListener('input',e=>{if(e.target.id==='auto-confidence'){
  const out=document.getElementById('auto-target');
  if(out)out.textContent=target+'%';
  return;
- }if(['leg-selection','leg-odds','prop-line'].includes(e.target.id)){clearPropQuote(e.target.id==='leg-odds');updateLegPreview();}if(e.target.id==='leg-selection'){lookupTyping(e.target.value);return;}if(e.target.id==='prop-line'){const market=e.target.dataset.market;const text=propNote(market,Number(e.target.value));document.getElementById('prop-line-value').textContent=text;document.getElementById('leg-notes').value=text;}else if(e.target.id==='search'||e.target.id==='team-search'){const inputId=e.target.id;const caret=e.target.selectionStart;state.search=e.target.value;render();const replacement=document.getElementById(inputId);if(replacement){replacement.focus();replacement.setSelectionRange(caret,caret);}}});
-document.addEventListener('submit',e=>{if(e.target.id==='cloud-login'){e.preventDefault();sendLogin(document.getElementById('cloud-email').value.trim());return;}if(e.target.id!=='leg-form')return;e.preventDefault();const selection=document.getElementById('leg-selection').value.trim();const odds=document.getElementById('leg-odds').value.trim();const number=parseAmerican(odds);const err=document.getElementById('form-error');if(!selection||number===null){err.textContent='Enter a selection and valid American odds (at least +100 or -100).';return;}if(state.ticket.length>=20){err.textContent='Prototype limit: 20 legs per ticket.';return;}const quote=document.getElementById('prop-quotes')?.applied;
+ }if(['leg-selection','leg-odds','prop-line'].includes(e.target.id)){clearPropQuote(e.target.id==='leg-odds');updateLegPreview();}if(e.target.id==='leg-selection'){lookupTyping(e.target.value);const form=e.target.form;if(form?.dataset.propStep==='player')form.querySelector('[data-action="prop-next"]').disabled=e.target.value.trim().length<2;return;}if(e.target.id==='prop-line'){const market=e.target.dataset.market;const text=propNote(market,Number(e.target.value));document.getElementById('prop-line-value').textContent=text;document.getElementById('leg-notes').value=text;}else if(e.target.id==='search'||e.target.id==='team-search'){const inputId=e.target.id;const caret=e.target.selectionStart;state.search=e.target.value;render();const replacement=document.getElementById(inputId);if(replacement){replacement.focus();replacement.setSelectionRange(caret,caret);}}});
+document.addEventListener('submit',e=>{if(e.target.id==='cloud-login'){e.preventDefault();sendLogin(document.getElementById('cloud-email').value.trim());return;}if(e.target.id!=='leg-form')return;e.preventDefault();if(e.target.dataset.propStep&&e.target.dataset.propStep!=='price')return;const selection=document.getElementById('leg-selection').value.trim();const odds=document.getElementById('leg-odds').value.trim();const number=parseAmerican(odds);const err=document.getElementById('form-error');if(!selection||number===null){err.textContent='Enter a selection and valid American odds (at least +100 or -100).';return;}if(state.ticket.length>=20){err.textContent='Prototype limit: 20 legs per ticket.';return;}const quote=document.getElementById('prop-quotes')?.applied;
  if(quote&&(Date.now()-Date.parse(quote.asOf)>900000||Date.parse(quote.start)<=Date.now()||number!==quote.price)){
   clearPropQuote();updateLegPreview();err.textContent='Check the saved price again or enter odds manually.';return;}
  state.ticket.push({id:`leg-${Date.now()}-${state.ticket.length}`,league:document.getElementById('leg-league').value,market:document.getElementById('leg-market').value,selection,odds:number,bookmaker:quote?.bookmaker||state.draft?.bookmaker||null,oddsAsOf:quote?.asOf||state.draft?.oddsAsOf||null,notes:isNflPlayerMarket(document.getElementById('leg-market').value)?propNote(document.getElementById('leg-market').value,Number(document.getElementById('prop-line').value)):document.getElementById('leg-notes').value.trim()||(document.getElementById('prop-line')?propNote(document.getElementById('leg-market').value,Number(document.getElementById('prop-line').value)):'') ,gameId:quote?.gameId||state.draft?.gameId||null,playerId:(state.lookup.chosen?.type==='player'&&state.lookup.chosen.selection===selection?state.lookup.chosen.id:null)||state.draft?.playerId||null,teamId:(state.lookup.chosen?.selection===selection?state.lookup.chosen.teamId:null)||state.draft?.teamId||null,enteredAt:new Date().toISOString()});saveTicket();state.draft=null;state.lookup.chosen=null;state.lookup.query='';render();notify('Added selection to your local ticket.');});

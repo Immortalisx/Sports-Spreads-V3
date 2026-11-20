@@ -174,12 +174,18 @@ async function run(){
   await noBuilderOverflow();
   console.log('PASS: 390x844 empty ticket, one +150 leg with $25 payout, last leg removed; no builder overflow');
   await mobile.getByRole('button',{name:'NFL player prop',exact:true}).tap();
+  assert.equal(await mobile.locator('#prop-line').isVisible(),false);
   await mobile.locator('#leg-selection').fill('Ravens');
   await mobile.getByRole('option',{name:/Fixture Ravens/}).tap();
   await mobile.locator('#leg-selection').fill('Receiver');
   await mobile.getByRole('option',{name:/Fixture Receiver/}).tap();
   await mobile.locator('#leg-market').selectOption('Receiving yards');
   await mobile.locator('#prop-line').evaluate(el=>{el.value='73';el.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.equal(await mobile.locator('#leg-odds').isVisible(),false);
+  await mobile.getByRole('button',{name:'Continue to odds'}).tap();
+  await mobile.getByRole('button',{name:'Back',exact:true}).tap();
+  assert.equal(await mobile.locator('#prop-line').inputValue(),'73');
+  await mobile.getByRole('button',{name:'Continue to odds'}).tap();
   await mobile.getByRole('button',{name:'Check saved prices'}).tap();
   await mobile.getByRole('button',{name:/Fixture Book \+125/}).tap();
   assert.equal(await mobile.locator('#leg-preview').innerText(),'Fixture Receiver · 73+ receiving yards · +125');

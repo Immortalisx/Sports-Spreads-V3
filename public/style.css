@@ -692,3 +692,18 @@ body{background:radial-gradient(ellipse 70% 48% at 74% -18%,rgba(44,104,117,.19)
  .game-grid .game-card-v3,.game-card-v3 .match-v3-foot .drill{transition:none!important;animation:none!important;transform:none!important}
  .game-card-v3 .match-v3-foot .drill:active{transform:none}
 }
+
+/* The NFL shortcut guides the same manual form through player, target and price. */
+.prop-guide,#leg-form [data-action="prop-next"]{display:none}
+#leg-form[data-prop-step] .prop-guide{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+#leg-form:is([data-prop-step="player"],[data-prop-step="target"]) [data-action="prop-next"]{display:inline-flex}
+.form-card:has(#leg-form[data-prop-step])>h3,
+.form-card:has(#leg-form[data-prop-step])>[data-action="nfl-player-prop"],
+#leg-form[data-prop-step] .form-item:has(#leg-league),
+#leg-form[data-prop-step] .form-item:has(#leg-notes),
+#leg-form[data-prop-step]:not([data-prop-step="player"]) .form-item:has(#leg-selection),
+#leg-form[data-prop-step]:not([data-prop-step="target"]) .form-item:has(#leg-market),
+#leg-form[data-prop-step="player"] #prop-controls,
+#leg-form[data-prop-step]:not([data-prop-step="price"]) :is(#leg-preview,#prop-quotes,[data-action="check-prop-quote"],button[type="submit"]),
+#leg-form[data-prop-step]:not([data-prop-step="price"]) .form-item:has(#leg-odds),
+#leg-form[data-prop-step="price"] #prop-controls>:is(label,input){display:none}
