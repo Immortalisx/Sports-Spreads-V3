@@ -58,6 +58,10 @@ async function acceptLookup(index){
   state.lookup.query='';state.lookup.status=`${item.teamName} player selected.`;drawLookup();input.focus();
  }
  updateLegPreview();
+ if(input.form?.dataset.propStep==='player'){
+  if(item.type==='player')setPropStep('target');
+  else input.form.querySelector('[data-action="prop-next"]').disabled=true;
+ }
 }
 function lookupTyping(value){
  state.lookup.query=value;state.lookup.chosen=null;state.lookup.active=-1;state.lookup.league=lookupLeague();

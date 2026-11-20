@@ -710,6 +710,21 @@ body{background:radial-gradient(ellipse 70% 48% at 74% -18%,rgba(44,104,117,.19)
  .game-card-v3 .match-v3-foot .drill:active{transform:none}
 }
 
+/* The NFL shortcut guides the same manual form through player, target and price. */
+.prop-guide,#leg-form [data-action="prop-next"]{display:none}
+#leg-form[data-prop-step] .prop-guide{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+#leg-form:is([data-prop-step="player"],[data-prop-step="target"]) [data-action="prop-next"]{display:inline-flex}
+.form-card:has(#leg-form[data-prop-step])>h3,
+.form-card:has(#leg-form[data-prop-step])>[data-action="nfl-player-prop"],
+#leg-form[data-prop-step] .form-item:has(#leg-league),
+#leg-form[data-prop-step] .form-item:has(#leg-notes),
+#leg-form[data-prop-step]:not([data-prop-step="player"]) .form-item:has(#leg-selection),
+#leg-form[data-prop-step]:not([data-prop-step="target"]) .form-item:has(#leg-market),
+#leg-form[data-prop-step="player"] #prop-controls,
+#leg-form[data-prop-step]:not([data-prop-step="price"]) :is(#leg-preview,#prop-quotes,[data-action="check-prop-quote"],button[type="submit"]),
+#leg-form[data-prop-step]:not([data-prop-step="price"]) .form-item:has(#leg-odds),
+#leg-form[data-prop-step="price"] #prop-controls>:is(label,input){display:none}
+
 </style>
   <script>window.SS_CLOUD_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co',publishableKey:'sb_publishable_BX7-wUhJWAp7d3fa3I7Uew_VZc4JHE6'};</script>
   <script>window.SS_FEED_CONFIG={url:'https://nwspnepkmeoytlkbltfe.supabase.co/functions/v1/sports-feed'};</script>
@@ -1845,6 +1860,21 @@ async function lookupPropQuote(){
   }
  }catch{if(box.isConnected&&box.revision===revision)box.textContent='Quote cache unavailable. Enter odds manually.';}
 }
+function setPropStep(step){
+ const form=document.getElementById('leg-form');
+ form.dataset.propStep=step;
+ const title=form.querySelector('.prop-step-title');
+ const selection=document.getElementById('leg-selection');
+ title.textContent=step==='player'?'Choose a player':step==='target'?selection.value+' · Choose a target':'Review your leg';
+ const next=form.querySelector('[data-action="prop-next"]');
+ next.textContent=step==='player'?'Use typed player':'Continue to odds';
+ next.disabled=step==='player'&&selection.value.trim().length<2;
+ form.querySelector('[type="submit"]').disabled=step!=='price';
+ const odds=document.getElementById('leg-odds');
+ odds.required=step==='price';
+ const focus=step==='player'?selection:step==='target'?document.getElementById('leg-market'):odds;
+ focus.focus();
+}
 function updateLegPreview(){
  const preview=document.getElementById('leg-preview');
  if(!preview)return;
@@ -1951,7 +1981,7 @@ function ticketView(){
  const suggestions=automatic?dailySuggestionsPanel()+autoTicketPanel()+'<details class="ux-secondary-matchups"><summary>Game research</summary>'+pregameGameTickets()+'</details>':'';
  if(automatic&&!hasLegs)return header+suggestions;
 
- const form=automatic?'':`<div class="form-card"><h3>Add selection</h3><button type="button" data-action="nfl-player-prop">NFL player prop</button><form id="leg-form"><div class="form-grid"><div class="form-item"><label for="leg-league">Sport</label><select id="leg-league">${Object.entries(SPORTS).map(([id,s])=>`<option value="${id}" ${id===(draft.league||state.league)?'selected':''}>${s.label}</option>`).join('')}</select></div><div class="form-item"><label for="leg-market">Market</label><select id="leg-market">${(MARKETS[draft.league||state.league]||MARKETS.nba).map(m=>`<option ${m===(draft.market||'Moneyline')?'selected':''}>${m}</option>`).join('')}</select></div>${propFields(draft.league||state.league,draft.market||'Moneyline')}<div class="form-item wide"><label for="leg-selection">Team or player</label><input type="text" id="leg-selection" required maxlength="95" autocomplete="off" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="selection-suggestions" placeholder="Search by name" value="${esc(draft.selection||'')}"><div id="selection-suggestions" role="listbox" aria-label="Matching teams and players" class="suggest-menu" hidden></div><p id="suggestion-hint" class="muted-sm">Type 3 letters to find a team or player.</p></div><div class="form-item"><label for="leg-odds">American odds</label><input type="text" id="leg-odds" required placeholder="e.g. -110 or +135" pattern="(?:\\+|-)?[0-9]+" value="${esc(draft.odds??'')}" /></div><div class="form-item"><label for="leg-notes">Line / notes</label><input type="text" id="leg-notes" maxlength="85" placeholder="e.g. Over 25.5 points" /></div></div><div class="form-actions"><button type="submit" class="btn">+ Add leg</button></div><div id="form-error" class="notice" role="alert"></div></form></div>`;
+ const form=automatic?'':`<div class="form-card"><h3>Add selection</h3><button type="button" data-action="nfl-player-prop">NFL player prop</button><form id="leg-form"><div class="prop-guide"><button type="button" data-action="prop-back">Back</button><strong class="prop-step-title" aria-live="polite"></strong></div><div class="form-grid"><div class="form-item"><label for="leg-league">Sport</label><select id="leg-league">${Object.entries(SPORTS).map(([id,s])=>`<option value="${id}" ${id===(draft.league||state.league)?'selected':''}>${s.label}</option>`).join('')}</select></div><div class="form-item"><label for="leg-market">Market</label><select id="leg-market">${(MARKETS[draft.league||state.league]||MARKETS.nba).map(m=>`<option ${m===(draft.market||'Moneyline')?'selected':''}>${m}</option>`).join('')}</select></div>${propFields(draft.league||state.league,draft.market||'Moneyline')}<div class="form-item wide"><label for="leg-selection">Team or player</label><input type="text" id="leg-selection" required maxlength="95" autocomplete="off" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="selection-suggestions" placeholder="Search by name" value="${esc(draft.selection||'')}"><div id="selection-suggestions" role="listbox" aria-label="Matching teams and players" class="suggest-menu" hidden></div><p id="suggestion-hint" class="muted-sm">Type 3 letters to find a team or player.</p></div><div class="form-item"><label for="leg-odds">American odds</label><input type="text" id="leg-odds" required placeholder="e.g. -110 or +135" pattern="(?:\\+|-)?[0-9]+" value="${esc(draft.odds??'')}" /></div><div class="form-item"><label for="leg-notes">Line / notes</label><input type="text" id="leg-notes" maxlength="85" placeholder="e.g. Over 25.5 points" /></div></div><div class="form-actions"><button type="button" class="btn" data-action="prop-next">Continue</button><button type="submit" class="btn">+ Add leg</button></div><div id="form-error" class="notice" role="alert"></div></form></div>`;
  const review=hasLegs?`<div class="form-card"><h3>My ticket <span class="muted">(${state.ticket.length})</span></h3><p>Saved on this device.</p><div class="ticket-items">${state.ticket.map((t,i)=>`<div class="ticket-item"><div class="ticket-head"><strong>${esc(t.selection)}</strong><button data-action="remove-leg" data-index="${i}" title="Remove leg" aria-label="Remove ${esc(t.selection)}">×</button></div><small>${esc(t.league.toUpperCase())} / ${esc(t.market)} ${t.notes?'· '+esc(t.notes):''}</small><small>${t.bookmaker?esc(t.bookmaker)+' quote · ':'Entered odds · '}${Number(t.odds)>0?'+':''}${esc(t.odds)}</small></div>`).join('')}</div>${ticketWarnings().length?`<div class="correlation-warning" role="status"><strong>⚠ Review this combination</strong><ul>${ticketWarnings().map(w=>`<li>${esc(w.message)}</li>`).join('')}</ul><small>Advisory only; no correlation-adjusted confidence is calculated.</small></div>`:''}<div class="ticket-totals"><div class="result-row"><span class="muted">Stake</span><input type="number" id="stake" min="0.01" max="1000000" step="0.01" value="${esc(state.stake)}" style="width:100px;text-align:right"></div><div class="result-row"><span class="muted">Decimal multiplier</span><strong>${estimate?estimate.multiplier.toFixed(2)+'×':'—'}</strong></div><div class="result-row"><span class="muted">Potential return</span><strong class="accent">${estimate?money(estimate.return):'—'}</strong></div><div class="result-row"><span class="muted">Potential profit</span><strong>${estimate?money(estimate.profit):'—'}</strong></div></div><div class="footlinks"><button class="btn small-btn" data-action="archive-ticket">Save snapshot</button>${state.cloud.configured&&state.cloud.token?`<button data-action="cloud-save">Save to cloud</button>`:``}<button data-action="export-ticket">Export JSON</button><button data-action="clear-ticket">Clear ticket</button></div><p class="notice">Estimated payout. Confirm at your sportsbook.</p></div>`:'';
  return header+suggestions+`<div class="ticket-layout ${automatic?'auto-only':''}">${form}${review}</div>`;
 }
@@ -2444,6 +2474,10 @@ async function acceptLookup(index){
   state.lookup.query='';state.lookup.status=`${item.teamName} player selected.`;drawLookup();input.focus();
  }
  updateLegPreview();
+ if(input.form?.dataset.propStep==='player'){
+  if(item.type==='player')setPropStep('target');
+  else input.form.querySelector('[data-action="prop-next"]').disabled=true;
+ }
 }
 function lookupTyping(value){
  state.lookup.query=value;state.lookup.chosen=null;state.lookup.active=-1;state.lookup.league=lookupLeague();
@@ -2565,11 +2599,27 @@ function openTeam(game,side){if(!game)return;const team=game[side];if(!team?.id)
 function openDirectoryTeam(id){const team=state.directory[state.league]?.teams?.find(t=>t.id===id);if(team){state.drawer={type:'team',league:state.league,team};state.teamTab='injuries';render();loadTeam('injuries');}}
 function getRosterPlayer(id){const key=`${state.drawer.league}-${state.drawer.team.id}-roster`;return state.teamCache[key]?.roster?.find(p=>p.id===id);}
 function saveTicket(){try{localStorage.setItem('ss-v2-ticket',JSON.stringify(state.ticket));}catch{notify('Browser storage is not available.');}}
-document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='check-prop-quote'){void lookupPropQuote();return;}if(action==='nfl-player-prop'){
+document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;if(action==='check-prop-quote'){void lookupPropQuote();return;}if(action==='prop-next'||action==='prop-back'){
+ const form=el.closest('form'),step=form.dataset.propStep;
+ if(action==='prop-next'){
+  if(step==='player'&&document.getElementById('leg-selection').value.trim().length<2)return;
+  setPropStep(step==='player'?'target':'price');
+ }else if(step==='player'){
+  delete form.dataset.propStep;form.querySelector('[type="submit"]').disabled=false;
+  document.getElementById('leg-odds').required=true;
+  document.getElementById('leg-league').dispatchEvent(new Event('change',{bubbles:true}));
+  document.getElementById('leg-league').focus();
+ }else{
+  clearPropQuote();document.getElementById('leg-odds').value='';updateLegPreview();
+  setPropStep(step==='price'?'target':'player');
+ }
+ return;
+}if(action==='nfl-player-prop'){
  const league=document.getElementById('leg-league'),market=document.getElementById('leg-market');
  league.value='nfl';league.dispatchEvent(new Event('change',{bubbles:true}));
  market.value='Passing yards';market.dispatchEvent(new Event('change',{bubbles:true}));
- document.getElementById('leg-selection').focus();return;
+ market.replaceChildren(...Array.from(market.options).filter(option=>isNflPlayerMarket(option.value)));
+ setPropStep('player');return;
 }if(action==='retry-nfl-availability'){void loadNflAvailability(true);return;}if(action==='retry-nfl-coaching'){void loadNflCoaching(getGame(el.dataset.game),true);return;}if(action==='load-market-history'){void loadMarketHistory(getGame(el.dataset.game),true);return;}if(action==='generate-ticket'){await generateAutomaticTicket();return;}if(action==='ticket-mode'){state.ticketMode=el.dataset.mode==='manual'?'manual':'automatic';render();if(state.ticketMode==='automatic')void loadDailySuggestions();return;}if(action==='daily-ticket-load'){loadSuggestedTicket(el.dataset.id);return;}if(action==='autocomplete-select'){await acceptLookup(Number(el.dataset.index));return;}if(action==='big-screen'){changeBigScreen();return;}if(action==='share'){const ok=await copyText(publicShareUrl());notify(ok?'Clean website link copied — paste it in Discord.':'Copy this link: '+publicShareUrl());return;}else if(action==='feedback'){state.drawer={type:'feedback'};render();return;}else if(action==='submit-feedback'){
  const type=document.getElementById('feedback-kind')?.value||'';
  const note=(document.getElementById('feedback-note')?.value||'').trim();
@@ -2601,8 +2651,8 @@ document.addEventListener('input',e=>{if(e.target.id==='auto-confidence'){
  const out=document.getElementById('auto-target');
  if(out)out.textContent=target+'%';
  return;
- }if(['leg-selection','leg-odds','prop-line'].includes(e.target.id)){clearPropQuote(e.target.id==='leg-odds');updateLegPreview();}if(e.target.id==='leg-selection'){lookupTyping(e.target.value);return;}if(e.target.id==='prop-line'){const market=e.target.dataset.market;const text=propNote(market,Number(e.target.value));document.getElementById('prop-line-value').textContent=text;document.getElementById('leg-notes').value=text;}else if(e.target.id==='search'||e.target.id==='team-search'){const inputId=e.target.id;const caret=e.target.selectionStart;state.search=e.target.value;render();const replacement=document.getElementById(inputId);if(replacement){replacement.focus();replacement.setSelectionRange(caret,caret);}}});
-document.addEventListener('submit',e=>{if(e.target.id==='cloud-login'){e.preventDefault();sendLogin(document.getElementById('cloud-email').value.trim());return;}if(e.target.id!=='leg-form')return;e.preventDefault();const selection=document.getElementById('leg-selection').value.trim();const odds=document.getElementById('leg-odds').value.trim();const number=parseAmerican(odds);const err=document.getElementById('form-error');if(!selection||number===null){err.textContent='Enter a selection and valid American odds (at least +100 or -100).';return;}if(state.ticket.length>=20){err.textContent='Prototype limit: 20 legs per ticket.';return;}const quote=document.getElementById('prop-quotes')?.applied;
+ }if(['leg-selection','leg-odds','prop-line'].includes(e.target.id)){clearPropQuote(e.target.id==='leg-odds');updateLegPreview();}if(e.target.id==='leg-selection'){lookupTyping(e.target.value);const form=e.target.form;if(form?.dataset.propStep==='player')form.querySelector('[data-action="prop-next"]').disabled=e.target.value.trim().length<2;return;}if(e.target.id==='prop-line'){const market=e.target.dataset.market;const text=propNote(market,Number(e.target.value));document.getElementById('prop-line-value').textContent=text;document.getElementById('leg-notes').value=text;}else if(e.target.id==='search'||e.target.id==='team-search'){const inputId=e.target.id;const caret=e.target.selectionStart;state.search=e.target.value;render();const replacement=document.getElementById(inputId);if(replacement){replacement.focus();replacement.setSelectionRange(caret,caret);}}});
+document.addEventListener('submit',e=>{if(e.target.id==='cloud-login'){e.preventDefault();sendLogin(document.getElementById('cloud-email').value.trim());return;}if(e.target.id!=='leg-form')return;e.preventDefault();if(e.target.dataset.propStep&&e.target.dataset.propStep!=='price')return;const selection=document.getElementById('leg-selection').value.trim();const odds=document.getElementById('leg-odds').value.trim();const number=parseAmerican(odds);const err=document.getElementById('form-error');if(!selection||number===null){err.textContent='Enter a selection and valid American odds (at least +100 or -100).';return;}if(state.ticket.length>=20){err.textContent='Prototype limit: 20 legs per ticket.';return;}const quote=document.getElementById('prop-quotes')?.applied;
  if(quote&&(Date.now()-Date.parse(quote.asOf)>900000||Date.parse(quote.start)<=Date.now()||number!==quote.price)){
   clearPropQuote();updateLegPreview();err.textContent='Check the saved price again or enter odds manually.';return;}
  state.ticket.push({id:`leg-${Date.now()}-${state.ticket.length}`,league:document.getElementById('leg-league').value,market:document.getElementById('leg-market').value,selection,odds:number,bookmaker:quote?.bookmaker||state.draft?.bookmaker||null,oddsAsOf:quote?.asOf||state.draft?.oddsAsOf||null,notes:isNflPlayerMarket(document.getElementById('leg-market').value)?propNote(document.getElementById('leg-market').value,Number(document.getElementById('prop-line').value)):document.getElementById('leg-notes').value.trim()||(document.getElementById('prop-line')?propNote(document.getElementById('leg-market').value,Number(document.getElementById('prop-line').value)):'') ,gameId:quote?.gameId||state.draft?.gameId||null,playerId:(state.lookup.chosen?.type==='player'&&state.lookup.chosen.selection===selection?state.lookup.chosen.id:null)||state.draft?.playerId||null,teamId:(state.lookup.chosen?.selection===selection?state.lookup.chosen.teamId:null)||state.draft?.teamId||null,enteredAt:new Date().toISOString()});saveTicket();state.draft=null;state.lookup.chosen=null;state.lookup.query='';render();notify('Added selection to your local ticket.');});
