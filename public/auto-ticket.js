@@ -11,7 +11,7 @@
   if(!input||input.modelValidated!==true||typeof input.modelVersion!=='string'||!input.modelVersion.trim())return false;
   const p=input.probability,price=input.odds,time=Date.parse(input.oddsAsOf||''),start=Date.parse(input.start||'');
   return Number.isFinite(p)&&p>0&&p<1&&priceOk(price)&&typeof input.gameId==='string'&&input.gameId.length>0&&
-   ['nfl','nba','nhl','mlb'].includes(input.league)&&input.market==='Moneyline'&&
+   ['nfl','nba','mlb'].includes(input.league)&&input.market==='Moneyline'&&
    typeof input.teamName==='string'&&input.teamName.length>1&&typeof input.bookmaker==='string'&&input.bookmaker.length>0&&
    Number.isFinite(time)&&time<=now&&now-time<=15*60*1000&&Number.isFinite(start)&&start>now;
  }
@@ -58,7 +58,7 @@ function marketEligible(x,now=Date.now()){
  return Number.isFinite(asOf)&&asOf<=now&&now-asOf<=8*60*60*1000&&
   Number.isFinite(start)&&start>now &&
   typeof x.gameId==='string'&&x.gameId.length>0 &&
-  ['nfl','nba','nhl','mlb'].includes(x.league)&&x.market==='Moneyline'&&
+  ['nfl','nba','mlb'].includes(x.league)&&x.market==='Moneyline'&&
   typeof x.teamName==='string'&&x.teamName.length>1&&
   typeof x.bookmaker==='string'&&x.bookmaker.length>0;
 }

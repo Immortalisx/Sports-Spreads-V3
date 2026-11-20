@@ -49,7 +49,7 @@ function booksForGame(game,response){
 }
 async function get(league,game){
  const url=root.SS_ODDS_CONFIG?.url;
- if(!['nfl','nba','nhl','mlb'].includes(league)||!game?.start||!game?.home?.name||!game?.away?.name)throw Error('Invalid matchup');
+ if(!['nfl','nba','mlb'].includes(league)||!game?.start||!game?.home?.name||!game?.away?.name)throw Error('Invalid matchup');
  if(typeof url!=='string'||!/^https:\/\/[-a-z0-9]+\.supabase\.co\/functions\/v1\/sportsbook-odds$/i.test(url))return {status:'not_configured',events:[]};
  const ctrl=new AbortController(),tm=setTimeout(()=>ctrl.abort(),9000);
  try{
@@ -65,7 +65,7 @@ async function get(league,game){
  * GET cannot call the licensed upstream provider or reserve credits. */
 async function getBoard(league){
  const endpoint=root.SS_ODDS_CONFIG?.url;
- if(!['nfl','nba','nhl','mlb'].includes(league))throw Error('Unsupported league');
+ if(!['nfl','nba','mlb'].includes(league))throw Error('Unsupported league');
  if(typeof endpoint!=='string'||!/^https:\/\/[-a-z0-9]+\.supabase\.co\/functions\/v1\/sportsbook-odds$/i.test(endpoint))
   return {status:'not_configured',events:[]};
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);

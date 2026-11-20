@@ -18,18 +18,17 @@ test('source build includes all V4 feature modules exactly once in a stable orde
 test('published app bundle is byte-for-byte source assembly',()=>assert.equal(bundle,expected));
 test('standalone root embeds the same source-built app bundle',()=>assert.ok(html.includes(bundle)));
 test('all critical loaders exist once across modules',()=>{
- for(const name of ['loadBoard','loadTeams','loadTeam','loadNflAvailability','loadNhlGoalies','loadCurrentSeasonForm','loadPregameSignals','loadSportsbookOdds','generateAutomaticTicket','loadDailySuggestions']){
+ for(const name of ['loadBoard','loadTeams','loadTeam','loadNflAvailability','loadCurrentSeasonForm','loadPregameSignals','loadSportsbookOdds','generateAutomaticTicket','loadDailySuggestions']){
   const hits=[...combined.matchAll(new RegExp('(?:async\\s+)?function\\s+'+name+'\\s*\\(','g'))];
   assert.equal(hits.length,1,name+' should have one definition');
  }
 });
-test('cached NFL and NHL research remains uncalibrated and read-only',()=>{
+test('cached NFL research remains uncalibrated and read-only',()=>{
  const src=read('src/app/26-cached-research.js');
  assert.match(src,/appliedToForecast===false/);
  assert.match(src,/calibrated===false/);
- assert.match(src,/confirmedStarter===false/);
  assert.match(src,/\/functions\/v1\/nfl-availability/);
- assert.match(src,/\/functions\/v1\/nhl-goalie-form/);
+ assert.doesNotMatch(src,/\/functions\/v1\/nhl-goalie-form/);
  assert.match(src,/\/functions\/v1\/season-form/);
  assert.doesNotMatch(src,/method:\s*['"]POST['"]/i);
 });
@@ -68,7 +67,7 @@ test('browser modules contain no secret provider or service role token',()=>{
 test('cached research loaders are GET-only and have bounded timeouts',()=>{
  const src=read('src/app/26-cached-research.js');
  assert.match(src,/controller\.abort\(\),12000/);
- assert.match(src,/ctrl\.abort\(\),12000/);
+ assert.match(src,/ctrl\.abort\(\),10000/);
  assert.match(src,/controller\.abort\(\),10000/);
  assert.match(src,/headers:\{accept:'application\/json'\}/);
  assert.doesNotMatch(src,/authorization|apikey|x-api-key/i);
@@ -77,9 +76,10 @@ test('NFL research rejects forecast-applied or calibrated records',()=>{
  const src=read('src/app/26-cached-research.js');
  assert.match(src,/data\.games\.every\(x=>x\.league==='nfl'&&x\.appliedToForecast===false&&x\.calibrated===false/);
 });
-test('NHL research does not invent confirmed starting goalies',()=>{
- const src=read('src/app/26-cached-research.js');
- assert.match(src,/x\.home\?\.confirmedStarter===false&&x\.away\?\.confirmedStarter===false/);
+test('new tickets exclude retired hockey markets',()=>{
+ const src=read('src/app/00-feed.js');
+ assert.doesNotMatch(src,/nhl:\{/);
+ assert.match(read('src/app/30-controller.js'),/leg.league==='nhl'/);
 });
 test('current season form does not feed back into model probability',()=>{
  const src=read('src/app/26-cached-research.js');

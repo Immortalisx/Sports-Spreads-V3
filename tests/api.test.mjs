@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {server} from '../server.mjs';
 
-test('API serves four leagues, normalized games, team reports, and useful input errors',async()=>{
+test('API serves three leagues, normalized games, team reports, and useful input errors',async()=>{
   const nativeFetch=globalThis.fetch;
   globalThis.fetch=async(input,opts)=>{
     const address=String(input);
@@ -21,7 +21,7 @@ test('API serves four leagues, normalized games, team reports, and useful input 
   const base=`http://127.0.0.1:${server.address().port}`;
   try {
     const status=await(await nativeFetch(base+'/api/status')).json();
-    assert.equal(status.leagues.length,4);
+    assert.equal(status.leagues.length,3);
     assert.equal(status.modelConnected,false);
     const board=await(await nativeFetch(base+'/api/scoreboard?league=nba&date=20261117')).json();
     assert.equal(board.games.length,1);assert.equal(board.games[0].home.name,'Toronto Raptors');assert.equal(board.games[0].model,null);

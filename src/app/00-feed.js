@@ -1,8 +1,8 @@
 /* Sports Spreads v3.1 — progressive disclosure, no fabricated model results. */
 const MODES={games:'Games',teams:'Teams',tickets:'Builder',history:'Saved',about:'About'};
-const SPORTS={nfl:{label:'NFL',emoji:'🏈'},nba:{label:'NBA',emoji:'🏀'},nhl:{label:'NHL',emoji:'🏒'},mlb:{label:'MLB',emoji:'⚾'}};
+const SPORTS={nfl:{label:'NFL',emoji:'🏈'},nba:{label:'NBA',emoji:'🏀'},mlb:{label:'MLB',emoji:'⚾'}};
 // Browser-side read-only fallback for free static hosting. Unofficial site data, not a licensed odds source.
-const ESPN_SPORT={nfl:'football/nfl',nba:'basketball/nba',nhl:'hockey/nhl',mlb:'baseball/mlb'};
+const ESPN_SPORT={nfl:'football/nfl',nba:'basketball/nba',mlb:'baseball/mlb'};
 function directBase(league){if(!ESPN_SPORT[league])throw Error('Unsupported sport');return `https://site.api.espn.com/apis/site/v2/sports/${ESPN_SPORT[league]}`;}
 async function directJson(url){
  const relay=globalThis.SS_FEED_CONFIG?.url;
@@ -62,7 +62,7 @@ async function directSportsData(route){
  const timestamp=new Date().toISOString(),meta={source:'ESPN public website feed (unofficial)',updatedAt:timestamp,cache:'relay-or-direct'};
  if(u.pathname==='/api/scoreboard'){
   const date=u.searchParams.get('date')||'';if(date&&!/^\d{8}$/.test(date))throw Error('Invalid game date');
-  if(league==='nba'||league==='nhl'){const cached=await apiSportsBoard(league,date);if(cached)return cached;}
+  if(league==='nba'){const cached=await apiSportsBoard(league,date);if(cached)return cached;}
   payload=await directJson(base+'/scoreboard'+(date?'?dates='+date+'&limit=100':'?limit=100'));
   return {...meta,league,date,games:(payload.events||[]).map(e=>mapDirectEvent(e,league))};
  }

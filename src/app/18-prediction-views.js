@@ -100,50 +100,6 @@ function nflAvailabilityPanel(g){
   (snapshot.injurySourceStatus==='unavailable'?'The injury feed could not be verified; injury statuses are unknown. ':'')+
   'No injury impact or starter certainty has been included in win probabilities or ticket confidence.</p></section>';
 }
-function nhlGoaliePanel(g){
- if(!g||g.league!=='nhl'||g.demo||g.status!=='scheduled')return '';
- const data=state.nhlGoalies;
- // NHL Web and ESPN team abbreviations differ for several franchises.
- const canonical=abbr=>({LA:'LAK',NJ:'NJD',SJ:'SJS',TB:'TBL'}[abbr]||abbr);
- const away=canonical(g.away?.abbr),home=canonical(g.home?.abbr);
- const record=data?.status==='cached'?data.games?.find(x=>
-  x.awayAbbrev===away&&x.homeAbbrev===home&&
-  Math.abs(Date.parse(x.start||'')-Date.parse(g.start||''))<7200000&&
-  Date.parse(x.asOf||'')<Date.parse(g.start||'')):null;
- const sourceTime=data?.generatedAt?formatFresh(data.generatedAt):'Not available';
- const header='<div class="goalie-heading"><span>GOALIE FORM</span>'+
-  '<small>Last 5 actual starts · '+esc(sourceTime)+'</small></div>';
- if(!record){
-  return '<div class="panel goalie-panel goalie-empty">'+header+
-   '<p>'+esc(state.nhlGoaliesLoading?'Loading shared NHL goalie research…':
-    state.nhlGoaliesError||'No verified goalie-history snapshot for this game yet.')+'</p>'+
-   '<button class="neutral-button" data-action="retry-nhl-goalies">Check cached data</button></div>';
- }
- const pct=x=>Number.isFinite(x)?(x*100).toFixed(1)+'%':'—';
- const fmt=goalie=>{
-  if(!goalie)return '<div class="goalie-missing">No verified recent goalie starts</div>';
-  return '<div class="goalie-name">'+esc(goalie.name||'Goalie')+'</div>'+
-   '<div class="goalie-stats"><span><strong>'+pct(goalie.last5?.savePct)+
-    '</strong><small>Save % · last 5 starts</small></span><span><strong>'+
-    esc(goalie.last5?.starts??0)+'</strong><small>Starts sampled</small></span></div>'+
-   '<div class="goalie-recent">Last started '+esc(goalie.latestStart||'unknown')+
-    (goalie.minimumSample?'':' · small sample')+'</div>';
- };
- const team=(teamLabel,teamData)=>{
-  const extras=teamData.otherGoalies?.slice(0,2)||[];
-  return '<article class="goalie-team"><strong>'+esc(teamLabel)+'</strong>'+
-   '<div class="goalie-tag">Most recently used goalie • not confirmed for next game</div>'+
-   fmt(teamData.mostRecentStarter)+
-   (extras.length?'<details class="goalie-alternatives"><summary>Other recent goalies ('+extras.length+')</summary>'+
-    extras.map(p=>'<div class="goalie-alternative">'+esc(p.name)+
-    ' · Last 5 SV% '+pct(p.last5?.savePct)+'</div>').join('')+'</details>':'')+'</article>';
- };
- return '<details class="panel goalie-panel"><summary class="goalie-summary">'+header+
-  '<span class="goalie-unknown">Starter unconfirmed</span></summary>'+
-  '<div class="goalie-grid">'+team(g.away.name,record.away)+team(g.home.name,record.home)+'</div>'+
-  '<p class="goalie-caution">NHL public game logs only. Previous game starts are verified; upcoming starting goalies are NOT confirmed. Expected-goals-saved data is not sourced. These figures do not affect prediction percentages or ticket confidence.</p>'+
-  '<button class="neutral-button" data-action="retry-nhl-goalies">Check cached data</button></details>';
-}
 function currentSeasonPanel(g){
  if(!g||g.demo||g.status!=='scheduled')return '';
  const data=state.forms[g.league],loading=state.formLoading[g.league];
