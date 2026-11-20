@@ -13,7 +13,6 @@ const event={events:[{id:'401999123',date:gameStart,status:{type:{state:'pre',sh
  {homeAway:'home',team:{id:'1',displayName:'Test Home Team',shortDisplayName:'Home Team',abbreviation:'HOM'},records:[{type:'total',summary:'8-2'}]},
  {homeAway:'away',team:{id:'2',displayName:'Test Away Team',shortDisplayName:'Away Team',abbreviation:'AWY'},records:[{type:'total',summary:'4-6'}]}
  ],venue:{fullName:'Test Arena',indoor:true,address:{city:'Test City',state:'MD',country:'USA'}}}]}]};
-const scoreboard={league:'nba',updatedAt:new Date().toISOString(),games:[{id:'401999123',league:'nba',home:{id:'1',name:'Test Home Team',abbr:'HOM',record:'8-2'},away:{id:'2',name:'Test Away Team',abbr:'AWY',record:'4-6'},start:gameStart,status:'scheduled',statusText:'Scheduled',venue:'Test Arena',venueIndoor:true,demo:false}]};
 async function checkScoreboardRecovery(browser, bigScreen) {
  const page = await browser.newPage({viewport: bigScreen ? {width:1920,height:1080} : {width:390,height:844}});
  const nflRequests = [];
@@ -21,13 +20,13 @@ async function checkScoreboardRecovery(browser, bigScreen) {
  try {
   await page.route('**/*', async route => {
    const request = new URL(route.request().url());
-   if (request.origin === url && request.pathname === '/api/scoreboard') {
-    const league = request.searchParams.get('league');
-    if (league === 'nfl') {
+   if (request.pathname === '/functions/v1/sports-feed') {
+    const path = request.searchParams.get('path') || '';
+    if (path.includes('/football/nfl/scoreboard')) {
      nflRequests.push(request.href);
      if (!recovered) return route.fulfill({status:502, json:{error:'Fixture outage'}});
     }
-    return route.fulfill({json:{league, updatedAt:gameStart, games:[]}});
+    return route.fulfill({json:{events:[]}});
    }
    if (request.origin !== url) return route.fulfill({status:502, json:{error:'Offline fixture'}});
    return route.continue();
@@ -57,8 +56,8 @@ async function run(){
   console.log('PASS: Games and Big Screen recover from an NFL scoreboard 502 after Refresh');
   const router=async route=>{
    const requestUrl=route.request().url();
-   if(requestUrl.includes('/functions/v1/sports-feed')||requestUrl.includes('/api/scoreboard'))
-    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(scoreboard)});
+   if(requestUrl.includes('/functions/v1/sports-feed'))
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(event)});
    if(requestUrl.includes('/functions/v1/daily-tickets'))
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
       status:'ready',generatedAt:new Date().toISOString(),
@@ -80,7 +79,7 @@ async function run(){
           ]}]}]
       }]
     })});
-   if(/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(requestUrl))return route.abort();
+   if(new URL(requestUrl).origin !== url)return route.abort();
    return route.continue();
   };
   const desktop=await browser.newPage({viewport:{width:1440,height:900}});
