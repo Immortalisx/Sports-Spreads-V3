@@ -35,6 +35,7 @@ async function ensureLookupRoster(team,league){
   if(!json){json=await readSportsData(`/api/team/${league}/${encodeURIComponent(team.id)}?view=roster`);state.teamCache[key]=json;}
   if(state.lookup.request!==request||state.lookup.selectedTeam?.id!==team.id)return;
   state.lookup.roster=(json.roster||[]).map(p=>({...p,teamId:team.id,teamName:team.name}));
+  state.lookup.status='Search players on '+team.name+'.';
   if(!state.lookup.roster.length)state.lookup.status='Roster unavailable; player name can still be entered manually.';
  }catch{state.lookup.status='Roster temporarily unavailable; enter a player manually.';}
  finally{if(state.lookup.request===request){state.lookup.loading=false;drawLookup();}}
@@ -55,6 +56,7 @@ async function acceptLookup(index){
   input.value=item.name;state.lookup.chosen={type:'player',id:item.id,teamId:item.teamId,selection:item.name};
   state.lookup.query='';state.lookup.status=`${item.teamName} player selected.`;drawLookup();input.focus();
  }
+ updateLegPreview();
 }
 function lookupTyping(value){
  state.lookup.query=value;state.lookup.chosen=null;state.lookup.active=-1;state.lookup.league=lookupLeague();

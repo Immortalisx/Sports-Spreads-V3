@@ -56,6 +56,11 @@ async function run(){
   console.log('PASS: Games and Big Screen recover from an NFL scoreboard 502 after Refresh');
   const router=async route=>{
    const requestUrl=route.request().url();
+   const feedPath=new URL(requestUrl).searchParams.get('path')||'';
+   if(feedPath.includes('/football/nfl/teams/7/roster'))
+    return route.fulfill({json:{athletes:[{id:'88',displayName:'Fixture Receiver'}]}});
+   if(feedPath.includes('/football/nfl/teams?'))
+    return route.fulfill({json:{teams:[{team:{id:'7',displayName:'Fixture Ravens'}}]}});
    if(requestUrl.includes('/functions/v1/sports-feed'))
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(event)});
    if(requestUrl.includes('/functions/v1/daily-tickets'))
@@ -165,6 +170,21 @@ async function run(){
   assert.equal(await mobile.locator('#leg-form').isVisible(),true);
   await noBuilderOverflow();
   console.log('PASS: 390x844 empty ticket, one +150 leg with $25 payout, last leg removed; no builder overflow');
+  await mobile.getByRole('button',{name:'NFL player prop',exact:true}).tap();
+  await mobile.locator('#leg-selection').fill('Ravens');
+  await mobile.getByRole('option',{name:/Fixture Ravens/}).tap();
+  await mobile.locator('#leg-selection').fill('Receiver');
+  await mobile.getByRole('option',{name:/Fixture Receiver/}).tap();
+  await mobile.locator('#leg-market').selectOption('Receiving yards');
+  await mobile.locator('#prop-line').evaluate(el=>{el.value='73';el.dispatchEvent(new Event('input',{bubbles:true}));});
+  await mobile.locator('#leg-odds').fill('+125');
+  assert.equal(await mobile.locator('#leg-preview').innerText(),'Fixture Receiver · 73+ receiving yards · +125');
+  await mobile.locator('#leg-form button[type="submit"]').tap();
+  const savedLeg=mobile.locator('.ticket-item');
+  assert.match(await savedLeg.innerText(),/Fixture Receiver/);
+  assert.match(await savedLeg.innerText(),/73\+ receiving yards/);
+  assert.match(await savedLeg.innerText(),/\+125/);
+  await mobile.getByRole('button',{name:'Remove Fixture Receiver'}).tap();
   await mobileNav.locator('[data-section="games"]').click();
   await mobile.locator('.game [data-action="game"]').first().click();
   await mobile.locator('.drawer').waitFor({timeout:5000});
