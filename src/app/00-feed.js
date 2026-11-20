@@ -5,26 +5,32 @@ const SPORTS={nfl:{label:'NFL',emoji:'🏈'},nba:{label:'NBA',emoji:'🏀'},nhl:
 const ESPN_SPORT={nfl:'football/nfl',nba:'basketball/nba',nhl:'hockey/nhl',mlb:'baseball/mlb'};
 function directBase(league){if(!ESPN_SPORT[league])throw Error('Unsupported sport');return `https://site.api.espn.com/apis/site/v2/sports/${ESPN_SPORT[league]}`;}
 async function directJson(url){
- const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),12000);
  const relay=globalThis.SS_FEED_CONFIG?.url;
  const origins=[];
  if(typeof relay==='string'&&/^https:\/\/[-a-z0-9.]+\.supabase\.co\/functions\/v1\/sports-feed$/i.test(relay)){
   const parsed=new URL(url);
   if(parsed.hostname==='site.api.espn.com')origins.push(relay+'?path='+encodeURIComponent(parsed.pathname+parsed.search));
  }
- // Browser direct is a last resort; the upstream may reject cross-origin calls.
+ // Read-only fallback. Keep a strict total deadline and reserve time for ESPN if the relay stalls.
  origins.push(url);
+ const totalDeadline=Date.now()+12000;
  let failure='Sports feed unavailable';
- try{
-  for(const address of origins){
-   try{const r=await fetch(address,{signal:ctrl.signal,headers:{Accept:'application/json'}});
-    if(!r.ok){failure='Sports provider returned '+r.status;continue;}
-    const data=await r.json();if(data?.error){failure=String(data.error);continue;}
-    return data;
-   }catch(e){failure=e?.name==='AbortError'?'Sports feed timed out':(e?.message||failure);}
-  }
-  throw Error(failure);
- } finally{clearTimeout(timer);}
+ for(let i=0;i<origins.length;i++){
+  const remaining=totalDeadline-Date.now();
+  if(remaining<=0)break;
+  // A slow relay cannot consume the entire deadline when direct ESPN is available.
+  const timeoutMs=Math.min(remaining,i<origins.length-1?6500:remaining);
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeoutMs);
+  try{
+   const r=await fetch(origins[i],{signal:ctrl.signal,headers:{Accept:'application/json'}});
+   if(!r.ok){failure='Sports provider returned '+r.status;continue;}
+   const data=await r.json();
+   if(data?.error){failure=String(data.error);continue;}
+   return data;
+  }catch(e){failure=e?.name==='AbortError'?'Sports feed timed out':(e?.message||failure);}
+  finally{clearTimeout(timer);}
+ }
+ throw Error(failure);
 }
 function mapDirectTeam(x,c={}){return {id:String(x.id??c.id??''),name:x.displayName??x.name??x.shortDisplayName??'Unknown team',abbr:x.abbreviation??'',shortName:x.shortDisplayName??x.name??'',record:c.records?.find(y=>y.type==='total')?.summary??c.records?.[0]?.summary??null,logo:x.logo??x.logos?.[0]?.href??null,score:c.score?.displayValue??c.score?.value??c.score??null};}
 function mapDirectEvent(e,l){const c=e.competitions?.[0]??{},cs=c.competitors??[],home=cs.find(x=>x.homeAway==='home')??cs[0]??{},away=cs.find(x=>x.homeAway==='away')??cs[1]??{};let status=e.status?.type??{};return {id:String(e.id??''),league:l,home:mapDirectTeam(home.team??{},home),away:mapDirectTeam(away.team??{},away),start:e.date??c.date??null,status:status.state==='in'?'live':status.state==='post'?'final':'scheduled',statusText:status.shortDetail??status.detail??'Scheduled',venue:c.venue?.fullName??c.venue?.name??null,venueCity:c.venue?.address?.city??null,venueState:c.venue?.address?.state??null,venueCountry:c.venue?.address?.country??null,venueIndoor:typeof c.venue?.indoor==='boolean'?c.venue.indoor:null,venueLatitude:c.venue?.latitude??null,venueLongitude:c.venue?.longitude??null,marketLine:null,model:null,demo:false};}
@@ -91,9 +97,9 @@ async function directSportsData(route){
  throw Error('No such data endpoint');
 }
 async function readSportsData(url){
- // Production, staging and the local server now share one fetch-first path.
- // Static hosts fall back to the Supabase relay via directSportsData after a 404;
- // the local Node server can still serve its own /api routes.
+ // Static hosts cannot serve /api/*; avoid a guaranteed 404 and its console noise.
+ // Node-hosted deployments still use their local API, with the existing read-only fallback.
+ if(window.__STANDALONE_PREVIEW__===true)return directSportsData(url);
  try{
   const route=new URL(url,window.location.href);
   const r=await fetch(route.href,{headers:{Accept:'application/json'}});
