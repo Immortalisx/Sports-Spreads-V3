@@ -10,7 +10,7 @@ test('NFL availability is displayed only for matching fixture and team IDs',()=>
  assert.match(view,/x\.homeTeamId===String\(g\.home\?\.id\)/);
  assert.match(view,/x\.awayTeamId===String\(g\.away\?\.id\)/);
  assert.match(view,/Date\.parse\(x\.asOf\|\|''\)<Date\.parse\(g\.start\|\|''\)/);
- assert.match(view,/\$\{nflAvailabilityPanel\(g\)\}/);
+ assert.match(view,/\$\{nflAvailabilityPanel\(g\)\|\|/);
 });
 test('UI refuses to call projected QB confirmed or change model percentage',()=>{
  assert.match(view,/Depth-chart QB1 is projected, not a confirmed starter/);

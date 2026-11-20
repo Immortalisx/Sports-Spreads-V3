@@ -196,17 +196,17 @@ function nflAvailabilityPanel(g){
   Math.abs(Date.parse(x.start||'')-Date.parse(g.start||''))<3600000&&
   Date.parse(x.asOf||'')<Date.parse(g.start||'')):null;
  const fresh=snapshot?.generatedAt?formatFresh(snapshot.generatedAt):'Not yet verified';
- const heading='<div class="availability-heading"><div><span class="block-label">NFL · STARTING QB & INJURIES</span>'+
+ const heading='<div class="availability-heading"><div><span class="block-label">QB & injuries</span>'+
   '<div class="availability-timestamp">Source check: '+esc(fresh)+'</div></div>'+
   '<button class="neutral-button availability-retry" data-action="retry-nfl-availability" aria-label="Check cached NFL availability again">'+
   (state.nflAvailabilityLoading?'Checking…':'Check updates')+'</button></div>';
  if(!game){
-  const message=state.nflAvailabilityLoading?'Checking the shared NFL availability snapshot…':
-   state.nflAvailabilityError||'No verified source snapshot for this upcoming matchup yet. Player availability is unknown.';
+  const message=state.nflAvailabilityLoading?'Checking injury reports…':
+   state.nflAvailabilityError||'No matched report for this game.';
   return '<section class="panel availability-panel">'+heading+
    '<div class="availability-empty"><span aria-hidden="true">?</span><div><strong>Availability not verified</strong>'+
    '<p>'+esc(message)+'</p></div></div>'+
-   '<p class="availability-disclaimer">Data is published only after its game and team identifiers match this matchup. No guessed starters or injury confidence are used.</p></section>';
+   '</section>';
  }
  const statusName=x=>String(x||'unknown').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
  const overview=(result)=>{
@@ -236,8 +236,8 @@ function nflAvailabilityPanel(g){
    '<span class="availability-badge availability-badge--'+starter+'">'+tag+'</span></div>'+
    '<div class="availability-qb">'+qbLabel+'</div>'+
    '<div class="availability-qb-note">'+esc(reportLine)+'</div>'+
-   counts+listing+
-   '<p class="availability-team-note">'+esc(result?.note||'No confirmed game-day starter')+'</p>'+
+   counts+'<details><summary>Injury report</summary>'+listing+
+   '<p class="availability-team-note">'+esc(result?.note||'No confirmed game-day starter')+'</p></details>'+
    '</article>';
  };
  const sourceState=snapshot.injurySourceStatus==='retrieved'?
@@ -722,13 +722,26 @@ function sportsbookOddsPanel(g){
  const current=info&&Number.isFinite(Date.parse(info.asOf))&&Date.now()-Date.parse(info.asOf)>=0&&Date.now()-Date.parse(info.asOf)<=8*60*60*1000;
  const disabled=!info||!['ok','cached'].includes(info.status)||!rows?.matched||!current;
  const quote=x=>x>0?'+'+x:String(x);
- const buttons=rows?.books?.map((b,i)=>`<div class="odds-book-row"><div class="odds-book-head"><strong>${esc(b.title)}</strong><small>As of ${esc(b.asOf?formatFresh(b.asOf):'unknown')} · no-vig ${Math.round(b.homeFair*100)}% home</small></div><div class="odds-pair"><button type="button" class="neutral-button" data-action="odds-pick" data-game="${esc(g.id)}" data-side="away" data-index="${i}" ${disabled?'disabled':''}>${esc(g.away.abbr||g.away.name)} <strong>${esc(quote(b.awayPrice))}</strong></button><button type="button" class="neutral-button" data-action="odds-pick" data-game="${esc(g.id)}" data-side="home" data-index="${i}" ${disabled?'disabled':''}>${esc(g.home.abbr||g.home.name)} <strong>${esc(quote(b.homePrice))}</strong></button></div></div>`).join('')||'';
- const status=busy?'Checking permitted US sportsbook moneylines…':problem?`Odds unavailable: ${esc(problem)}`:
-  !info?'Only loads when requested · Uses a free provider when connected.':info.status==='needs_key'||info.status==='not_configured'?'Sportsbook connection awaiting a provider key. Enter odds manually for now.':info.status==='unavailable'?'Bookmaker prices could not be loaded. No estimated odds are substituted.':info.status==='quota_paused'?'Free-tier limit reached or stale. No prices can be selected.':!rows?.matched?esc(rows?.reason||'No verified prices were matched.'):
+ const buttons=rows?.books?.map((b,i)=>`<div class="odds-book-row"><div class="odds-book-head"><strong>${esc(b.title)}</strong><small>As of ${esc(b.asOf?formatFresh(b.asOf):'unknown')}</small></div><div class="odds-pair"><button type="button" class="neutral-button" data-action="odds-pick" data-game="${esc(g.id)}" data-side="away" data-index="${i}" ${disabled?'disabled':''}>${esc(g.away.abbr||g.away.name)} <strong>${esc(quote(b.awayPrice))}</strong></button><button type="button" class="neutral-button" data-action="odds-pick" data-game="${esc(g.id)}" data-side="home" data-index="${i}" ${disabled?'disabled':''}>${esc(g.home.abbr||g.home.name)} <strong>${esc(quote(b.homePrice))}</strong></button></div></div>`).join('')||'';
+ const status=busy?'Checking saved prices…':problem?`Odds unavailable: ${esc(problem)}`:
+  !info?'Prices haven’t been loaded.':info.status==='needs_key'||info.status==='not_configured'?'Feed unavailable. Enter odds manually.':info.status==='unavailable'?'Prices unavailable.':info.status==='quota_paused'?'Free-tier limit reached or stale. No prices can be selected.':!rows?.matched?esc(rows?.reason||'No verified prices were matched.'):
   `Bookmaker snapshot ${esc(formatFresh(info.asOf))} · ${info.status==='stale'||!current?'expired — check sportsbook':'reference quote — verify live price'}`;
- return `<div class="panel sportsbook-panel"><div class="odds-panel-heading"><span class="block-label">SPORTSBOOK MONEYLINE COMPARISON</span><span class="tag">US · Provider quotes</span></div><p class="muted-sm">${status}</p>${rows?.matched?`<div class="odds-books">${buttons}</div>`:''}<div class="form-actions"><button class="neutral-button small-btn" data-action="load-odds" data-game="${esc(g.id)}" ${busy?'disabled':''}>${busy?'Checking…':info?'Check cached prices':'Compare sportsbook odds'}</button></div><small class="muted-sm">The Odds API · up to 8-hour cached prices · moneyline only. Prices can change and may be unavailable. This is not live betting or a model confidence score. Quotes may be hours old; always confirm the current book price. Verify the current price directly at the sportsbook.</small></div>`;
+ return `<div class="panel sportsbook-panel"><div class="odds-panel-heading"><span class="block-label">Saved moneylines</span></div><p class="muted-sm">${status}</p>${rows?.matched?`<div class="odds-books">${buttons}</div>`:''}<div class="form-actions"><button class="neutral-button small-btn" data-action="load-odds" data-game="${esc(g.id)}" ${busy?'disabled':''}>${busy?'Checking…':info?'Check cached prices':'Compare sportsbook odds'}</button></div><small class="muted-sm">Saved quotes can be up to 8 hours old. Verify the current price directly at the sportsbook.</small></div>`;
 }
-function gameDrawer(){const d=state.drawer,g=d.game;return `<div class="drawer-head"><div class="drawer-title"><span class="team-logo">${esc(SPORTS[g.league].emoji)}</span><div><div class="eyebrow">${esc(g.league.toUpperCase())} / MATCHUP</div><h2>${esc(g.away.abbr||g.away.name)} @ ${esc(g.home.abbr||g.home.name)}</h2><small>${g.demo?'Example matchup':`${formatDay(g.start)} · ${formatTime(g.start)}`}</small></div></div><button class="drawer-close" data-action="close" aria-label="Close panel">×</button></div>${g.demo?`<div class="error-note">UI example only. Do not treat this as a scheduled game.</div>`:''}${modelPanel(g)}${currentSeasonPanel(g)}${nflCoachingPanel(g)}${recentScoringMatchupPanel(g)}${nflAvailabilityPanel(g)}<div class="panel"><span class="block-label">MATCHUP</span><div class="details-grid"><div>${logo(g.away,g.league)}<div style="margin-top:8px"><strong>${esc(g.away.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="away" style="margin-top:6px">Injuries · Roster · News ↗</button></div><div>${logo(g.home,g.league)}<div style="margin-top:8px"><strong>${esc(g.home.name)}</strong></div><button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="home" style="margin-top:6px">Injuries · Roster · News ↗</button></div></div></div><div class="panel"><span class="block-label">GAME DETAILS</span><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Game status</span><strong>${esc(g.demo?'Example only':g.statusText)}</strong></div><div class="result-row" style="justify-content:space-between;margin-bottom:12px"><span class="muted">Scheduled start (Eastern Time)</span><strong class="drawer-start-time">${esc(g.demo?'Not verified':formatTime(g.start))}</strong></div><div class="result-row" style="justify-content:space-between"><span class="muted">Sportsbook odds</span><strong>See US market quotes below, if connected</strong></div></div>${sportsbookOddsPanel(g)}${marketHistoryPanel(g)}${pregameStarterPanel(g)}${weatherPanel(g)}${matchupFactorsPanel(g)}<div class="panel"><h3>Build a ticket</h3><p>Copy a sourced moneyline quote above, or enter a price manually.</p><button class="btn" data-action="quickpick" data-game="${esc(g.id)}" style="margin-top:13px">Add to ticket ↗</button></div><details class="panel data-panel"><summary>Model roadmap & limits</summary><p>This first transparent baseline uses season W-L form and assumed home advantage. Weather increases the displayed uncertainty range for outdoor games when a forecast is available. A trained Elo model, injury impact, sport-specific player projections, calibrated confidence, independent historical backtests and verified sportsbook prices still require a production data pipeline. A projected winner does not imply a profitable bet.</p></details>`;}
+function gameDrawer(){
+ const d=state.drawer,g=d.game;
+ const teams=['away','home'].map(side=>`<button class="inline-link" data-action="team" data-game="${esc(g.id)}" data-team="${side}">${esc(g[side].name)} report ↗</button>`).join(' ');
+ return `<div class="drawer-head"><div class="drawer-title"><div><h2>${esc(g.away.abbr||g.away.name)} @ ${esc(g.home.abbr||g.home.name)}</h2>
+ <small class="drawer-start-time" aria-label="Scheduled start (Eastern Time)">${g.demo?'Example matchup':esc(formatDay(g.start))+' · '+esc(g.start?formatTime(g.start):'Time TBD')} · ${esc(g.statusText||g.status)}</small></div></div>
+ <button class="drawer-close" data-action="close" aria-label="Close panel">×</button></div>
+ ${sportsbookOddsPanel(g)}
+ ${nflAvailabilityPanel(g)||'<section class="panel"><h3>Injuries</h3><p>See each team’s report.</p></section>'}
+ <div class="form-actions">${teams}</div>
+ <button class="btn" data-action="quickpick" data-game="${esc(g.id)}">Add to ticket ↗</button>
+ <details class="panel data-panel" data-matchup-research="${esc(g.id)}" ${d.researchOpen?'open':''}><summary>Matchup research</summary>
+ ${modelPanel(g)}${currentSeasonPanel(g)}${nflCoachingPanel(g)}${recentScoringMatchupPanel(g)}${marketHistoryPanel(g)}${pregameStarterPanel(g)}${weatherPanel(g)}${matchupFactorsPanel(g)}
+ </details>`;
+}
 
 
 async function loadNflAvailability(force=false){
@@ -1041,6 +1054,10 @@ function render(){
  document.body.classList?.toggle?.('big-screen-mode',Boolean(state.bigScreen));
  document.body.style.overflow=state.drawer?'hidden':'';
 }
+document.addEventListener('toggle',event=>{
+ const panel=event.target,drawer=state.drawer;
+ if(panel.isConnected&&drawer?.game&&panel.dataset?.matchupResearch===String(drawer.game.id))drawer.researchOpen=panel.open;
+},true);
 function changeBigScreen(){
  if(state.bigScreen){
   state.bigScreen=false;state.section=state.bigScreenReturnSection||'games';
