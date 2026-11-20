@@ -25,3 +25,7 @@ jobs:
         run: npm run build:static
       - name: Verify release and published content are identical
         run: npm run verify:release
+      - name: Fail on generated production artifact drift
+        run: git diff --exit-code -- index.html public/app.js
+      - name: Confirm production Render build contract remains unchanged
+        run: node --test tests/render-deploy-contract.test.mjs

@@ -9,6 +9,12 @@ const [published,built,source,staticHtml]=await Promise.all([
  'index.html','release/index.html','public/index.html','dist/index.html'
 ].map(p=>readFile(join(root,p),'utf8')));
 assert.equal(published,built,'Root deploy artifact differs from the generated standalone release');
+// Render production uses `cp index.html public/index.html` (not dist/).
+// Verify the exact input bytes used by that configured copy command.
+const renderBlueprint=await readFile(join(root,'render.yaml'),'utf8');
+assert.match(renderBlueprint,/buildCommand:\s*mkdir -p public && cp index\.html public\/index\.html\s*$/m,'Render production build command changed; update the release gate before deployment');
+assert.match(renderBlueprint,/staticPublishPath:\s*public\s*$/m,'Render publish path changed; update the release gate before deployment');
+assert.equal(Buffer.from(published).compare(Buffer.from(built)),0,'Render production source bytes differ from verified release');
 assert.match(published,/<meta property="og:url" content="https:\/\/sports-spreads\.onrender\.com\/"/);
 assert.match(published,/<meta property="og:title" content="Sports Spreads"/);
 assert.match(published,/<meta property="og:description"/);
