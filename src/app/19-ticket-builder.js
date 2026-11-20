@@ -46,6 +46,42 @@ function propInfo(league,market){return (PROPS[league]||[]).find(x=>x[0]===marke
 function isNflPlayerMarket(market){
  return ['Passing yards','Rushing yards','Receiving yards','Touchdowns scored'].includes(market);
 }
+function selectedProp(){
+ const chosen=state.lookup.chosen,team=state.lookup.selectedTeam;
+ if(chosen?.type!=='player'||!team||chosen.teamId!==team.id||chosen.selection!==document.getElementById('leg-selection').value.trim())return null;
+ if(state.lookup.roster.filter(p=>p.name===chosen.selection).length!==1)return null;
+ return {player:chosen.selection,team:team.name,market:document.getElementById('leg-market').value,target:Number(document.getElementById('prop-line').value)};
+}
+function clearPropQuote(manual=false){
+ const box=document.getElementById('prop-quotes');
+ if(!box)return;
+ if(box.applied&&!manual)document.getElementById('leg-odds').value='';
+ box.applied=null;box.textContent='';box.revision=(box.revision||0)+1;
+}
+async function lookupPropQuote(){
+ clearPropQuote();
+ updateLegPreview();
+ const box=document.getElementById('prop-quotes'),pick=selectedProp(),revision=box.revision;
+ if(!pick){box.textContent='Choose a player from the team roster first.';return;}
+ box.textContent='Checking saved prices…';
+ try{
+  const snapshot=await SportsOdds.getBoard('nfl');
+  if(!box.isConnected||box.revision!==revision)return;
+  const offers=SportsOdds.propQuotes(snapshot,pick);
+  box.textContent=offers.length?'Use a saved price:':'No recent exact quote. Enter your sportsbook’s odds.';
+  for(const quote of offers){
+   const btn=document.createElement('button');btn.type='button';
+   btn.textContent=quote.bookmaker+' '+(quote.price>0?'+':'')+quote.price+' · '+quote.matchup+' · saved '+new Date(quote.asOf).toLocaleTimeString([], {hour:'numeric',minute:'2-digit',timeZoneName:'short'});
+   btn.onclick=()=>{
+    if(!SportsOdds.propQuotes(snapshot,pick).some(q=>q.bookmaker===quote.bookmaker&&q.price===quote.price)){clearPropQuote();box.textContent='Quote expired. Check again.';updateLegPreview();return;}
+    const label=btn.textContent;
+    document.getElementById('leg-odds').value=String(quote.price);
+    box.applied=quote;box.textContent=label;updateLegPreview();
+   };
+   box.append(btn);
+  }
+ }catch{if(box.isConnected&&box.revision===revision)box.textContent='Quote cache unavailable. Enter odds manually.';}
+}
 function updateLegPreview(){
  const preview=document.getElementById('leg-preview');
  if(!preview)return;
@@ -61,7 +97,7 @@ function propNote(market,value){
 function propFields(league,market){const info=propInfo(league,market);if(!info)return '<div id="prop-controls"></div>';
  if(isNflPlayerMarket(market)){
   const target=market==='Touchdowns scored'?1:50;
-  return `<div class="prop-control" id="prop-controls"><label for="prop-line">Target <output id="prop-line-value">${esc(propNote(market,target))}</output></label><input type="range" id="prop-line" data-market="${esc(market)}" min="0" max="${info[2]}" value="${target}" step="1"><output id="leg-preview" aria-live="polite">Choose a player · ${esc(propNote(market,target))} · Enter sportsbook odds</output></div>`;
+  return `<div class="prop-control" id="prop-controls"><label for="prop-line">Target <output id="prop-line-value">${esc(propNote(market,target))}</output></label><input type="range" id="prop-line" data-market="${esc(market)}" min="0" max="${info[2]}" value="${target}" step="1"><output id="leg-preview" aria-live="polite">Choose a player · ${esc(propNote(market,target))} · Enter sportsbook odds</output><button type="button" data-action="check-prop-quote">Check saved prices</button><div id="prop-quotes" aria-live="polite"></div></div>`;
  }
  return `<div class="prop-control" id="prop-controls"><label for="prop-line">Line target <output id="prop-line-value">${esc(propNote(market,market==='Touchdowns'?1:Math.min(info[2],market==='Player yards'?50:10)))}</output></label><input type="range" id="prop-line" data-market="${esc(market)}" min="${info[1]}" max="${info[2]}" value="${market==='Touchdowns'?1:Math.min(info[2],info[0]==='Player yards'?50:10)}" step="${info[3]}"><small class="muted">Line selector only · No live pricing or probability</small></div>`;}
 function autoTicketPanel(){

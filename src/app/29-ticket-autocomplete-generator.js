@@ -42,6 +42,7 @@ async function ensureLookupRoster(team,league){
 }
 async function acceptLookup(index){
  const item=state.lookup.rows[index],input=document.getElementById('leg-selection');if(!item||!input)return;
+ clearPropQuote();
  const league=lookupLeague();state.lookup.rows=[];state.lookup.active=-1;state.lookup.league=league;
  if(item.type==='team'){
   const team=state.directory[league]?.teams?.find(t=>String(t.id)===item.id);
