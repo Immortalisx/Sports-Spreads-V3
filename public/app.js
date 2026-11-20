@@ -6,26 +6,32 @@ const SPORTS={nfl:{label:'NFL',emoji:'🏈'},nba:{label:'NBA',emoji:'🏀'},nhl:
 const ESPN_SPORT={nfl:'football/nfl',nba:'basketball/nba',nhl:'hockey/nhl',mlb:'baseball/mlb'};
 function directBase(league){if(!ESPN_SPORT[league])throw Error('Unsupported sport');return `https://site.api.espn.com/apis/site/v2/sports/${ESPN_SPORT[league]}`;}
 async function directJson(url){
- const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),12000);
  const relay=globalThis.SS_FEED_CONFIG?.url;
  const origins=[];
  if(typeof relay==='string'&&/^https:\/\/[-a-z0-9.]+\.supabase\.co\/functions\/v1\/sports-feed$/i.test(relay)){
   const parsed=new URL(url);
   if(parsed.hostname==='site.api.espn.com')origins.push(relay+'?path='+encodeURIComponent(parsed.pathname+parsed.search));
  }
- // Browser direct is a last resort; the upstream may reject cross-origin calls.
+ // Read-only fallback. Keep a strict total deadline and reserve time for ESPN if the relay stalls.
  origins.push(url);
+ const totalDeadline=Date.now()+12000;
  let failure='Sports feed unavailable';
- try{
-  for(const address of origins){
-   try{const r=await fetch(address,{signal:ctrl.signal,headers:{Accept:'application/json'}});
-    if(!r.ok){failure='Sports provider returned '+r.status;continue;}
-    const data=await r.json();if(data?.error){failure=String(data.error);continue;}
-    return data;
-   }catch(e){failure=e?.name==='AbortError'?'Sports feed timed out':(e?.message||failure);}
-  }
-  throw Error(failure);
- } finally{clearTimeout(timer);}
+ for(let i=0;i<origins.length;i++){
+  const remaining=totalDeadline-Date.now();
+  if(remaining<=0)break;
+  // A slow relay cannot consume the entire deadline when direct ESPN is available.
+  const timeoutMs=Math.min(remaining,i<origins.length-1?6500:remaining);
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeoutMs);
+  try{
+   const r=await fetch(origins[i],{signal:ctrl.signal,headers:{Accept:'application/json'}});
+   if(!r.ok){failure='Sports provider returned '+r.status;continue;}
+   const data=await r.json();
+   if(data?.error){failure=String(data.error);continue;}
+   return data;
+  }catch(e){failure=e?.name==='AbortError'?'Sports feed timed out':(e?.message||failure);}
+  finally{clearTimeout(timer);}
+ }
+ throw Error(failure);
 }
 function mapDirectTeam(x,c={}){return {id:String(x.id??c.id??''),name:x.displayName??x.name??x.shortDisplayName??'Unknown team',abbr:x.abbreviation??'',shortName:x.shortDisplayName??x.name??'',record:c.records?.find(y=>y.type==='total')?.summary??c.records?.[0]?.summary??null,logo:x.logo??x.logos?.[0]?.href??null,score:c.score?.displayValue??c.score?.value??c.score??null};}
 function mapDirectEvent(e,l){const c=e.competitions?.[0]??{},cs=c.competitors??[],home=cs.find(x=>x.homeAway==='home')??cs[0]??{},away=cs.find(x=>x.homeAway==='away')??cs[1]??{};let status=e.status?.type??{};return {id:String(e.id??''),league:l,home:mapDirectTeam(home.team??{},home),away:mapDirectTeam(away.team??{},away),start:e.date??c.date??null,status:status.state==='in'?'live':status.state==='post'?'final':'scheduled',statusText:status.shortDetail??status.detail??'Scheduled',venue:c.venue?.fullName??c.venue?.name??null,venueCity:c.venue?.address?.city??null,venueState:c.venue?.address?.state??null,venueCountry:c.venue?.address?.country??null,venueIndoor:typeof c.venue?.indoor==='boolean'?c.venue.indoor:null,venueLatitude:c.venue?.latitude??null,venueLongitude:c.venue?.longitude??null,marketLine:null,model:null,demo:false};}
@@ -822,29 +828,49 @@ async function loadMarketHistory(game,force=false){
 }
 
 
+// Guard same-league/date overlapping requests, not just navigation to a different date.
+let boardRequestVersion=0;
 async function loadBoard(){
+ const version=++boardRequestVersion;
  const league=state.league,date=state.date;
  state.loading=true;state.error='';state.feed=null;
  render();
- try{const json=await readSportsData(`/api/scoreboard?league=${league}&date=${date.replaceAll('-','')}`);if(state.league!==league||state.date!==date)return;state.feed=json;state.error='';}
- catch(e){if(state.league!==league||state.date!==date)return;state.error=e.message||'Provider unavailable';state.feed={games:[],demo:true,updatedAt:null};}
- finally{if(state.league===league&&state.date===date){state.loading=false;render();// Detail-only feeds (odds, form, injuries, goalies) are intentionally fetched
+ try{const json=await readSportsData(`/api/scoreboard?league=${league}&date=${date.replaceAll('-','')}`);if(version!==boardRequestVersion||state.league!==league||state.date!==date)return;state.feed=json;state.error='';}
+ catch(e){if(version!==boardRequestVersion||state.league!==league||state.date!==date)return;state.error=e.message||'Provider unavailable';state.feed={games:[],demo:true,updatedAt:null};}
+ finally{if(version===boardRequestVersion&&state.league===league&&state.date===date){state.loading=false;render();// Detail-only feeds (odds, form, injuries, goalies) are intentionally fetched
  // only when a user opens a matchup. This keeps the schedule lightweight.
 }}
 }
+// Version each directory request so late responses cannot replace a newer forced refresh.
+const directoryRequestVersions=Object.create(null);
 async function loadTeams(force=false){
- const league=state.league;if(state.directory[league]&&!force){render();return;}state.directoryLoading[league]=true;render();
- try{const json=await readSportsData(`/api/teams?league=${league}`);state.directory[league]={...json,demo:false};}
- catch(e){state.directory[league]={teams:[],error:e.message||'Feed unavailable',demo:true};}
- finally{state.directoryLoading[league]=false;render();}
+ const league=state.league;
+ if(state.directory[league]&&!force){if(state.section==='teams')render();return;}
+ if(state.directoryLoading[league]&&!force)return;
+ const version=(directoryRequestVersions[league]||0)+1;
+ directoryRequestVersions[league]=version;
+ state.directoryLoading[league]=true;
+ if(state.section==='teams'&&state.league===league)render();
+ try{
+  const json=await readSportsData(`/api/teams?league=${league}`);
+  if(directoryRequestVersions[league]===version)state.directory[league]={...json,demo:false};
+ }catch(e){
+  if(directoryRequestVersions[league]===version)state.directory[league]={teams:[],error:e.message||'Feed unavailable',demo:true};
+ }finally{
+  if(directoryRequestVersions[league]===version){
+   state.directoryLoading[league]=false;
+   if(state.league===league&&state.section==='teams')render();
+  }
+ }
 }
 function teamCacheKey(d,tab){return `${d.league}-${d.team.id}-${tab}`;}
+function isActiveTeamDetail(d,tab){const active=state.drawer;return active?.type==='team'&&active.league===d.league&&String(active.team?.id)===String(d.team.id)&&state.teamTab===tab;}
 async function loadTeam(tab,force=false){
  if(state.drawer?.type!=='team')return;const d=state.drawer,key=teamCacheKey(d,tab);
- if(state.teamCache[key]&&!force){render();return;}if(state.teamLoading[key])return;state.teamLoading[key]=true;delete state.teamErrors[key];render();
+ if(state.teamCache[key]&&!force){if(isActiveTeamDetail(d,tab))render();return;}if(state.teamLoading[key])return;state.teamLoading[key]=true;delete state.teamErrors[key];if(isActiveTeamDetail(d,tab))render();
  try{const json=await readSportsData(`/api/team/${d.league}/${encodeURIComponent(d.team.id)}?view=${tab}&name=${encodeURIComponent(d.team.name)}`);state.teamCache[key]=json;}
  catch(e){state.teamErrors[key]=e.message||'Team feed unavailable';}
- finally{state.teamLoading[key]=false;render();}
+ finally{state.teamLoading[key]=false;if(isActiveTeamDetail(d,tab))render();}
 }
 
 
