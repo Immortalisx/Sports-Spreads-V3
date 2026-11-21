@@ -112,6 +112,14 @@ async function run(){
   await desktop.screenshot({path:'qa/screenshots/desktop.png'});
   await desktop.locator('nav.nav [data-section="tickets"]').click();
   await desktop.locator('#auto-confidence').waitFor({timeout:5000});
+  const suggestion=desktop.locator('.daily-ticket-card').filter({hasText:'Fixture Same Book'});
+  await suggestion.getByRole('button',{name:'Use ticket'}).waitFor();
+  assert.equal(await suggestion.locator('.daily-picks span').count(),4);
+  assert.match(await suggestion.locator('.daily-price').innerText(),/If all picks win, \$10 returns.*\$67/s);
+  const grade=suggestion.getByText('Market grade D',{exact:true});
+  assert.equal(await grade.isVisible(),false);
+  await suggestion.getByText('Market estimates',{exact:true}).click();
+  assert.equal(await grade.isVisible(),true);
   assert.equal(await desktop.locator('#leg-form').count(),0,'Suggested tickets must not duplicate the manual entry form');
   assert.equal(await desktop.locator('.ux-secondary-matchups').count(),1,'Game-by-game research should be collapsed');
   await desktop.locator('[data-action="ticket-mode"][data-mode="manual"]').click();
@@ -157,8 +165,12 @@ async function run(){
    assert.ok(await dock.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2));}),'Floating ticket stays tappable');
   }
   assert.ok(await mobile.locator('.game-card-v3').last().evaluate(el=>el.getBoundingClientRect().bottom<=document.querySelector('.ticket-dock').getBoundingClientRect().top),'Last card clears ticket at bottom of scroll');
+  await mobile.route('**/functions/v1/daily-tickets',route=>route.fulfill({json:{
+   generatedAt:new Date().toISOString(),cards:[{id:'steady',available:false},{id:'balanced',available:false}]
+  }}));
   await dock.tap();
-  await mobile.locator('[data-action="ticket-mode"][data-mode="manual"]').click();
+  const emptyPanel=mobile.locator('.daily-empty').filter({hasText:'Too few games'});
+  await emptyPanel.getByRole('button',{name:'Build my own',exact:true}).tap();
   await mobile.locator('#leg-form').waitFor({timeout:5000});
   assert.equal(await mobile.locator('#auto-confidence').count(),0);
   const mobileSummary=mobile.getByRole('region',{name:'Ticket summary'});

@@ -506,13 +506,13 @@ function dailySuggestionsPanel(){
   const canLoad=!state.ticket.length;
   const label=canLoad?'Use ticket':'Clear ticket first';
   return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one big-one-hero':'')+'">'+
-   '<div class="daily-card-title"><strong>'+(c.id==='big-one'?'✦ THE BIG ONE':esc(c.name))+'</strong><span>MARKET GRADE '+esc(c.marketGrade||'—')+'</span></div>'+
+   '<div class="daily-card-title"><strong>'+(c.id==='big-one'?'✦ THE BIG ONE':esc(c.name))+'</strong></div>'+
    '<div class="daily-card-sub">'+esc(c.bookmaker)+' · '+esc(c.legCount)+' games</div>'+
-   '<details><summary>Market estimates</summary><div class="daily-card-metrics"><div><strong>'+Math.round(100*(c.marketProbabilityProduct||0))+'%*</strong><small>Independence illustration · Market-derived, not calibrated</small></div>'+
-   '<div><strong>'+Number(c.payoutMultiplier||0).toFixed(2)+'×</strong><small>Payout multiplier</small></div></div></details>'+
-   '<div class="daily-price">Estimated $10 return <strong>'+money(c.returnAt10)+'</strong></div>'+
    '<div class="daily-picks">'+(c.legs||[]).map(l=>'<span>'+esc(l.selection)+' <b>'+(Number(l.odds)>0?'+':'')+esc(l.odds)+'</b></span>').join('')+'</div>'+
-   '<button type="button" class="neutral-button daily-load" data-action="daily-ticket-load" data-id="'+esc(c.id)+'" '+(!canLoad?'disabled':'')+'>'+esc(label)+'</button></article>';
+   '<div class="daily-price">If all picks win, $10 returns <strong>'+money(c.returnAt10)+'</strong></div>'+
+   '<button type="button" class="neutral-button daily-load" data-action="daily-ticket-load" data-id="'+esc(c.id)+'" '+(!canLoad?'disabled':'')+'>'+esc(label)+'</button>'+
+   '<details><summary>Market estimates</summary><p>Market grade '+esc(c.marketGrade||'—')+'</p><div class="daily-card-metrics"><div><strong>'+Math.round(100*(c.marketProbabilityProduct||0))+'%*</strong><small>Independence illustration · Market-derived, not calibrated</small></div>'+
+   '<div><strong>'+Number(c.payoutMultiplier||0).toFixed(2)+'×</strong><small>Payout multiplier</small></div></div></details></article>';
  }).join('')+'</div>';
  return '<section class="daily-suggestions" aria-label="Daily suggested automatic tickets">'+
  '<div class="daily-section-head"><div><h3>Today’s tickets</h3></div><small>'+(d.generatedAt?'Updated '+esc(stamp):'')+'</small></div>'+contents+
