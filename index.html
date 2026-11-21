@@ -1965,10 +1965,12 @@ function dailySuggestionsPanel(){
  }
  else contents='<div class="daily-ticket-grid">'+usable.sort((a,b)=>(a.id==='big-one'?-1:0)-(b.id==='big-one'?-1:0)).map(c=>{
   const canLoad=!state.ticket.length;
+  const oldestQuote=Math.min(...c.legs.map(leg=>Date.parse(leg.oddsAsOf)));
+  const quoteAge=Date.now()-oldestQuote<60000?'under 1m ago':formatFresh(oldestQuote);
   const label=canLoad?'Use ticket':'Clear ticket first';
   return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one big-one-hero':'')+'">'+
    '<div class="daily-card-title"><strong>'+(c.id==='big-one'?'✦ THE BIG ONE':esc(c.name))+'</strong></div>'+
-   '<div class="daily-card-sub">'+esc(c.bookmaker)+' · '+esc(c.legCount)+' games</div>'+
+   '<div class="daily-card-sub">'+esc(c.bookmaker)+' · '+esc(c.legCount)+' games · Oldest odds saved <time datetime="'+new Date(oldestQuote).toISOString()+'">'+esc(quoteAge)+'</time></div>'+
    '<div class="daily-picks">'+(c.legs||[]).map(l=>'<span>'+esc(l.selection)+' <b>'+(Number(l.odds)>0?'+':'')+esc(l.odds)+'</b></span>').join('')+'</div>'+
    '<div class="daily-price">If all picks win, $10 returns <strong>'+money(c.returnAt10)+'</strong></div>'+
    '<button type="button" class="neutral-button daily-load" data-action="daily-ticket-load" data-id="'+esc(c.id)+'" '+(!canLoad?'disabled':'')+'>'+esc(label)+'</button>'+

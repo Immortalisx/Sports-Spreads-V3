@@ -71,7 +71,7 @@ async function run(){
        legs:Array.from({length:4},(_,i)=>({gameId:'fixture-event-'+i,league:'nba',market:'Moneyline',
         selection:'Test Fixture Home '+i,homeTeam:'Test Fixture Home '+i,awayTeam:'Test Fixture Away '+i,
         bookmaker:'Fixture Same Book',bookmakerKey:'fixture',marketProbability:.61,odds:-150,
-        oddsAsOf:new Date().toISOString(),start:gameStart}))}]
+        oddsAsOf:new Date(Date.now()-i*10*60000).toISOString(),start:gameStart}))}]
     })});
    if(requestUrl.includes('/functions/v1/sportsbook-odds')&&new URL(requestUrl).searchParams.get('league')==='nfl')
     return route.fulfill({json:{status:'cached',events:[{id:'fixture-nfl',sport_key:'americanfootball_nfl',home_team:'Fixture Ravens',away_team:'Fixture Visitors',commence_time:gameStart,
@@ -146,6 +146,30 @@ async function run(){
   await desktop.locator('.tv-shell').waitFor({timeout:5000});
   await desktop.locator('[aria-label="Exit Big Screen Mode"]').click();
   assert.equal(await desktop.locator('.tv-shell').count(),0);
+  const suggested=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
+  await suggested.route('**/*',router);
+  await suggested.goto(url);
+  await suggested.locator('.ticket-dock').tap();
+  const dailyCard=suggested.locator('.daily-ticket-card').filter({hasText:'Fixture Same Book'});
+  await dailyCard.getByText('30m ago',{exact:true}).waitFor();
+  await dailyCard.getByRole('button',{name:'Use ticket',exact:true}).tap();
+  const loaded=suggested.locator('.ticket-item');
+  await loaded.nth(3).waitFor();
+  async function verifySuggestedLegs(){
+   assert.equal(await loaded.count(),4);
+   for(let i=0;i<4;i++){
+    const row=await loaded.nth(i).innerText();
+    assert.ok(row.includes('Test Fixture Home '+i+' to win'));
+    assert.match(row,/Fixture Same Book quote · -150/);
+   }
+  }
+  await verifySuggestedLegs();
+  await suggested.reload();
+  await suggested.locator('.ticket-dock').tap();
+  await verifySuggestedLegs();
+  await loaded.first().getByRole('button').tap();
+  assert.equal(await loaded.count(),3);
+  await suggested.close();
   const mobile=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});
   await mobile.route('**/*',router);await mobile.goto(url,{waitUntil:'domcontentloaded'});
   await mobile.locator('.game').first().waitFor({timeout:15000});
