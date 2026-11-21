@@ -2,16 +2,16 @@
  * Neither market no-vig probabilities nor products of legs are validated parlay
  * models. No guaranteed returns, betting advice or bookmaker orders.
  */
-export const DAILY_TICKETS_VERSION='daily-market-research-v1';
+export const DAILY_TICKETS_VERSION='daily-market-research-v2';
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const americanToDecimal=p=>p>0?1+p/100:1+100/-p;
 const implied=p=>1/americanToDecimal(p);
 const validPrice=p=>Number.isInteger(p)&&Math.abs(p)>=100&&Math.abs(p)<=100000;
-const four=new Set(['nfl','nba','nhl','mlb']);
+const easternDate=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York'});
 // Operator list is constrained to regulated MD sportsbook brands, not all
 // entries tagged "us" by the provider (which includes offshore operators).
 const supportedBooks=new Set(['draftkings','fanduel','betmgm','betrivers','williamhill_us','fanatics','betparx','ballybet','espnbet']);
-const kLeague={americanfootball_nfl:'nfl',basketball_nba:'nba',icehockey_nhl:'nhl',baseball_mlb:'mlb'};
+const kLeague={americanfootball_nfl:'nfl',basketball_nba:'nba',baseball_mlb:'mlb'};
 const normal=s=>String(s||'').trim().toLowerCase();
 export function sourceCandidates(rows,now=new Date()){
  const time=now.getTime(),candidateByBook=new Map(),seenIds=new Set();
@@ -20,7 +20,7 @@ export function sourceCandidates(rows,now=new Date()){
   const age=time-Date.parse(row.fetched_at||''),snapshot=row.snapshot;
   if(!Number.isFinite(age)||age<0||age>8*3600_000||!snapshot||!Array.isArray(snapshot.events))continue;
   for(const e of snapshot.events){
-   if(!e||!kLeague[e.sport_key]||!four.has(kLeague[e.sport_key]))continue;
+   if(!e||!kLeague[e.sport_key]||row.league!==kLeague[e.sport_key])continue;
    const start=Date.parse(e.commence_time||'');
    if(!Number.isFinite(start)||start<=time||start>time+36*3600_000)continue;
    const eventId=kLeague[e.sport_key]+':'+String(e.id||'').slice(0,110);
@@ -100,9 +100,23 @@ function ticketFor(mode,byBook,now){
 export function buildDailySuggestions(rows,{now=new Date()}={}){
  if(!(now instanceof Date)||!Number.isFinite(now.getTime()))throw Error('Invalid generation time');
  const candidateByBook=sourceCandidates(rows,now);
- const dateET=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+ const dateET=easternDate.format(now);
+ const cards=MODES.map(mode=>ticketFor(mode,candidateByBook,now));
+ if(new Date(dateET+'T12:00:00Z').getUTCDay()===0){
+  const sunday=new Map();
+  for(const [book,candidates] of candidateByBook){
+   sunday.set(book,candidates.filter(c=>c.league==='nfl'&&easternDate.format(new Date(c.start))===dateET));
+  }
+  const card=ticketFor({...MODES[0],id:'sunday-nfl',name:'Sunday NFL'},sunday,now);
+  if(!card.available){
+   const fresh=rows.filter(r=>r.league==='nfl'&&now-Date.parse(r.fetched_at)>=0&&now-Date.parse(r.fetched_at)<=8*3600000);
+   const upcoming=fresh.some(r=>r.snapshot?.events?.some(e=>e?.sport_key==='americanfootball_nfl'&&Date.parse(e.commence_time)>now.getTime()&&easternDate.format(new Date(e.commence_time))===dateET));
+   card.reason=!fresh.length?'No recent NFL odds snapshot.':!upcoming?'No upcoming Sunday games in the saved NFL odds.':'Two qualifying Sunday NFL games at one sportsbook are required.';
+  }
+  cards.push(card);
+ }
  return {version:DAILY_TICKETS_VERSION,dateET,generatedAt:now.toISOString(),
   status:'market_illustrations_not_model_confidence',source:'The Odds API shared US h2h cache',
   disclaimer:'No joint probability or parlay confidence has been independently calibrated. Bookmaker quotes are snapshots, parlays may be restricted, and no wager is placed.',
-  cards:MODES.map(m=>ticketFor(m,candidateByBook,now))};
+  cards};
 }

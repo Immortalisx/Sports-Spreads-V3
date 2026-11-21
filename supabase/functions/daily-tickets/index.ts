@@ -1,6 +1,6 @@
 // Daily suggested-ticket research; no provider APIs are called here.
 // GET is public cached data. POST requires the private Vault-backed cron token.
-import {buildDailySuggestions} from './generator.mjs';
+import {buildDailySuggestions,DAILY_TICKETS_VERSION} from './generator.mjs';
 import {evaluatePregameParlay} from './pregame-parlay-engine.mjs';
 import {extractCachedOffers} from './market-normalizer.mjs';
 const originAllow=new Set(['https://sports-spreads.onrender.com','https://sports-spreads-v3.onrender.com','https://sports-spreads-v4-staging.onrender.com','http://localhost:4173','http://127.0.0.1:4173']);
@@ -36,15 +36,15 @@ Deno.serve(async(req:Request)=>{
    const rows=await api('sports_daily_tickets?date_et=eq.'+date+'&select=snapshot,generated_at&limit=1');
    // All upcoming fixtures are derived from the existing shared cache.
    // No paid odds calls, speculative player prices or fabricated model records.
-   const sources=await api('sports_odds_cache?select=league,snapshot,fetched_at&limit=4');
+   const sources=await api('sports_odds_cache?select=league,snapshot,fetched_at&league=in.(nfl,nba,mlb)&limit=4');
    const now=new Date();
    const perGame=[];
    for(const row of sources||[]){
     const age=now.getTime()-Date.parse(row.fetched_at||'');
     if(!Number.isFinite(age)||age<0||age>8*3600000)continue;
     for(const event of row.snapshot?.events||[]){
-     const start=event.commence_time;
-     if(!event.id||!start||!Number.isFinite(Date.parse(start)))continue;
+     const start=event?.commence_time;
+     if(!event||({americanfootball_nfl:"nfl",basketball_nba:"nba",baseball_mlb:"mlb"} as Record<string,string>)[event.sport_key]!==row.league||!event.id||!start||!Number.isFinite(Date.parse(start)))continue;
      const minutes=(Date.parse(start)-now.getTime())/60000;
      if(minutes<=0||minutes>60)continue;
      const game={id:String(event.id),league:row.league,start};
@@ -54,7 +54,7 @@ Deno.serve(async(req:Request)=>{
       awayTeam:String(event.away_team||'').slice(0,100),status:result.status,reason:result.reason,legs:[],marketCoverage:normalized.counts});
     }
    }
-   const snapshot=rows?.[0]?{status:'ready',...rows[0].snapshot}:{status:'pending',dateET:date,cards:[]};
+   const snapshot=rows?.[0]?(rows[0].snapshot?.version===DAILY_TICKETS_VERSION?rows[0].snapshot:buildDailySuggestions(sources||[],{now})):{status:'pending',dateET:date,cards:[]};
    return answer(req,200,{...snapshot,pregame:{asOf:now.toISOString(),games:perGame,modelStatus:'not_validated',source:'shared_odds_cache'}});
 
   }catch{return answer(req,503,{status:'unavailable',cards:[]});}
@@ -63,7 +63,7 @@ Deno.serve(async(req:Request)=>{
  try{
   const existing=await api('sports_daily_tickets?date_et=eq.'+date+'&select=generated_at&limit=1');
   if(existing?.length)return answer(req,200,{status:'already_generated',dateET:date,generatedAt:existing[0].generated_at,note:'Daily cards are generated at most once per Eastern day.'});
-  const sourceRows=await api('sports_odds_cache?select=league,snapshot,fetched_at&limit=4');
+  const sourceRows=await api('sports_odds_cache?select=league,snapshot,fetched_at&league=in.(nfl,nba,mlb)&limit=4');
   const snapshot=buildDailySuggestions(sourceRows||[],{now:new Date()});
   // Missing cards are explicitly unavailable. No future fixtures are invented.
   await api('sports_daily_tickets?on_conflict=date_et',{method:'POST',

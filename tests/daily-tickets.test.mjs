@@ -41,3 +41,20 @@ test('does not invent tickets with too few fixtures or already started games',()
  const past={...data,snapshot:{events:data.snapshot.events.map(x=>({...x,commence_time:'2026-11-17T14:00:00Z'}))}};
  assert.equal(buildDailySuggestions([past],{now}).cards.some(x=>x.available),false);
 });
+test('Sunday ticket uses NFL Sunday ET games only and explains missing prices',()=>{
+ const sunday=new Date('2026-11-22T17:15:00Z');
+ const row=structuredClone(data);
+ row.league='nfl';
+ row.fetched_at=sunday.toISOString();
+ for(const e of row.snapshot.events){
+  e.sport_key='americanfootball_nfl';
+  e.commence_time='2026-11-22T21:05:00Z';
+  for(const b of e.bookmakers)b.markets[0].last_update=row.fetched_at;
+ }
+ const result=rows=>buildDailySuggestions(rows,{now:sunday}).cards.find(c=>c.id==='sunday-nfl');
+ assert.equal(result([row]).legs.length,2);
+ assert.match(result([]).reason,/recent NFL/);
+ row.snapshot.events[0].commence_time='2026-11-23T06:00:00Z';
+ assert.equal(result([row]).available,false);
+ assert.equal(sourceCandidates([{...row,league:'nhl'}],sunday).size,0);
+});
