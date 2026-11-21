@@ -5,10 +5,9 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('expired daily snapshots cannot display cached payouts',()=>{
  const s=read('src/app/19-ticket-builder.js');
  assert.match(s,/snapshotFresh/);
- assert.match(s,/d\.loaded&&d\.cards\?\.length&&!snapshotFresh/);
- assert.match(s,/Quotes expired/);
- assert.match(s,/if\(!valid\)return/);
- assert.match(s,/PRICES EXPIRED/);
+ assert.match(s,/else if\(!snapshotFresh\)contents=empty/);
+ assert.match(s,/usable=cards\.filter/);
+ assert.match(s,/usable\.sort/);
 });
 test('automatic tickets reject started games, stale prices and duplicate game legs',()=>{
  const s=read('src/app/19-ticket-builder.js');
