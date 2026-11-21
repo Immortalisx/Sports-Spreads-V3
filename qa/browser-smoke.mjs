@@ -152,6 +152,11 @@ async function run(){
   await suggested.locator('.ticket-dock').tap();
   const dailyCard=suggested.locator('.daily-ticket-card').filter({hasText:'Fixture Same Book'});
   await dailyCard.getByText('30m ago',{exact:true}).waitFor();
+  const prices=dailyCard.locator('.daily-picks span');
+  assert.equal(await prices.nth(0).locator('small').count(),0);
+  assert.equal(await prices.nth(1).locator('small').count(),0);
+  assert.equal(await prices.nth(2).locator('small').innerText(),'Recheck');
+  assert.equal(await prices.nth(3).locator('small').innerText(),'Oldest · Recheck');
   await dailyCard.getByRole('button',{name:'Use ticket',exact:true}).tap();
   const loaded=suggested.locator('.ticket-item');
   await loaded.nth(3).waitFor();
