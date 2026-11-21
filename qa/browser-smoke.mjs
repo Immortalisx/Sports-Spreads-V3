@@ -151,7 +151,13 @@ async function run(){
    assert.ok((await button.boundingBox()).height>=44,'Mobile navigation touch targets must be at least 44px');
    assert.equal(await button.locator('span').isVisible(),true,'Mobile navigation labels should be visible');
   }
-  await mobileNav.locator('[data-section="tickets"]').click();
+  const dock=mobile.locator('.ticket-dock');
+  for (const fraction of [0,0.5,1]){
+   await mobile.evaluate(f=>window.scrollTo({top:(document.documentElement.scrollHeight-innerHeight)*f,behavior:'instant'}),fraction);
+   assert.ok(await dock.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2));}),'Floating ticket stays tappable');
+  }
+  assert.ok(await mobile.locator('.game-card-v3').last().evaluate(el=>el.getBoundingClientRect().bottom<=document.querySelector('.ticket-dock').getBoundingClientRect().top),'Last card clears ticket at bottom of scroll');
+  await dock.tap();
   await mobile.locator('[data-action="ticket-mode"][data-mode="manual"]').click();
   await mobile.locator('#leg-form').waitFor({timeout:5000});
   assert.equal(await mobile.locator('#auto-confidence').count(),0);
@@ -167,12 +173,18 @@ async function run(){
   assert.match(await mobileSummary.innerText(),/\$25(?:\.00)?\b/);
   assert.match(await mobileSummary.innerText(),/\+150/);
   await noBuilderOverflow();
+  await mobileNav.locator('[data-section="games"]').tap();
+  assert.match(await dock.innerText(),/1 legs?/);
+  await dock.tap();
   await mobile.getByRole('button',{name:'Remove NY',exact:true}).tap();
   await mobileSummary.waitFor({state:'detached'});
   assert.equal(await mobile.locator('.ticket-item').count(),0);
   assert.equal(await mobile.locator('#leg-form').isVisible(),true);
   await noBuilderOverflow();
   console.log('PASS: 390x844 empty ticket, one +150 leg with $25 payout, last leg removed; no builder overflow');
+  await mobileNav.locator('[data-section="games"]').tap();
+  assert.match(await dock.innerText(),/0 legs/);
+  await dock.tap();
   await mobile.getByRole('button',{name:'NFL player prop',exact:true}).tap();
   assert.equal(await mobile.locator('#prop-line').isVisible(),false);
   await mobile.locator('#leg-selection').fill('Ravens');
