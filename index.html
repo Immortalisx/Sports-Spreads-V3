@@ -1947,7 +1947,7 @@ function dailySuggestionsPanel(){
  else if(d.loaded&&d.cards?.length&&!snapshotFresh)contents='<div class="daily-empty">Quotes expired. Waiting for the next refresh.</div>';
  else if(!d.loaded||!d.cards?.length)contents='<article class="daily-ticket-card big-one big-one-hero"><div class="daily-card-title"><strong>✦ THE BIG ONE</strong></div><p class="muted-sm">Waiting for eligible games and fresh odds.</p></article>';
  else contents='<div class="daily-ticket-grid">'+[...d.cards].sort((a,b)=>(a.id==='big-one'?-1:0)-(b.id==='big-one'?-1:0)).map(c=>{
-  if(!c.available)return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one big-one-hero':'')+'"><div class="daily-card-title"><strong>'+esc(c.name)+'</strong><span>NO SLATE</span></div><p class="muted-sm">'+esc(c.reason||'Insufficient verified games')+'</p></article>';
+  if(!c.available)return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one big-one-hero':'')+'"><div class="daily-card-title"><strong>'+esc(c.name)+'</strong></div><p class="muted-sm">'+esc(c.reason||'Insufficient verified games')+'</p></article>';
   const legs=Array.isArray(c.legs)?c.legs:[];
   const valid=legs.length>=2&&legs.length===Number(c.legCount)&&
    legs.every(l=>Number.isFinite(Date.parse(l.oddsAsOf))&&Date.parse(l.oddsAsOf)<=Date.now()&&Date.parse(l.oddsAsOf)>Date.now()-8*3600_000&&Date.parse(l.start)>Date.now()+5*60_000&&l.gameId&&l.selection&&l.bookmaker)&&
