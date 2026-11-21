@@ -163,23 +163,31 @@ function dailySuggestionsPanel(){
  const d=state.daily||{},stamp=d.generatedAt?formatFresh(d.generatedAt):'Not generated';
  const snapshotTime=Date.parse(d.generatedAt||'');
  const snapshotFresh=Number.isFinite(snapshotTime)&&snapshotTime<=Date.now()+60_000&&snapshotTime>Date.now()-24*3600_000;
- let contents;
- if(d.loading&&!d.loaded)contents='<div class="daily-empty">Loading tickets…</div>';
- else if(d.error)contents='<div class="daily-empty">Suggestions unavailable. Try Build my own.</div>';
- else if(d.loaded&&d.cards?.length&&!snapshotFresh)contents='<div class="daily-empty">Quotes expired. Waiting for the next refresh.</div>';
- else if(!d.loaded||!d.cards?.length)contents='<article class="daily-ticket-card big-one big-one-hero"><div class="daily-card-title"><strong>✦ THE BIG ONE</strong></div><p class="muted-sm">Waiting for eligible games and fresh odds.</p></article>';
- else contents='<div class="daily-ticket-grid">'+[...d.cards].sort((a,b)=>(a.id==='big-one'?-1:0)-(b.id==='big-one'?-1:0)).map(c=>{
-  if(!c.available)return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one big-one-hero':'')+'"><div class="daily-card-title"><strong>'+esc(c.name)+'</strong></div><p class="muted-sm">'+esc(c.reason||'Insufficient verified games')+'</p></article>';
+ const cards=d.cards||[];
+ const usable=cards.filter(c=>{
+  if(!c.available)return false;
   const legs=Array.isArray(c.legs)?c.legs:[];
-  const valid=legs.length>=2&&legs.length===Number(c.legCount)&&
+  return legs.length>=2&&legs.length===Number(c.legCount)&&
    legs.every(l=>Number.isFinite(Date.parse(l.oddsAsOf))&&Date.parse(l.oddsAsOf)<=Date.now()&&Date.parse(l.oddsAsOf)>Date.now()-8*3600_000&&Date.parse(l.start)>Date.now()+5*60_000&&l.gameId&&l.selection&&l.bookmaker)&&
    new Set(legs.map(l=>String(l.gameId))).size===legs.length&&
    new Set(legs.map(l=>String(l.bookmaker).toLowerCase())).size===1&&
    (!d.generatedAt||(Number.isFinite(Date.parse(d.generatedAt))&&Date.parse(d.generatedAt)>Date.now()-24*3600_000));
-
-  if(!valid)return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one big-one-hero':'')+'"><div class="daily-card-title"><strong>'+esc(c.id==='big-one'?'THE BIG ONE':c.name)+'</strong><span>PRICES EXPIRED</span></div><p class="muted-sm">Waiting for updated odds or game times.</p></article>';
-  const canLoad=valid&&!state.ticket.length;
-  const label=!valid?'Recheck prices / slate':state.ticket.length?'Clear ticket first':'Use ticket';
+ });
+ const empty=reason=>'<div class="daily-empty"><p>'+esc(reason)+'</p><button type="button" class="neutral-button" data-action="ticket-mode" data-mode="manual">Build my own</button></div>';
+ let contents;
+ if(d.loading&&!d.loaded)contents='<div class="daily-empty">Loading tickets…</div>';
+ else if(d.error)contents=empty('Suggested tickets could not load.');
+ else if(!cards.length)contents=empty('Waiting for today’s tickets.');
+ else if(!snapshotFresh)contents=empty('The saved ticket prices have expired.');
+ else if(!usable.length){
+  const sunday=cards.find(c=>c.id==='sunday-nfl'&&!c.available);
+  const reason=cards.some(c=>c.available)?'Saved odds or game times need updating.':
+   sunday?.reason?'Sunday NFL: '+sunday.reason:'Too few games qualify at the same sportsbook.';
+  contents=empty(reason);
+ }
+ else contents='<div class="daily-ticket-grid">'+usable.sort((a,b)=>(a.id==='big-one'?-1:0)-(b.id==='big-one'?-1:0)).map(c=>{
+  const canLoad=!state.ticket.length;
+  const label=canLoad?'Use ticket':'Clear ticket first';
   return '<article class="daily-ticket-card '+(c.id==='big-one'?'big-one big-one-hero':'')+'">'+
    '<div class="daily-card-title"><strong>'+(c.id==='big-one'?'✦ THE BIG ONE':esc(c.name))+'</strong><span>MARKET GRADE '+esc(c.marketGrade||'—')+'</span></div>'+
    '<div class="daily-card-sub">'+esc(c.bookmaker)+' · '+esc(c.legCount)+' games</div>'+

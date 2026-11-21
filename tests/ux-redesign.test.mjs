@@ -31,7 +31,7 @@ test('suggestions are genuinely separate: no manual form or hidden duplicate wid
  ui.state.ticketMode='automatic';
  let html=ui.ticketView();
  assert.match(html,/Suggested tickets/);
- assert.match(html,/big-one big-one-hero/);
+ assert.match(html,/Waiting for today’s tickets/);
  assert.match(html,/id="auto-confidence"/);
  assert.match(html,/Bookmaker-implied chance/);
  assert.match(html,/ux-secondary-matchups/);
@@ -103,7 +103,7 @@ for (const mode of ['automatic', 'manual']) {
   const empty=ui.ticketView();
   assert.ok(empty.startsWith('<div class="ticket-tabs"'));
   assert.doesNotMatch(empty,/aria-label="Ticket summary"|<h3>My ticket|Nothing added yet|<h2>Build a ticket/);
-  assert.match(empty,mode==='manual'?/id="leg-form"/:/big-one-hero/);
+  assert.match(empty,mode==='manual'?/id="leg-form"/:/Waiting for today’s tickets/);
 
   ui.state.ticket.push({league:'nfl',market:'Moneyline',selection:'Test team',odds:150});
   const filled=ui.ticketView();
@@ -115,3 +115,19 @@ for (const mode of ['automatic', 'manual']) {
   assert.equal(ui.ticketView(),empty);
  });
 }
+
+test('unavailable tickets share one explanation and a manual builder button',()=>{
+ const {ui}=renderLab();
+ ui.state.daily={loaded:true,generatedAt:new Date().toISOString(),cards:[
+  {id:'steady',available:false},{id:'balanced',available:false},
+  {id:'sunday-nfl',available:false,reason:'No recent NFL odds snapshot.'}
+ ]};
+ const panel=ui.ticketView();
+ assert.equal((panel.match(/class="daily-empty"/g)||[]).length,1);
+ assert.match(panel,/Sunday NFL: No recent NFL odds snapshot/);
+ assert.match(panel,/data-action="ticket-mode" data-mode="manual">Build my own/);
+ assert.doesNotMatch(panel,/class="daily-ticket-card/);
+ ui.state.daily.generatedAt='2000-01-01T00:00:00Z';
+ assert.match(ui.ticketView(),/saved ticket prices have expired/);
+ assert.doesNotMatch(ui.ticketView(),/class="daily-price"/);
+});
